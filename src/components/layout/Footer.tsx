@@ -53,7 +53,7 @@ export function Footer() {
           <div className="lg:col-span-2">
             <Logo size="lg" />
             <p className="mt-4 text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
-              Find it. Post it. Done. Dealmint connects doers and requesters—fast, safe, and local.
+              Find it. Post it. Done. Dealmint connects doers and requesters, fast, safe, and local.
             </p>
             
             {/* Contact Info */}

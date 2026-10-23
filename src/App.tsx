@@ -76,6 +76,7 @@ function getInitialDarkMode() {
 
 function AppContent() {
   const { user } = useApp();
+  const location = useLocation();
   const [isDarkMode, setIsDarkMode] = useState(getInitialDarkMode);
 
   useEffect(() => {
@@ -153,7 +154,8 @@ function AppContent() {
           </Suspense>
         </ErrorBoundary>
       </main>
-      <Footer />
+      {/* Footer is only part of the landing page */}
+      {location.pathname === '/' && <Footer />}
       <Toaster position="top-right" />
     </div>
   );
