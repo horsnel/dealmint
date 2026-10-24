@@ -429,11 +429,11 @@ export function ProfilePage() {
               {verifications.map((item) => (
                 <div
                   key={item.label}
-                  className="flex items-center justify-between p-4 rounded-lg bg-gray-50 dark:bg-violet-700/30"
+                  className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 p-4 rounded-lg bg-gray-50 dark:bg-violet-700/30"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
                         item.verified ? 'bg-green-100 dark:bg-green-900/30' : 'bg-amber-100 dark:bg-amber-900/30'
                       }`}
                     >
@@ -443,9 +443,9 @@ export function ProfilePage() {
                         }`}
                       />
                     </div>
-                    <span className="text-gray-900 dark:text-white">{item.label}</span>
+                    <span className="text-gray-900 dark:text-white leading-snug">{item.label}</span>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 shrink-0 ml-auto">
                     <Badge className={item.verified ? 'bg-green-500 text-white' : 'bg-amber-500 text-white'}>
                       {item.verified ? 'Verified' : item.pendingText}
                     </Badge>
