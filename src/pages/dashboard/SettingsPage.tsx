@@ -145,7 +145,7 @@ export function SettingsPage() {
                 <Label htmlFor="dark-mode" className="text-gray-900 dark:text-white font-medium">
                   Dark mode
                 </Label>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Easier on the eyes in low light</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Saved to your account, so it follows you on every device</p>
               </div>
               <Switch id="dark-mode" checked={isDarkMode} onCheckedChange={toggleDarkMode} />
             </div>

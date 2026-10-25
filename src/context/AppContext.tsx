@@ -182,20 +182,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  // Theme (dark / light) — persisted per device, synced to <html> class
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    const stored = localStorage.getItem('dealmint_darkmode');
-    if (stored !== null) return stored === 'true';
-    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
-  });
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDarkMode);
-    localStorage.setItem('dealmint_darkmode', String(isDarkMode));
-  }, [isDarkMode]);
-
-  const toggleDarkMode = useCallback(() => setIsDarkMode((v) => !v), []);
-
   const commit = useCallback((fn: (d: DB) => DB) => {
     const next = fn(dbRef.current);
     dbRef.current = next;
@@ -238,6 +224,53 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
   const user = useMemo(() => (storedUser ? stripPassword(storedUser) : null), [storedUser]);
   const uidNow = () => sessionId; // current user id at call time
+
+  // ---------- theme ----------
+  // Logged-in users: theme is bound to the account record, so it follows the account.
+  // Visitors: follow the device system preference (live).
+  const [systemDark, setSystemDark] = useState<boolean>(
+    () => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false
+  );
+  const [guestDark, setGuestDark] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
+    if (!mq) return;
+    const onChange = (e: MediaQueryListEvent) => setSystemDark(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  // One-time migration: legacy per-device choice -> account preference
+  useEffect(() => {
+    if (!user || user.theme !== undefined) return;
+    const stored = localStorage.getItem('dealmint_darkmode');
+    const theme: 'light' | 'dark' = stored !== null ? (stored === 'true' ? 'dark' : 'light') : systemDark ? 'dark' : 'light';
+    commit((d) => ({ ...d, users: d.users.map((u) => (u.id === user.id ? { ...u, theme } : u)) }));
+  }, [user, systemDark, commit]);
+
+  const isDarkMode = user
+    ? user.theme !== undefined
+      ? user.theme === 'dark'
+      : systemDark
+    : guestDark ?? systemDark;
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDarkMode);
+  }, [isDarkMode]);
+
+  const toggleDarkMode = useCallback(() => {
+    if (!user) {
+      setGuestDark((v) => !(v ?? systemDark));
+      return;
+    }
+    const next: 'light' | 'dark' = (user.theme ?? (systemDark ? 'dark' : 'light')) === 'dark' ? 'light' : 'dark';
+    commit((d) => ({
+      ...d,
+      users: d.users.map((u) => (u.id === user.id ? { ...u, theme: next } : u)),
+    }));
+    localStorage.setItem('dealmint_darkmode', String(next === 'dark')); // legacy per-device cache
+  }, [user, systemDark, commit]);
 
   // ---------- helpers that run on a db snapshot ----------
   const pushNotification = (d: DB, userId: string, n: Omit<Notification, 'id' | 'userId' | 'isRead' | 'createdAt'>): DB => {

@@ -20,6 +20,7 @@ export interface User {
   idStatus?: 'none' | 'pending' | 'verified';
   studentVerified?: boolean;
   settings?: UserSettings;
+  theme?: 'light' | 'dark';
 }
 
 export interface UserSettings {
