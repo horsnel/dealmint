@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Lock, Shield, Trash2, LogOut } from 'lucide-react';
+import { Bell, Lock, Shield, Trash2, LogOut, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,7 +47,7 @@ const privacyRows: { key: keyof UserSettings; label: string; description: string
 export function SettingsPage() {
   usePageTitle('Settings');
   const navigate = useNavigate();
-  const { user, updateSettings, changePassword, deleteAccount, logout } = useApp();
+  const { user, updateSettings, changePassword, deleteAccount, logout, isDarkMode, toggleDarkMode } = useApp();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -129,6 +129,27 @@ export function SettingsPage() {
             <CardDescription className="dark:text-gray-300">Control what appears on your public profile</CardDescription>
           </CardHeader>
           <CardContent className="divide-y dark:divide-violet-700">{renderSwitches(privacyRows)}</CardContent>
+        </Card>
+
+        <Card className="dark:bg-violet-800 dark:border-violet-700">
+          <CardHeader>
+            <CardTitle className="text-gray-900 dark:text-white flex items-center gap-2">
+              <Moon className="w-5 h-5" />
+              Appearance
+            </CardTitle>
+            <CardDescription className="dark:text-gray-300">Choose how Dealmint looks on this device</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between gap-4 py-1">
+              <div>
+                <Label htmlFor="dark-mode" className="text-gray-900 dark:text-white font-medium">
+                  Dark mode
+                </Label>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Easier on the eyes in low light</p>
+              </div>
+              <Switch id="dark-mode" checked={isDarkMode} onCheckedChange={toggleDarkMode} />
+            </div>
+          </CardContent>
         </Card>
 
         <Card className="dark:bg-violet-800 dark:border-violet-700">

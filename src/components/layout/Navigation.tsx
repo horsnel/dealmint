@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Logo } from '@/components/common/Logo';
-import { 
-  Menu, 
-  X, 
-  Sun, 
-  Moon, 
-  User as UserIcon, 
-  Briefcase, 
-  MessageSquare, 
-  Wallet, 
+import {
+  Menu,
+  X,
+  User as UserIcon,
+  Briefcase,
+  MessageSquare,
+  Wallet,
   LogOut,
   ChevronDown,
   Bell,
@@ -32,11 +30,9 @@ import type { User } from '@/types';
 
 interface NavigationProps {
   user: User | null;
-  isDarkMode: boolean;
-  toggleDarkMode: () => void;
 }
 
-export function Navigation({ user, isDarkMode, toggleDarkMode }: NavigationProps) {
+export function Navigation({ user }: NavigationProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
@@ -142,19 +138,6 @@ export function Navigation({ user, isDarkMode, toggleDarkMode }: NavigationProps
 
           {/* Right Side Actions */}
           <div className="hidden lg:flex items-center space-x-4">
-            {/* Dark Mode Toggle */}
-            <button
-              onClick={toggleDarkMode}
-              aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-              className={`p-2 rounded-full transition-colors ${
-                isScrolled || !isLandingPage
-                  ? 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-violet-800'
-                  : 'text-white/90 hover:bg-white/10'
-              }`}
-            >
-              {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
-
             {user ? (
               <>
                 {/* Notifications */}
@@ -334,16 +317,6 @@ export function Navigation({ user, isDarkMode, toggleDarkMode }: NavigationProps
                 ))}
               </div>
             )}
-
-            <div className="border-t dark:border-violet-800 pt-4 flex items-center justify-between">
-              <button
-                onClick={toggleDarkMode}
-                className="flex items-center gap-2 text-gray-700 dark:text-gray-200"
-              >
-                {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                {isDarkMode ? 'Light Mode' : 'Dark Mode'}
-              </button>
-            </div>
 
             {user ? (
               <div className="border-t dark:border-violet-800 pt-4 space-y-2">

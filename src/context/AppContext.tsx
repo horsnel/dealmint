@@ -83,6 +83,10 @@ interface AppContextValue {
   isLoading: boolean;
   user: User | null;
 
+  // theme (per device)
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
+
   // auth
   login: (email: string, password: string, remember: boolean) => Result;
   register: (input: RegisterInput) => Result<User>;
@@ -177,6 +181,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setIsLoading(false);
   }, []);
+
+  // Theme (dark / light) — persisted per device, synced to <html> class
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const stored = localStorage.getItem('dealmint_darkmode');
+    if (stored !== null) return stored === 'true';
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDarkMode);
+    localStorage.setItem('dealmint_darkmode', String(isDarkMode));
+  }, [isDarkMode]);
+
+  const toggleDarkMode = useCallback(() => setIsDarkMode((v) => !v), []);
 
   const commit = useCallback((fn: (d: DB) => DB) => {
     const next = fn(dbRef.current);
@@ -969,6 +987,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value: AppContextValue = {
     isLoading,
+    isDarkMode,
+    toggleDarkMode,
     user,
     login,
     register,

@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState, type ComponentType, type ReactNode } from 'react';
+import { Suspense, lazy, type ComponentType, type ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { Navigation } from '@/components/layout/Navigation';
@@ -68,33 +68,16 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-function getInitialDarkMode() {
-  const stored = localStorage.getItem('dealmint_darkmode');
-  if (stored !== null) return stored === 'true';
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
-}
-
 function AppContent() {
-  const { user } = useApp();
+  const { user, isDarkMode } = useApp();
   const location = useLocation();
-  const [isDarkMode, setIsDarkMode] = useState(getInitialDarkMode);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDarkMode);
-  }, [isDarkMode]);
-
-  const toggleDarkMode = () => {
-    const next = !isDarkMode;
-    setIsDarkMode(next);
-    localStorage.setItem('dealmint_darkmode', String(next));
-  };
 
   const protect = (el: ReactNode) => <ProtectedRoute>{el}</ProtectedRoute>;
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
       <ScrollToTop />
-      <Navigation user={user} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />
+      <Navigation user={user} />
       <main>
         <ErrorBoundary>
           <Suspense fallback={<PageSkeleton />}>
