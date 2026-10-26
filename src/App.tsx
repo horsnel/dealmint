@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { Toaster } from '@/components/ui/sonner';
 import { Navigation } from '@/components/layout/Navigation';
 import { Footer } from '@/components/layout/Footer';
+import { PostFab } from '@/components/layout/PostFab';
 import { ScrollToTop } from '@/components/common/ScrollToTop';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { PageSkeleton } from '@/components/common/PageSkeleton';
@@ -139,6 +140,8 @@ function AppContent() {
       </main>
       {/* Footer is only part of the landing page */}
       {location.pathname === '/' && <Footer />}
+      {/* Mobile-only: floating "Post" button + bottom sheet (replaces the mobile menu Post links) */}
+      <PostFab user={user} />
       <Toaster position="top-right" />
     </div>
   );

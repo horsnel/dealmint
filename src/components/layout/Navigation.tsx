@@ -310,22 +310,7 @@ export function Navigation({ user }: NavigationProps) {
               </Link>
             ))}
             
-            {user && (
-              <div className="border-t dark:border-violet-800 pt-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Post</p>
-                {postLinks.map((link) => (
-                  <Link
-                    key={link.name}
-                    to={link.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-2 py-2 text-gray-700 dark:text-gray-200 hover:text-violet-600 dark:hover:text-amber-400"
-                  >
-                    <link.icon className="w-4 h-4" />
-                    {link.name}
-                  </Link>
-                ))}
-              </div>
-            )}
+            {/* Post options moved to the mobile FAB bottom sheet (PostFab) */}
 
             {user ? (
               <div className="border-t dark:border-violet-800 pt-4 space-y-2">
