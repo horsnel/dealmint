@@ -25,7 +25,7 @@ import type {
 import { buildSeedDB, DB_VERSION, type DB, type StoredUser } from '@/data/seed';
 import { featuredTaskers } from '@/data/mockData';
 import { commissionRate } from '@/lib/categories';
-import { uid } from '@/lib/format';
+import { formatPrice, uid } from '@/lib/format';
 
 const DB_KEY = 'dealmint_db_v1';
 const SESSION_KEY = 'dealmint_session_user';
@@ -123,6 +123,8 @@ interface AppContextValue {
   getSellerStats: (sellerId: string) => { rating: number; count: number };
   addReview: (orderId: string, rating: number, comment: string) => Result;
   replyToReview: (reviewId: string, reply: string) => void;
+  // "Usually replies in …" derived from this seller's real conversations
+  getSellerResponsiveness: (sellerId: string) => { label: string; lastActive: string | null } | null;
 
   // orders
   orders: Order[];
@@ -529,7 +531,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const updateListing: AppContextValue['updateListing'] = (id, patch) => {
-    commit((d) => ({ ...d, listings: d.listings.map((l) => (l.id === id ? { ...l, ...patch } : l)) }));
+    commit((d) => {
+      const old = d.listings.find((l) => l.id === id);
+      let next: DB = { ...d, listings: d.listings.map((l) => (l.id === id ? { ...l, ...patch } : l)) };
+      // Price-drop alerts for everyone who saved this listing
+      if (old && typeof patch.price === 'number' && patch.price < old.price) {
+        const watchers = Object.entries(d.favourites)
+          .filter(([fid, ids]) => ids.includes(id) && fid !== old.seller.id)
+          .map(([fid]) => fid);
+        for (const fid of watchers) {
+          next = pushNotification(next, fid, {
+            type: 'system',
+            title: 'Price drop on a saved listing',
+            message: `"${old.title}" dropped from ${formatPrice(old.price)} to ${formatPrice(patch.price)}.`,
+            link: `/listing/${id}`,
+          });
+        }
+      }
+      return next;
+    });
   };
 
   const deleteListing: AppContextValue['deleteListing'] = (id) => {
@@ -589,6 +609,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return calcStats(s?.rating || 0, s?.reviewCount || 0, db.reviews.filter((r) => r.sellerId === rid && r.id.startsWith('rv_')));
   };
 
+  // Median time between a buyer's message and this seller's next reply,
+  // measured across every stored conversation the seller took part in.
+  const getSellerResponsiveness: AppContextValue['getSellerResponsiveness'] = (sellerId) => {
+    const rid = taskerAlias[sellerId] || sellerId;
+    const convos = db.conversations.filter((c) => c.userId === rid || c.otherId === rid);
+    const diffs: number[] = [];
+    let lastActive: string | null = null;
+    for (const c of convos) {
+      if (!lastActive || c.updatedAt > lastActive) lastActive = c.updatedAt;
+      c.messages.forEach((m, i) => {
+        if (m.senderId !== rid) return;
+        const prev = c.messages[i - 1];
+        if (!prev || prev.senderId === rid) return;
+        const hours = (Date.parse(m.createdAt) - Date.parse(prev.createdAt)) / 3600000;
+        if (hours >= 0 && hours <= 24 * 7) diffs.push(hours);
+      });
+    }
+    if (diffs.length === 0) return null;
+    diffs.sort((a, b) => a - b);
+    const median = diffs[Math.floor(diffs.length / 2)];
+    const rounded = Math.round(median);
+    const label =
+      median < 1
+        ? 'Replies in under an hour'
+        : median < 24
+          ? `Replies in about ${rounded} hour${rounded === 1 ? '' : 's'}`
+          : median < 72
+            ? 'Replies in about a day'
+            : 'Replies in a few days';
+    return { label, lastActive };
+  };
+
   const addReview: AppContextValue['addReview'] = (orderId, rating, comment) => {
     const order = dbRef.current.orders.find((o) => o.id === orderId);
     if (!user || !order) return { ok: false, error: 'Order not found.' };
@@ -607,22 +659,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
       comment: comment.trim(),
       createdAt: nowIso(),
     };
-    commit((d) =>
-      pushNotification(
+    commit((d0) => {
+      let next = pushNotification(
         {
-          ...d,
-          reviews: [review, ...d.reviews],
-          orders: d.orders.map((o) => (o.id === orderId ? { ...o, reviewed: true } : o)),
+          ...d0,
+          reviews: [review, ...d0.reviews],
+          orders: d0.orders.map((o) => (o.id === orderId ? { ...o, reviewed: true } : o)),
         },
         order.sellerId,
         { type: 'review', title: `New ${rating}-star review`, message: `${user.name} reviewed "${order.listingTitle}".`, link: '/dashboard/reviews' }
-      )
-    );
+      );
+      // Alert everyone who saved this listing (except the seller and the reviewer)
+      const watchers = Object.entries(d0.favourites)
+        .filter(([fid, ids]) => ids.includes(order.listingId) && fid !== order.sellerId && fid !== user.id)
+        .map(([fid]) => fid);
+      for (const fid of watchers) {
+        next = pushNotification(next, fid, {
+          type: 'review',
+          title: 'New review on a saved listing',
+          message: `${user.name} rated "${order.listingTitle}" ${rating} star${rating === 1 ? '' : 's'}.`,
+          link: `/listing/${order.listingId}`,
+        });
+      }
+      return next;
+    });
     return { ok: true };
   };
 
   const replyToReview: AppContextValue['replyToReview'] = (reviewId, reply) => {
-    commit((d) => ({ ...d, reviews: d.reviews.map((r) => (r.id === reviewId ? { ...r, reply: reply.trim() } : r)) }));
+    const review = dbRef.current.reviews.find((r) => r.id === reviewId);
+    commit((d) => {
+      let next: DB = { ...d, reviews: d.reviews.map((r) => (r.id === reviewId ? { ...r, reply: reply.trim() } : r)) };
+      if (review) {
+        const title = dbRef.current.listings.find((l) => l.id === review.listingId)?.title;
+        next = pushNotification(next, review.reviewerId, {
+          type: 'review',
+          title: 'Seller replied to your review',
+          message: `The seller responded to your review${title ? ` of "${title}"` : ''}.`,
+          link: `/listing/${review.listingId}`,
+        });
+      }
+      return next;
+    });
   };
 
   // ---------- orders ----------
@@ -1050,6 +1128,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     reviewsForSeller,
     getListingStats,
     getSellerStats,
+    getSellerResponsiveness,
     addReview,
     replyToReview,
     orders,

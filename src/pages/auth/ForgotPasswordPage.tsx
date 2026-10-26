@@ -196,9 +196,9 @@ export function ForgotPasswordPage() {
               type="button"
               variant="ghost"
               onClick={goBack}
-              className="w-full text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-amber-400"
+              className="w-full text-gray-600 hover:text-gray-900 hover:bg-transparent dark:text-gray-300 dark:hover:text-white"
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
+              <ArrowLeft className="size-6 mr-1" strokeWidth={2} />
               Back to sign in
             </Button>
           </div>

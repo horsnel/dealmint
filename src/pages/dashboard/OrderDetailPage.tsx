@@ -7,6 +7,7 @@ import {
   Download,
   MessageSquare,
   Search,
+  ShieldAlert,
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
@@ -39,7 +40,7 @@ import { StarInput } from '@/components/common/Stars';
 import { formatDate, formatPrice, formatTime } from '@/lib/format';
 import { typeLabel } from '@/lib/categories';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import type { Order } from '@/types';
+import type { Order, OrderStatus } from '@/types';
 
 const stepText: Record<string, string> = {
   pending: 'Order placed. Payment is held in escrow.',
@@ -123,6 +124,84 @@ export function OrderDetailPage() {
   const listing = getListing(order.listingId);
   const net = order.price - order.fee;
   const escrowHeld = ['pending', 'in_progress', 'delivered', 'disputed'].includes(order.status);
+
+  // ---------- escrow stepper ----------
+  const eventAt = (s: OrderStatus) => {
+    const e = [...order.timeline].reverse().find((x) => x.status === s);
+    return e?.at;
+  };
+  const fmtWhen = (iso?: string) => (iso ? `${formatDate(iso)} · ${formatTime(iso)}` : undefined);
+
+  type Stage = { title: string; desc: string; state: 'done' | 'current' | 'pending'; when?: string; tone?: 'green' };
+
+  const deliveredSeen = order.timeline.some((e) => e.status === 'delivered');
+  let stages: Stage[];
+  if (order.status === 'cancelled') {
+    stages = [
+      {
+        title: 'Payment in escrow',
+        desc: `${formatPrice(order.price)} was paid into escrow.`,
+        state: 'done',
+        when: fmtWhen(eventAt('pending')),
+      },
+      {
+        title: 'Order cancelled',
+        desc: `A refund of ${formatPrice(order.price)} was sent to the buyer's wallet.`,
+        state: 'done',
+        tone: 'green',
+        when: fmtWhen(eventAt('cancelled')),
+      },
+    ];
+  } else {
+    const progressDone = ['in_progress', 'delivered', 'completed', 'disputed'].includes(order.status) || deliveredSeen;
+    const deliveredDone = ['delivered', 'completed'].includes(order.status) || (order.status === 'disputed' && deliveredSeen);
+    const releasedDone = order.status === 'completed';
+    stages = [
+      {
+        title: 'Payment in escrow',
+        desc: `${formatPrice(order.price)} is held safely by Dealmint — not sent to the seller yet.`,
+        state: 'done',
+        when: fmtWhen(eventAt('pending')),
+      },
+      {
+        title: order.listingType === 'job' ? 'Accepted & working' : 'Seller accepted & started',
+        desc: progressDone
+          ? 'Work is under way.'
+          : isBuyer
+            ? 'Waiting for the seller to accept. Your money stays in escrow until they do.'
+            : 'Accept this order to start working.',
+        state: progressDone ? 'done' : 'current',
+        when: progressDone ? fmtWhen(eventAt('in_progress')) : undefined,
+      },
+      {
+        title: 'Work delivered',
+        desc: deliveredDone
+          ? isBuyer
+            ? 'Review the delivery below before releasing payment.'
+            : 'Waiting for the buyer to review your delivery.'
+          : isBuyer
+            ? 'Money stays in escrow until you confirm you are happy.'
+            : 'Deliver the work so the buyer can release your payment.',
+        state: deliveredDone ? 'done' : progressDone ? 'current' : 'pending',
+        when: deliveredDone ? fmtWhen(eventAt('delivered')) : undefined,
+      },
+      {
+        title: 'Payment released',
+        desc: releasedDone
+          ? isBuyer
+            ? `${formatPrice(net)} was released to ${order.sellerName}.`
+            : `You earned ${formatPrice(net)} from this order.`
+          : order.status === 'disputed'
+            ? 'Funds stay locked in escrow until the dispute is resolved.'
+            : isBuyer
+              ? 'Confirm delivery to release the payment, or open a dispute — the money stays locked either way.'
+              : 'You get paid the moment the buyer confirms.',
+        state: releasedDone ? 'done' : deliveredDone ? 'current' : 'pending',
+        when: releasedDone ? fmtWhen(order.completedAt) : undefined,
+        tone: releasedDone ? 'green' : undefined,
+      },
+    ];
+  }
 
   const message = () => {
     const cid = startConversation(other, listing);
@@ -234,6 +313,83 @@ export function OrderDetailPage() {
                   </Link>
                 </p>
               </div>
+            </div>
+
+            {/* Escrow & progress */}
+            <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <h3 className="font-semibold text-gray-900 dark:text-white">Escrow &amp; progress</h3>
+                {escrowHeld ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 rounded-full px-2.5 py-1">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    {formatPrice(order.price)} in escrow
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-violet-700/40 rounded-full px-2.5 py-1">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    No funds in escrow
+                  </span>
+                )}
+              </div>
+              <ol>
+                {stages.map((s, i) => (
+                  <li key={s.title} className="relative flex gap-3 pb-6 last:pb-0">
+                    {i < stages.length - 1 && (
+                      <span
+                        aria-hidden="true"
+                        className={`absolute left-[11px] top-6 bottom-0 w-0.5 ${
+                          s.state === 'done'
+                            ? 'bg-violet-500 dark:bg-amber-400'
+                            : 'bg-gray-200 dark:bg-violet-700'
+                        }`}
+                      />
+                    )}
+                    <span
+                      aria-hidden="true"
+                      className={`relative z-10 mt-0.5 w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+                        s.state === 'done'
+                          ? s.tone === 'green'
+                            ? 'bg-green-500 text-white'
+                            : 'bg-violet-600 text-white dark:bg-amber-400 dark:text-violet-950'
+                          : s.state === 'current'
+                            ? 'border-2 border-violet-600 dark:border-amber-400 text-violet-600 dark:text-amber-400 bg-white dark:bg-violet-800'
+                            : 'border-2 border-gray-200 dark:border-violet-700 text-gray-300 dark:text-violet-600'
+                      }`}
+                    >
+                      {s.state === 'done' ? (
+                        <CheckCircle className="w-4 h-4" />
+                      ) : s.state === 'current' ? (
+                        <span className="w-2 h-2 rounded-full bg-current animate-pulse" />
+                      ) : (
+                        <span className="w-2 h-2 rounded-full bg-current" />
+                      )}
+                    </span>
+                    <div className="min-w-0">
+                      <p
+                        className={`font-medium leading-snug ${
+                          s.state === 'pending' ? 'text-gray-400 dark:text-violet-500' : 'text-gray-900 dark:text-white'
+                        }`}
+                      >
+                        {s.title}
+                      </p>
+                      <p
+                        className={`text-sm leading-snug ${
+                          s.state === 'pending' ? 'text-gray-400 dark:text-violet-600' : 'text-gray-600 dark:text-gray-300'
+                        }`}
+                      >
+                        {s.desc}
+                      </p>
+                      {s.when && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{s.when}</p>}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+              {order.status === 'disputed' && (
+                <div className="mt-4 flex items-start gap-2 text-sm text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3">
+                  <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0" />
+                  Dispute under review — {formatPrice(order.price)} stays locked in escrow until this is resolved.
+                </div>
+              )}
             </div>
 
             {/* Notes */}
@@ -420,11 +576,11 @@ export function OrderDetailPage() {
               )}
 
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={goBack}
-                className="w-full dark:border-violet-600 dark:text-white"
+                className="w-full justify-start text-gray-600 hover:text-gray-900 hover:bg-transparent dark:text-gray-300 dark:hover:text-white"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
+                <ArrowLeft className="size-6 mr-1" strokeWidth={2} />
                 Go back
               </Button>
             </div>

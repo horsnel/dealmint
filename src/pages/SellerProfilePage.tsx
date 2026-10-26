@@ -4,6 +4,7 @@ import {
   MapPin,
   Calendar,
   CheckCircle,
+  Clock,
   MessageSquare,
   Briefcase,
   ArrowLeft,
@@ -31,7 +32,7 @@ export function SellerProfilePage() {
     else navigate('/browse');
   };
   const location = useLocation();
-  const { user, listings, getSeller, getSellerStats, reviewsForSeller, startConversation } = useApp();
+  const { user, listings, getSeller, getSellerStats, getSellerResponsiveness, reviewsForSeller, startConversation } = useApp();
 
   const seller = getSeller(id);
   usePageTitle(seller?.name);
@@ -58,6 +59,7 @@ export function SellerProfilePage() {
   const sellerListings = listings.filter((l) => l.seller.id === seller.id);
   const reviews = reviewsForSeller(seller.id);
   const stats = getSellerStats(seller.id);
+  const responsiveness = getSellerResponsiveness(seller.id);
   const isMe = user?.id === seller.id;
   const showLocation = seller.settings?.showLocation !== false;
 
@@ -120,6 +122,15 @@ export function SellerProfilePage() {
                   <Calendar className="w-4 h-4" />
                   Joined {new Date(seller.joinedAt).toLocaleDateString('en-NG', { month: 'long', year: 'numeric' })}
                 </div>
+                {responsiveness && (
+                  <div className="flex items-center gap-1 text-gray-600 dark:text-gray-300">
+                    <Clock className="w-4 h-4" />
+                    Usually {responsiveness.label.toLowerCase()}
+                    {responsiveness.lastActive && (
+                      <span className="text-gray-400 dark:text-gray-500">· Active {timeAgo(responsiveness.lastActive)}</span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {seller.bio && (
@@ -152,9 +163,9 @@ export function SellerProfilePage() {
                 <Button
                   variant="ghost"
                   onClick={goBack}
-                  className="text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-amber-400"
+                  className="text-gray-600 hover:text-gray-900 hover:bg-transparent dark:text-gray-300 dark:hover:text-white"
                 >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  <ArrowLeft className="size-6 mr-1" strokeWidth={2} />
                   Go back
                 </Button>
               </div>

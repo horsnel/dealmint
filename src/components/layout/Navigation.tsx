@@ -280,7 +280,16 @@ export function Navigation({ user }: NavigationProps) {
                   : 'text-white/90 hover:bg-white/10'
               }`}
             >
-              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {isMobileMenuOpen ? (
+                <span
+                  aria-hidden="true"
+                  className="w-9 h-9 rounded-full bg-gray-100 dark:bg-violet-800 flex items-center justify-center text-gray-600 dark:text-gray-200"
+                >
+                  <X className="w-5 h-5" strokeWidth={2.5} />
+                </span>
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
             </button>
           </div>
         </div>

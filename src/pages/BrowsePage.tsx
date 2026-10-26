@@ -22,9 +22,9 @@ import { categories } from '@/data/mockData';
 import { useApp } from '@/context/AppContext';
 import { ListingCard } from '@/components/common/ListingCard';
 import { EmptyState } from '@/components/common/EmptyState';
-import { matchesCategory, slugify } from '@/lib/categories';
+import { matchesCategory, slugify, typeLabel } from '@/lib/categories';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import type { Listing } from '@/types';
+import type { Listing, ListingType } from '@/types';
 
 const PAGE_SIZE = 12;
 
@@ -61,6 +61,7 @@ export function BrowsePage() {
 
   const q = searchParams.get('q') || '';
   const category = searchParams.get('category') || 'all';
+  const listingType = searchParams.get('type') || 'all';
   const sortBy = searchParams.get('sort') || 'recommended';
   const priceRange = searchParams.get('price') || 'all';
   const where = searchParams.get('where') || 'all';
@@ -94,6 +95,7 @@ export function BrowsePage() {
         l.tags.some((t) => t.toLowerCase().includes(term));
       if (!matchesSearch) return false;
       if (!matchesCategory(l, category)) return false;
+      if (listingType !== 'all' && l.type !== (listingType as ListingType)) return false;
       if (priceRange !== 'all') {
         const [min, max] = priceRanges[priceRange] || [0, Infinity];
         if (l.price < min || l.price >= max) return false;
@@ -107,7 +109,7 @@ export function BrowsePage() {
       return true;
     });
     return sortListings(result, sortBy, (l) => getListingStats(l).rating);
-  }, [listings, q, category, priceRange, where, minRating, sortBy, getListingStats]);
+  }, [listings, q, category, listingType, priceRange, where, minRating, sortBy, getListingStats]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -119,6 +121,7 @@ export function BrowsePage() {
 
   const activeFilterCount =
     Number(category !== 'all') +
+    Number(listingType !== 'all') +
     Number(priceRange !== 'all') +
     Number(where !== 'all') +
     Number(minRating !== 'all') +
@@ -128,6 +131,22 @@ export function BrowsePage() {
 
   const FilterSelects = ({ stacked }: { stacked?: boolean }) => (
     <div className={stacked ? 'space-y-6' : 'flex flex-col lg:flex-row gap-4'}>
+      <div className={stacked ? '' : 'w-full lg:w-40'}>
+        {stacked && <label className="text-sm font-medium dark:text-white mb-2 block">Type</label>}
+        <Select value={listingType} onValueChange={(v) => setParam('type', v)}>
+          <SelectTrigger className="w-full dark:bg-violet-800 dark:border-violet-700">
+            <SelectValue placeholder="Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            {(['gig', 'task', 'job', 'service', 'digital'] as ListingType[]).map((t) => (
+              <SelectItem key={t} value={t}>
+                {typeLabel(t)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       <div className={stacked ? '' : 'w-full lg:w-44'}>
         {stacked && <label className="text-sm font-medium dark:text-white mb-2 block">Category</label>}
         <Select value={category} onValueChange={(v) => setParam('category', v)}>
@@ -269,13 +288,23 @@ export function BrowsePage() {
           {/* Active Filters */}
           {activeFilterCount > 0 && (
             <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t dark:border-violet-700">
-              {category !== 'all' && (
+              {categoryName && (
                 <Badge
                   variant="secondary"
                   className="cursor-pointer dark:bg-violet-800"
                   onClick={() => setParam('category', 'all')}
                 >
                   {categoryName}
+                  <X className="w-3 h-3 ml-1" />
+                </Badge>
+              )}
+              {listingType !== 'all' && (
+                <Badge
+                  variant="secondary"
+                  className="cursor-pointer dark:bg-violet-800"
+                  onClick={() => setParam('type', 'all')}
+                >
+                  {typeLabel(listingType as ListingType)}
                   <X className="w-3 h-3 ml-1" />
                 </Badge>
               )}

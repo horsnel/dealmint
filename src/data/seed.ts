@@ -299,6 +299,24 @@ const demoConversations: Conversation[] = [
       { id: 'm2', senderId: 's3', content: 'Can we reschedule to 3 PM?', createdAt: daysAgo(0, 3) },
     ],
   },
+  {
+    // A message request: a new contact reached out first and Demo User has not replied yet,
+    // so it stays in the Requests tab until they respond.
+    id: 'c4',
+    userId: 'u1',
+    otherId: 's5',
+    otherName: 'Ngozi Templates',
+    otherAvatar: '/images/avatar_kemi.jpg',
+    listingId: '5',
+    listingTitle: 'Notion Budget & Planner Template',
+    demoReplies: true,
+    lastReadAt: daysAgo(2),
+    updatedAt: daysAgo(1),
+    messages: [
+      { id: 'm1', senderId: 's5', content: 'Hello! I saw your data entry gig. Do you also handle Notion template setup?', createdAt: daysAgo(1) },
+      { id: 'm2', senderId: 's5', content: 'I would need about 40 rows migrated into my planner each week.', createdAt: daysAgo(1) },
+    ],
+  },
 ];
 
 function seedOrders(): Order[] {

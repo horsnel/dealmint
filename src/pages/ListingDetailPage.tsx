@@ -82,6 +82,7 @@ export function ListingDetailPage() {
     recordView,
     reportListing,
     getSeller,
+    getSellerResponsiveness,
     replyToReview,
   } = useApp();
 
@@ -128,6 +129,7 @@ export function ListingDetailPage() {
   const stats = getListingStats(listing);
   const reviews = reviewsForListing(listing.id);
   const seller = getSeller(listing.seller.id) || listing.seller;
+  const responsiveness = getSellerResponsiveness(seller.id);
   const isOwner = !!user && listing.seller.id === user.id;
   const isLiked = favourites.includes(listing.id);
   const isNegotiable = listing.priceType === 'negotiable' || listing.type === 'task';
@@ -357,6 +359,12 @@ export function ListingDetailPage() {
                           <span className="text-gray-500 dark:text-gray-400">({seller.reviewCount} reviews)</span>
                         )}
                       </div>
+                      {responsiveness && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5" />
+                          Usually {responsiveness.label.toLowerCase()}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -488,7 +496,7 @@ export function ListingDetailPage() {
                 <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
                   <Calendar className="w-5 h-5" />
                   <span>
-                    {listing.deliveryTime ? `Delivery: ${listing.deliveryTime}` : listing.deadline ? `Needed by ${listing.deadline}` : 'Usually responds within a few hours'}
+                    {listing.deliveryTime ? `Delivery: ${listing.deliveryTime}` : listing.deadline ? `Needed by ${listing.deadline}` : responsiveness ? `Usually ${responsiveness.label.toLowerCase()}` : 'Flexible schedule'}
                   </span>
                 </div>
               </div>
@@ -528,9 +536,9 @@ export function ListingDetailPage() {
                 <Button
                   variant="ghost"
                   onClick={goBack}
-                  className="w-full rounded-full text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-amber-400"
+                  className="w-full rounded-full text-gray-600 hover:text-gray-900 hover:bg-transparent dark:text-gray-300 dark:hover:text-white"
                 >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  <ArrowLeft className="size-6 mr-1" strokeWidth={2} />
                   Go back
                 </Button>
               </div>
@@ -544,6 +552,17 @@ export function ListingDetailPage() {
                   <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                     <CheckCircle className="w-4 h-4 text-green-500" />
                     <span>Verified seller</span>
+                  </div>
+                )}
+                {responsiveness && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                    <Clock className="w-4 h-4 text-violet-500 dark:text-amber-400" />
+                    <span>
+                      Usually {responsiveness.label.toLowerCase()}
+                      {responsiveness.lastActive && (
+                        <span className="text-gray-400 dark:text-gray-500"> · Active {timeAgo(responsiveness.lastActive)}</span>
+                      )}
+                    </span>
                   </div>
                 )}
               </div>

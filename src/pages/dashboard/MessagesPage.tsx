@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Search, Send, MoreVertical, CheckCheck, ArrowLeft, Paperclip, MessageSquare, Ban, User, FileText, X } from 'lucide-react';
+import { Search, Send, MoreVertical, CheckCheck, ArrowLeft, Paperclip, MessageSquare, Ban, User, FileText, X, Inbox, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -55,6 +55,15 @@ function PresenceDot({ online, className = 'w-3 h-3' }: { online: boolean; class
   );
 }
 
+// Quick replies: one-tap openers for common buyer/seller questions
+const quickReplies = [
+  'Is this still available?',
+  'What is your best price?',
+  'Can you deliver today?',
+  'When can you start?',
+  'Thanks, I will confirm shortly.',
+];
+
 /* --------------------------------- component --------------------------------- */
 
 export function MessagesPage() {
@@ -66,6 +75,7 @@ export function MessagesPage() {
   const [newMessage, setNewMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [tab, setTab] = useState<'inbox' | 'requests'>('inbox');
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -78,13 +88,33 @@ export function MessagesPage() {
     }
   }, [params, conversations]);
 
+  const unreadFor = (id: string) => {
+    const c = conversations.find((x) => x.id === id);
+    if (!c || !user) return 0;
+    return c.messages.filter((m) => m.senderId !== user.id && m.createdAt > c.lastReadAt).length;
+  };
+
+  // A message request: a new contact reached out first and you have not replied yet.
+  // Replying accepts the conversation, so it automatically moves to the main inbox.
+  const isRequest = (c: (typeof conversations)[number]) =>
+    !!user &&
+    c.messages.length > 0 &&
+    c.messages[0].senderId === c.otherId &&
+    !c.messages.some((m) => m.senderId === user.id);
+
+  const mainList = conversations.filter((c) => !isRequest(c));
+  const requestList = conversations.filter((c) => isRequest(c));
+  const requestsUnread = requestList.reduce((sum, c) => sum + unreadFor(c.id), 0);
+  const baseList = tab === 'inbox' ? mainList : requestList;
+
   const selected = useMemo(() => {
     if (selectedId) {
       const found = conversations.find((c) => c.id === selectedId);
       if (found) return found;
     }
-    return conversations[0];
-  }, [conversations, selectedId]);
+    return (tab === 'requests' && requestList.length > 0 ? requestList[0] : conversations[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversations, selectedId, tab]);
 
   const lastMessageId = selected?.messages[selected.messages.length - 1]?.id;
 
@@ -95,13 +125,7 @@ export function MessagesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.id, lastMessageId]);
 
-  const unreadFor = (id: string) => {
-    const c = conversations.find((x) => x.id === id);
-    if (!c || !user) return 0;
-    return c.messages.filter((m) => m.senderId !== user.id && m.createdAt > c.lastReadAt).length;
-  };
-
-  const filtered = conversations.filter((c) => {
+  const filtered = baseList.filter((c) => {
     const t = searchQuery.trim().toLowerCase();
     if (!t) return true;
     return (
@@ -176,39 +200,90 @@ export function MessagesPage() {
                 className="pl-9 rounded-full dark:bg-violet-700 dark:border-violet-600"
               />
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
+              type="button"
               aria-label="Close search"
-              className="shrink-0 rounded-full dark:text-gray-300"
+              className="shrink-0 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-violet-700 dark:hover:bg-violet-600 text-gray-600 dark:text-gray-200 flex items-center justify-center transition-colors"
               onClick={() => {
                 setSearchOpen(false);
                 setSearchQuery('');
               }}
             >
-              <X className="w-4 h-4" />
-            </Button>
+              <X className="w-5 h-5" strokeWidth={2.5} />
+            </button>
           </div>
         ) : (
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="font-display font-semibold text-lg text-gray-900 dark:text-white">Messages</h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label="Search conversations"
-              className="rounded-full dark:text-gray-300"
-              onClick={() => setSearchOpen(true)}
-            >
-              <Search className="w-4 h-4" />
-            </Button>
-          </div>
+          <>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-display font-semibold text-lg text-gray-900 dark:text-white">Messages</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Search conversations"
+                className="rounded-full dark:text-gray-300"
+                onClick={() => setSearchOpen(true)}
+              >
+                <Search className="w-4 h-4" />
+              </Button>
+            </div>
+            {/* Inbox / Requests tabs */}
+            <div className="flex items-center gap-5 mt-3" role="tablist" aria-label="Message folders">
+              <button
+                role="tab"
+                aria-selected={tab === 'inbox'}
+                onClick={() => setTab('inbox')}
+                className={`text-sm font-medium pb-1.5 border-b-2 transition-colors ${
+                  tab === 'inbox'
+                    ? 'border-[#6B46C1] text-gray-900 dark:text-white dark:border-amber-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                }`}
+              >
+                Messages
+              </button>
+              <button
+                role="tab"
+                aria-selected={tab === 'requests'}
+                onClick={() => setTab('requests')}
+                className={`text-sm font-medium pb-1.5 border-b-2 transition-colors flex items-center gap-1.5 ${
+                  tab === 'requests'
+                    ? 'border-[#6B46C1] text-gray-900 dark:text-white dark:border-amber-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                }`}
+              >
+                Requests
+                {requestList.length > 0 && (
+                  <span
+                    className={`min-w-5 h-5 px-1.5 rounded-full text-[11px] font-medium flex items-center justify-center ${
+                      requestsUnread > 0
+                        ? 'bg-[#6B46C1] text-white'
+                        : 'bg-gray-100 text-gray-500 dark:bg-violet-700 dark:text-gray-300'
+                    }`}
+                  >
+                    {requestList.length}
+                  </span>
+                )}
+              </button>
+            </div>
+          </>
         )}
       </div>
 
       {/* Conversation list */}
       <div className="flex-1 overflow-y-auto min-h-0">
         {filtered.length === 0 && (
-          <p className="p-6 text-center text-sm text-gray-500 dark:text-gray-400">No conversations match your search</p>
+          <div className="p-6 text-center">
+            {tab === 'requests' && requestList.length === 0 && !searchQuery ? (
+              <>
+                <Inbox className="w-8 h-8 text-gray-300 dark:text-violet-600 mx-auto mb-2" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">No message requests</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                  Messages from people you have never chatted with land here first.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400">No conversations match your search</p>
+            )}
+          </div>
         )}
         {filtered.map((conv) => {
           const unread = unreadFor(conv.id);
@@ -297,9 +372,9 @@ export function MessagesPage() {
                   size="sm"
                   aria-label="Back to conversations"
                   onClick={closeChat}
-                  className="lg:hidden dark:text-gray-300 px-2"
+                  className="lg:hidden px-2 text-gray-600 hover:text-gray-900 hover:bg-transparent dark:text-gray-300 dark:hover:text-white"
                 >
-                  <ArrowLeft className="w-4 h-4" />
+                  <ArrowLeft className="size-6" strokeWidth={2} />
                 </Button>
                 <div className="relative shrink-0">
                   <Avatar className="w-9 h-9">
@@ -396,6 +471,16 @@ export function MessagesPage() {
                 <div ref={bottomRef} />
               </div>
 
+              {/* Message request notice */}
+              {isRequest(selected) && !selected.blocked && (
+                <div className="mx-4 mb-2 flex items-start gap-2 text-xs text-violet-800 dark:text-amber-200 bg-violet-50 dark:bg-violet-900/50 border border-violet-200 dark:border-violet-700 rounded-lg p-2.5 shrink-0">
+                  <Info className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>
+                    <span className="font-semibold">Message request.</span> {selected.otherName} is not in your contacts yet. Reply to accept — the conversation then moves to Messages. You can also block them from the menu above.
+                  </span>
+                </div>
+              )}
+
               {/* Composer */}
               <div className="p-3 border-t dark:border-violet-700 shrink-0">
                 {selected.blocked ? (
@@ -406,6 +491,21 @@ export function MessagesPage() {
                     </button>
                   </p>
                 ) : (
+                  <>
+                  {!newMessage.trim() && (
+                    <div className="flex gap-2 overflow-x-auto pb-2" aria-label="Quick replies">
+                      {quickReplies.map((qr) => (
+                        <button
+                          key={qr}
+                          type="button"
+                          onClick={() => setNewMessage(qr)}
+                          className="shrink-0 text-xs font-medium text-violet-700 dark:text-amber-300 bg-violet-50 dark:bg-violet-900/60 border border-violet-200 dark:border-violet-700 rounded-full px-3 py-1.5 hover:bg-violet-100 dark:hover:bg-violet-800 transition-colors"
+                        >
+                          {qr}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <form onSubmit={handleSend} className="flex items-center gap-2">
                     <input ref={fileRef} type="file" className="hidden" onChange={handleAttach} />
                     <Button
@@ -442,6 +542,7 @@ export function MessagesPage() {
                       <Send className="w-4 h-4" />
                     </Button>
                   </form>
+                  </>
                 )}
               </div>
             </div>

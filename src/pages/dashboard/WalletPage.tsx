@@ -11,6 +11,8 @@ import {
   Trash2,
   ShieldCheck,
   CheckCircle,
+  Eye,
+  EyeOff,
   Landmark,
   Hash,
 } from 'lucide-react';
@@ -78,6 +80,26 @@ export function WalletPage() {
     removePayoutAccount,
   } = useApp();
   const balance = user?.walletBalance ?? 0;
+
+  // Privacy toggle: hide the balance figures on this device (kept per device on purpose)
+  const [hideBalance, setHideBalance] = useState(() => {
+    try {
+      return localStorage.getItem('dealmint_hide_balance') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const toggleHideBalance = () => {
+    setHideBalance((v) => {
+      try {
+        localStorage.setItem('dealmint_hide_balance', String(!v));
+      } catch {
+        // ignore
+      }
+      return !v;
+    });
+  };
+  const maskedBalance = '₦ ••••••';
 
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
@@ -263,13 +285,31 @@ export function WalletPage() {
           <CardContent className="p-8">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div>
-                <p className="text-violet-200 mb-2">Available Balance</p>
-                <h2 className="text-4xl lg:text-5xl font-display font-bold text-white">{formatPrice(balance)}</h2>
+                <div className="flex items-center gap-2 mb-2">
+                  <p className="text-violet-200">Available Balance</p>
+                  <button
+                    type="button"
+                    onClick={toggleHideBalance}
+                    aria-label={hideBalance ? 'Show balance' : 'Hide balance'}
+                    aria-pressed={hideBalance}
+                    className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-violet-100 transition-colors"
+                  >
+                    {hideBalance ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <h2 className="text-4xl lg:text-5xl font-display font-bold text-white">
+                  {hideBalance ? maskedBalance : formatPrice(balance)}
+                </h2>
                 {escrowHeld > 0 && (
-                  <p className="text-violet-200 text-sm mt-2 flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4" />
-                    {formatPrice(escrowHeld)} held in escrow for your open orders
-                  </p>
+                  <div className="mt-3 inline-flex items-center gap-2 bg-white/10 rounded-lg px-3 py-2 max-w-full">
+                    <ShieldCheck className="w-4 h-4 text-amber-300 shrink-0" />
+                    <span className="text-sm text-violet-100 truncate">
+                      <span className="font-semibold text-white">
+                        {hideBalance ? maskedBalance : formatPrice(escrowHeld)}
+                      </span>{' '}
+                      in escrow for your open orders
+                    </span>
+                  </div>
                 )}
               </div>
               <div className="flex gap-3">

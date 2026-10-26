@@ -599,11 +599,11 @@ export function ListingForm({ type, listing }: Props) {
               <div className="flex flex-col sm:flex-row gap-3 pt-4">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => navigate(-1)}
-                  className="flex-1 dark:border-violet-600 dark:text-white"
+                  className="flex-1 text-gray-600 hover:text-gray-900 hover:bg-transparent dark:text-gray-300 dark:hover:text-white"
                 >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  <ArrowLeft className="size-6 mr-1" strokeWidth={2} />
                   Back
                 </Button>
                 <Button
