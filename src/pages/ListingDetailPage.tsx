@@ -570,14 +570,14 @@ export function ListingDetailPage() {
               <div className="flex items-center justify-center gap-4 mt-6">
                 <button
                   onClick={handleLike}
-                  className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-amber-400"
+                  className="flex items-center gap-2 py-2.5 -my-2.5 px-2 -mx-2 text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-amber-400"
                 >
                   <Heart className={`w-5 h-5 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
                   <span className="text-sm">{isLiked ? 'Saved' : 'Save'}</span>
                 </button>
                 <button
                   onClick={handleShare}
-                  className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-amber-400"
+                  className="flex items-center gap-2 py-2.5 -my-2.5 px-2 -mx-2 text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-amber-400"
                 >
                   <Share2 className="w-5 h-5" />
                   <span className="text-sm">Share</span>
@@ -585,7 +585,7 @@ export function ListingDetailPage() {
                 {!isOwner && (
                   <button
                     onClick={() => (user ? setReportOpen(true) : requireLogin())}
-                    className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-red-600"
+                    className="flex items-center gap-2 py-2.5 -my-2.5 px-2 -mx-2 text-gray-600 dark:text-gray-300 hover:text-red-600"
                   >
                     <Flag className="w-5 h-5" />
                     <span className="text-sm">Report</span>

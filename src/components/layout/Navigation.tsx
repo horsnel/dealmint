@@ -304,7 +304,7 @@ export function Navigation({ user }: NavigationProps) {
                 key={link.name}
                 to={link.href}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="block text-gray-700 dark:text-gray-200 hover:text-violet-600 dark:hover:text-amber-400 font-medium"
+                className="block py-2 text-gray-700 dark:text-gray-200 hover:text-violet-600 dark:hover:text-amber-400 font-medium"
               >
                 {link.name}
               </Link>

@@ -26,7 +26,7 @@ export function Logo({ href = '/', size = 'md', tone = 'auto' }: LogoProps) {
     <Link
       to={href}
       aria-label="Dealmint home"
-      className={`inline-flex items-center transition-opacity duration-200 hover:opacity-80 ${
+      className={`inline-flex items-center py-2.5 -my-2.5 transition-opacity duration-200 hover:opacity-80 ${
         isLg ? 'gap-2.5' : 'gap-2'
       }`}
     >

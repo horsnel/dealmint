@@ -71,7 +71,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
           )}
         </div>
 
-        <Link to={`/listing/${listing.id}`}>
+        <Link to={`/listing/${listing.id}`} className="inline-block py-1.5 -my-1.5">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 hover:text-violet-600 dark:hover:text-amber-400 transition-colors">
             {listing.title}
           </h3>

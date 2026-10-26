@@ -97,7 +97,7 @@ export function Footer() {
                 <li key={link.name}>
                   <Link
                     to={link.href}
-                    className="text-sm text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-amber-400 transition-colors"
+                    className="inline-block py-1.5 -my-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-amber-400 transition-colors"
                   >
                     {link.name}
                   </Link>
@@ -116,7 +116,7 @@ export function Footer() {
                 <li key={link.name}>
                   <Link
                     to={link.href}
-                    className="text-sm text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-amber-400 transition-colors"
+                    className="inline-block py-1.5 -my-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-amber-400 transition-colors"
                   >
                     {link.name}
                   </Link>
@@ -135,7 +135,7 @@ export function Footer() {
                 <li key={link.name}>
                   <Link
                     to={link.href}
-                    className="text-sm text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-amber-400 transition-colors"
+                    className="inline-block py-1.5 -my-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-amber-400 transition-colors"
                   >
                     {link.name}
                   </Link>
@@ -154,7 +154,7 @@ export function Footer() {
                 <li key={link.name}>
                   <Link
                     to={link.href}
-                    className="text-sm text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-amber-400 transition-colors"
+                    className="inline-block py-1.5 -my-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-amber-400 transition-colors"
                   >
                     {link.name}
                   </Link>

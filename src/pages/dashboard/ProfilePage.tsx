@@ -412,7 +412,7 @@ export function ProfilePage() {
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-6">
               Want to change your password or privacy options?{' '}
-              <Link to="/dashboard/settings" className="text-violet-600 dark:text-amber-400 underline">
+              <Link to="/dashboard/settings" className="inline-block py-2.5 -my-2.5 text-violet-600 dark:text-amber-400 underline">
                 Open Settings
               </Link>
             </p>

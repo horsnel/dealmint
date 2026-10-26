@@ -292,7 +292,7 @@ export function WalletPage() {
                     onClick={toggleHideBalance}
                     aria-label={hideBalance ? 'Show balance' : 'Hide balance'}
                     aria-pressed={hideBalance}
-                    className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-violet-100 transition-colors"
+                    className="p-2 -m-0.5 rounded-full bg-white/10 hover:bg-white/20 text-violet-100 transition-colors"
                   >
                     {hideBalance ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -414,7 +414,7 @@ export function WalletPage() {
                               removePayoutAccount(a.id);
                               toast.success('Payout account removed');
                             }}
-                            className="text-gray-400 hover:text-red-500"
+                            className="p-2.5 -m-2.5 text-gray-400 hover:text-red-500"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -463,7 +463,7 @@ export function WalletPage() {
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
                   Your rate: {user?.role === 'student' ? '10% (student)' : '15% (general)'}.{' '}
                   {user?.role !== 'student' && (
-                    <Link to="/dashboard/profile" className="text-violet-600 dark:text-amber-400 underline">
+                    <Link to="/dashboard/profile" className="inline-block py-2.5 -my-2.5 text-violet-600 dark:text-amber-400 underline">
                       Verify as a student
                     </Link>
                   )}

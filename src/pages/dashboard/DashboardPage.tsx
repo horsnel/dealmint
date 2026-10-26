@@ -130,7 +130,7 @@ export function DashboardPage() {
             <Card className="mt-6 dark:bg-violet-800 dark:border-violet-700">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-gray-900 dark:text-white">Recent Activity</CardTitle>
-                <Link to="/dashboard/notifications" className="text-sm text-violet-600 dark:text-amber-400 hover:underline">
+                <Link to="/dashboard/notifications" className="inline-block py-2.5 -my-2.5 text-sm text-violet-600 dark:text-amber-400 hover:underline">
                   View all
                 </Link>
               </CardHeader>
@@ -216,7 +216,7 @@ export function DashboardPage() {
                       {item.ok ? (
                         <span className="text-sm text-green-500">{item.status}</span>
                       ) : (
-                        <Link to={item.href} className="text-sm text-amber-500 hover:underline">
+                        <Link to={item.href} className="inline-block py-2.5 -my-2.5 text-sm text-amber-500 hover:underline">
                           {item.status}
                         </Link>
                       )}
@@ -239,7 +239,7 @@ export function DashboardPage() {
                     : 'You are all caught up'}
                 </p>
                 <Link to="/dashboard/notifications">
-                  <Button variant="link" className="p-0 h-auto text-violet-600 dark:text-amber-400">
+                  <Button variant="link" className="p-0 h-auto py-2.5 -my-2.5 px-1 -mx-1 text-violet-600 dark:text-amber-400">
                     View all
                     <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>

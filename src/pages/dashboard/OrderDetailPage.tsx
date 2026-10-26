@@ -300,7 +300,7 @@ export function OrderDetailPage() {
               <div className="min-w-0">
                 <p className="text-xs text-gray-500 dark:text-gray-400">{typeLabel(order.listingType)} · Order #{order.id.slice(-6).toUpperCase()}</p>
                 {listing ? (
-                  <Link to={`/listing/${listing.id}`} className="font-semibold text-gray-900 dark:text-white hover:text-violet-600 dark:hover:text-amber-400 line-clamp-2">
+                  <Link to={`/listing/${listing.id}`} className="inline-block py-1.5 -my-1.5 font-semibold text-gray-900 dark:text-white hover:text-violet-600 dark:hover:text-amber-400 line-clamp-2">
                     {order.listingTitle}
                   </Link>
                 ) : (
@@ -308,7 +308,7 @@ export function OrderDetailPage() {
                 )}
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   {isBuyer ? 'Seller' : 'Buyer'}:{' '}
-                  <Link to={`/seller/${other.id}`} className="hover:underline">
+                  <Link to={`/seller/${other.id}`} className="inline-block py-2 -my-2 hover:underline">
                     {other.name}
                   </Link>
                 </p>
