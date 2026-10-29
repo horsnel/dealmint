@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
+import { NotificationDrawer } from '@/components/notifications/NotificationDrawer';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -35,6 +36,7 @@ interface NavigationProps {
 export function Navigation({ user }: NavigationProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, unreadMessages, unreadNotifications } = useApp();
@@ -141,10 +143,12 @@ export function Navigation({ user }: NavigationProps) {
           <div className="hidden lg:flex items-center space-x-4">
             {user ? (
               <>
-                {/* Notifications */}
-                <Link
-                  to="/dashboard/notifications"
+                {/* Notifications — quiet drawer, not a page jump */}
+                <button
+                  type="button"
+                  onClick={() => setNotifOpen(true)}
                   aria-label={`Notifications${unreadNotifications ? `, ${unreadNotifications} unread` : ''}`}
+                  aria-haspopup="dialog"
                   className={`relative p-2 rounded-full transition-colors ${
                     isScrolled || !isLandingPage
                       ? 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-violet-800'
@@ -153,7 +157,7 @@ export function Navigation({ user }: NavigationProps) {
                 >
                   <Bell className="w-5 h-5" />
                   <Badge count={unreadNotifications} />
-                </Link>
+                </button>
 
                 {/* Messages */}
                 <Link
@@ -331,14 +335,17 @@ export function Navigation({ user }: NavigationProps) {
                   <MessageSquare className="w-4 h-4" />
                   Messages{unreadMessages > 0 ? ` (${unreadMessages})` : ''}
                 </Link>
-                <Link
-                  to="/dashboard/notifications"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-2 py-2 text-gray-700 dark:text-gray-200"
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    setNotifOpen(true);
+                  }}
+                  className="flex items-center gap-2 py-2 w-full text-gray-700 dark:text-gray-200"
                 >
                   <Bell className="w-4 h-4" />
                   Notifications{unreadNotifications > 0 ? ` (${unreadNotifications})` : ''}
-                </Link>
+                </button>
                 <Link
                   to="/dashboard/favourites"
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -377,6 +384,9 @@ export function Navigation({ user }: NavigationProps) {
           </div>
         </div>
       )}
+
+      {/* Quiet notification drawer — bottom sheet on mobile, side panel on desktop */}
+      <NotificationDrawer open={notifOpen} onOpenChange={setNotifOpen} />
     </header>
   );
 }

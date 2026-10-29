@@ -14,7 +14,6 @@ import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ChatLock } from '@/components/chat/ChatLock';
-import { Logo } from '@/components/common/Logo';
 import { formatBytes, formatPrice, formatTime } from '@/lib/format';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
@@ -378,24 +377,9 @@ export function MessagesPage() {
 
   return (
     <div className="h-[100dvh] flex flex-col bg-lavender dark:bg-violet-950">
-      {/* Slim dedicated header — the inbox hides the global nav and runs
-          chat-app style: brand logo on the left, account avatar on the right */}
-      <header className="shrink-0 h-14 lg:h-16 bg-white dark:bg-violet-900 border-b border-gray-200 dark:border-violet-700 flex items-center justify-between px-4 sm:px-6 z-10">
-        <Logo />
-        <Link
-          to="/dashboard"
-          aria-label="Go to dashboard"
-          className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2"
-        >
-          <img
-            src={user?.avatar || '/images/avatar_default.jpg'}
-            alt={user?.name || 'Account'}
-            className="w-8 h-8 lg:w-9 lg:h-9 rounded-full object-cover border-2 border-amber-500"
-          />
-        </Link>
-      </header>
-
-      <div className="flex-1 min-h-0 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 flex">
+      {/* Distraction-free inbox — the page is only the conversation sidebar
+          (with its "Messages" title) and the chat pane; no top bar at all */}
+      <div className="flex-1 min-h-0 max-w-7xl mx-auto w-full px-0 sm:px-6 lg:px-8 py-0 sm:py-4 flex">
         {conversations.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="card-white dark:bg-violet-800 dark:border-violet-700 w-full max-w-md">
@@ -413,7 +397,7 @@ export function MessagesPage() {
           </div>
         ) : (
         <div
-          className="card-white dark:bg-violet-800 dark:border-violet-700 overflow-hidden flex flex-1 min-h-0"
+          className="card-white rounded-none border-0 shadow-none sm:rounded-2xl sm:border sm:shadow-card dark:bg-violet-800 dark:border-violet-700 overflow-hidden flex flex-1 min-h-0"
         >
           {listPane}
 
