@@ -184,7 +184,7 @@ interface AppContextValue {
 
   // safe spots
   safeSpots: SafeSpot[];
-  submitSafeSpot: (input: { name: string; type: SafeSpotType; address: string; city: string }) => Result;
+  submitSafeSpot: (input: { name: string; type: SafeSpotType; address: string; city: string; lat?: number; lng?: number }) => Result;
 
   // referrals
   myReferralCode: string;
@@ -1394,6 +1394,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       type: input.type,
       address: input.address.trim(),
       city: input.city,
+      lat: input.lat,
+      lng: input.lng,
       isApproved: false,
       submittedById: sessionId,
       createdAt: nowIso(),

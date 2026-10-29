@@ -207,3 +207,162 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------- Safe Spots live map (Leaflet) ---------- */
+
+.leaflet-container {
+  font-family: inherit;
+  background: #ede9fe;
+}
+
+.dark .leaflet-container {
+  background: #1e1033;
+}
+
+/* Dark mode: invert the OSM tiles into a deep violet-tinted night map.
+   Markers/popups live in other panes and are untouched. */
+.dark .leaflet-tile-pane .leaflet-tile {
+  filter: invert(1) hue-rotate(190deg) brightness(0.92) contrast(0.92) saturate(0.75);
+}
+
+/* Brand pins */
+.ss-marker-wrap {
+  background: transparent;
+  border: none;
+}
+
+.ss-marker {
+  filter: drop-shadow(0 2px 3px rgb(46 16 101 / 0.4));
+  transition: transform 150ms ease;
+}
+
+.ss-marker:hover {
+  transform: scale(1.08);
+}
+
+/* Visitor position: amber dot with a soft pulse */
+.ss-user-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #fbbf24;
+  border: 3px solid #ffffff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+  animation: ss-pulse 2.2s ease-out infinite;
+}
+
+@keyframes ss-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(251 191 36 / 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgb(251 191 36 / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(251 191 36 / 0);
+  }
+}
+
+/* Popups */
+.leaflet-popup-content-wrapper {
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgb(91 58 168 / 0.28);
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px;
+  line-height: 1.45;
+}
+
+.ss-popup {
+  min-width: 168px;
+}
+
+.ss-popup__name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.ss-popup__meta {
+  font-size: 11px;
+  color: #5b3aa8;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.ss-popup__addr {
+  font-size: 12px;
+  color: #4b5563;
+  margin-top: 4px;
+}
+
+.ss-popup__dir {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #5b3aa8;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.dark .leaflet-popup-content-wrapper,
+.dark .leaflet-popup-tip {
+  background: #2e1065;
+  color: #ede9fe;
+}
+
+.dark .ss-popup__name {
+  color: #ffffff;
+}
+
+.dark .ss-popup__meta {
+  color: #c4b5fd;
+}
+
+.dark .ss-popup__addr {
+  color: #ddd6fe;
+}
+
+.dark .ss-popup__dir {
+  color: #fbbf24;
+}
+
+/* Controls + attribution */
+.dark .leaflet-bar a,
+.dark .leaflet-bar a:hover {
+  background: #2e1065;
+  color: #ede9fe;
+  border-bottom-color: #5b21b6;
+}
+
+.dark .leaflet-bar a:hover {
+  background: #3b1a7a;
+}
+
+.leaflet-control-attribution {
+  font-size: 10px;
+  border-radius: 6px 0 0 0;
+}
+
+.dark .leaflet-control-attribution {
+  background: rgb(30 16 51 / 0.85);
+  color: #a78bfa;
+}
+
+.dark .leaflet-control-attribution a {
+  color: #c4b5fd;
+}
+
+/* Picker cursor hint */
+.ss-picker {
+  cursor: crosshair;
+}
+
+/* Rounded corners clip everything inside the map frame */
+.ss-map-frame .leaflet-container {
+  border-radius: 1rem;
+}

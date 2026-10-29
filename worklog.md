@@ -89,3 +89,50 @@ searches and one price alert.
 ### Deploy
 - Commit on this branch; push to GitHub main (triggers Vercel).
 - Cloudflare Pages: `wrangler pages deploy dist --project-name=dealmint`.
+
+## 2026-10-29 — Safe Spots live map (Leaflet + OpenStreetMap)
+
+Makes the Safe Spots promise real: every spot is now pinned on an
+interactive, real-geography map. AI features remain on hold per decision.
+
+### What shipped
+- **Leaflet map on /safe-spots** (`SafeSpotsMap` component, plain Leaflet +
+  OpenStreetMap raster tiles — no API key, `scrollWheelZoom` off, zoom
+  control bottom-left so popups never overlap it).
+- **Brand pins**: violet teardrop divIcon with white check; visitor position
+  rendered as a pulsing amber dot with a violet accuracy circle.
+- **City framing**: filtering by city fit-bounds to that city's pins; "All
+  cities" frames the whole country; cities without pins (Benin City, Kano)
+  center on the city with the empty state below.
+- **"Near me"** button (geolocation): flies to the user, drops the amber dot,
+  and cards gain haversine distance chips ("2.4 km away"). Graceful error
+  toast when permission is denied.
+- **Popups**: name, type, city, address and a Google Maps "Get directions"
+  deep link. List cards got "View on map" (fly + open popup after the flight
+  lands) and "Directions" actions.
+- **Map picker in the suggest dialog**: tap to drop the pin (required),
+  city switch re-centers and resets the pin; coordinates stored on the spot.
+- **Dark mode**: OSM tiles inverted via CSS filter into a violet-tinted night
+  map; popups/controls re-themed dark. Tile provider stays keyless.
+- **Seed coordinates**: 10 seeded spots pinned to real Lagos/Abuja/PH/Ibadan
+  locations (ss7 renamed "Nike Lake Resort Cafe" → "Genesis Restaurant GRA"
+  since Nike Lake is Enugu, not PH).
+
+### DB migration
+`DB_VERSION` 2 → 3: existing spots get coordinates backfilled by seed id;
+user-submitted spots created before this release keep working in the list
+(pins appear for new submissions).
+
+### Verification
+- `tsc --noEmit` clean; production build clean (Leaflet code-split into the
+  lazy SafeSpotsPage chunk, ~50 kB gzip; main bundle unchanged).
+- Mobile 390×844 + desktop 1280×800: zero horizontal overflow.
+- Interactive checks in-browser: pin popup + directions link, Lagos/Kano
+  framing, near-me success + error paths, distance chips, view-on-map focus,
+  full suggest flow (pin drop → submit → 6s auto-approval → pin live +
+  notification), all in light and dark.
+- No new back buttons; PostFab, Requests flow, wallet and theme behavior
+  untouched.
+
+### Deploy
+- Push to GitHub main (triggers Vercel); Cloudflare Pages wrangler deploy.

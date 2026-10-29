@@ -40,7 +40,7 @@ export interface DB {
   referrals: Referral[];
 }
 
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 export const DEMO_EMAIL = 'demo@dealmint.ng';
 export const DEMO_PASSWORD = 'Demo1234';
 
@@ -417,16 +417,16 @@ function seedEscrowLedger(): import('@/types').EscrowRecord[] {
 function seedSafeSpots(): SafeSpot[] {
   const at = (d: number) => daysAgo(d);
   return [
-    { id: 'ss1', name: 'Ikeja Police Division', type: 'police_station', address: '2 Obafemi Awolowo Way, Allen Avenue', city: 'Lagos', isApproved: true, createdAt: at(30) },
-    { id: 'ss2', name: 'Ikeja City Mall', type: 'mall', address: 'Obafemi Awolowo Way, Alausa', city: 'Lagos', isApproved: true, createdAt: at(28) },
-    { id: 'ss3', name: 'GTBank Lekki Phase 1', type: 'bank', address: 'Admiralty Way, Lekki Phase 1', city: 'Lagos', isApproved: true, createdAt: at(25) },
-    { id: 'ss4', name: 'Cafe Neo Victoria Island', type: 'restaurant', address: '24 Akin Adesola Street', city: 'Lagos', isApproved: true, createdAt: at(21) },
-    { id: 'ss5', name: 'Wuse II Police Station', type: 'police_station', address: 'Aminu Kano Crescent, Wuse II', city: 'Abuja', isApproved: true, createdAt: at(20) },
-    { id: 'ss6', name: 'Jabi Lake Mall', type: 'mall', address: 'Bala Sokoto Way, Jabi', city: 'Abuja', isApproved: true, createdAt: at(18) },
-    { id: 'ss7', name: 'Nike Lake Resort Cafe', type: 'restaurant', address: 'Nike Lake Road, Trans-Ekulu', city: 'Port Harcourt', isApproved: true, createdAt: at(15) },
-    { id: 'ss8', name: 'Port Harcourt Main Library', type: 'library', address: '4 Birabi Street, GRA', city: 'Port Harcourt', isApproved: true, createdAt: at(12) },
-    { id: 'ss9', name: 'Heritage Mall Ibadan', type: 'mall', address: 'Dugbe Market Area', city: 'Ibadan', isApproved: true, createdAt: at(10) },
-    { id: 'ss10', name: 'First Bank Bodija', type: 'bank', address: 'Onireke GRA, Bodija', city: 'Ibadan', isApproved: true, createdAt: at(8) },
+    { id: 'ss1', name: 'Ikeja Police Division', type: 'police_station', address: '2 Obafemi Awolowo Way, Allen Avenue', city: 'Lagos', lat: 6.5966, lng: 3.3478, isApproved: true, createdAt: at(30) },
+    { id: 'ss2', name: 'Ikeja City Mall', type: 'mall', address: 'Obafemi Awolowo Way, Alausa', city: 'Lagos', lat: 6.6134, lng: 3.3585, isApproved: true, createdAt: at(28) },
+    { id: 'ss3', name: 'GTBank Lekki Phase 1', type: 'bank', address: 'Admiralty Way, Lekki Phase 1', city: 'Lagos', lat: 6.4459, lng: 3.4708, isApproved: true, createdAt: at(25) },
+    { id: 'ss4', name: 'Cafe Neo Victoria Island', type: 'restaurant', address: '24 Akin Adesola Street', city: 'Lagos', lat: 6.4284, lng: 3.4245, isApproved: true, createdAt: at(21) },
+    { id: 'ss5', name: 'Wuse II Police Station', type: 'police_station', address: 'Aminu Kano Crescent, Wuse II', city: 'Abuja', lat: 9.0778, lng: 7.4703, isApproved: true, createdAt: at(20) },
+    { id: 'ss6', name: 'Jabi Lake Mall', type: 'mall', address: 'Bala Sokoto Way, Jabi', city: 'Abuja', lat: 9.0797, lng: 7.4091, isApproved: true, createdAt: at(18) },
+    { id: 'ss7', name: 'Genesis Restaurant GRA', type: 'restaurant', address: 'Tombia Street, GRA Phase 2', city: 'Port Harcourt', lat: 4.816, lng: 7.017, isApproved: true, createdAt: at(15) },
+    { id: 'ss8', name: 'Port Harcourt Main Library', type: 'library', address: '4 Birabi Street, GRA', city: 'Port Harcourt', lat: 4.8172, lng: 7.0305, isApproved: true, createdAt: at(12) },
+    { id: 'ss9', name: 'Heritage Mall Ibadan', type: 'mall', address: 'Dugbe Market Area', city: 'Ibadan', lat: 7.3778, lng: 3.8944, isApproved: true, createdAt: at(10) },
+    { id: 'ss10', name: 'First Bank Bodija', type: 'bank', address: 'Onireke GRA, Bodija', city: 'Ibadan', lat: 7.4262, lng: 3.9078, isApproved: true, createdAt: at(8) },
   ];
 }
 
@@ -515,7 +515,14 @@ export function migrateDB(prev: DB): DB {
     escrowLedger: prev.escrowLedger || fresh.escrowLedger,
     savedSearches: prev.savedSearches || [],
     priceAlerts: prev.priceAlerts || [],
-    safeSpots: prev.safeSpots && prev.safeSpots.length > 0 ? prev.safeSpots : fresh.safeSpots,
+    // v3: backfill map coordinates onto existing spots by seed id
+    safeSpots:
+      prev.safeSpots && prev.safeSpots.length > 0
+        ? prev.safeSpots.map((s) => {
+            const match = fresh.safeSpots.find((x) => x.id === s.id);
+            return match?.lat != null && s.lat == null ? { ...s, lat: match.lat, lng: match.lng } : s;
+          })
+        : fresh.safeSpots,
     referrals: prev.referrals || [],
   };
 }

@@ -1,15 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ShieldCheck,
   Building2,
-  Landmark,
-  UtensilsCrossed,
-  BookOpen,
+  Check,
+  LocateFixed,
   MapPin,
-  Plus,
-  ShoppingBag,
   MapPinned,
+  Navigation,
+  Plus,
+  ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,28 +33,27 @@ import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
 import { EmptyState } from '@/components/common/EmptyState';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { SafeSpotsMap } from '@/components/safe-spots/SafeSpotsMap';
+import { directionsUrl, formatDistance, haversineKm, type LatLng } from '@/lib/safe-spots';
+import { spotCities, spotTypeMeta } from '@/pages/SafeSpotsPage.meta';
 import type { SafeSpotType } from '@/types';
-
-const spotTypes: { value: SafeSpotType; label: string; icon: typeof ShieldCheck }[] = [
-  { value: 'police_station', label: 'Police station', icon: ShieldCheck },
-  { value: 'mall', label: 'Shopping mall', icon: ShoppingBag },
-  { value: 'bank', label: 'Bank', icon: Landmark },
-  { value: 'restaurant', label: 'Restaurant / cafe', icon: UtensilsCrossed },
-  { value: 'library', label: 'Library', icon: BookOpen },
-];
-
-const cities = ['Lagos', 'Abuja', 'Port Harcourt', 'Ibadan', 'Benin City', 'Kano'];
 
 export function SafeSpotsPage() {
   usePageTitle('Safe Spots');
   const navigate = useNavigate();
-  const { user, safeSpots, submitSafeSpot } = useApp();
+  const { user, safeSpots, submitSafeSpot, isDarkMode } = useApp();
   const [city, setCity] = useState<string>('all');
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [type, setType] = useState<SafeSpotType | ''>('');
   const [address, setAddress] = useState('');
   const [spotCity, setSpotCity] = useState('Lagos');
+  const [picked, setPicked] = useState<LatLng | null>(null);
+  const [userPos, setUserPos] = useState<LatLng | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [focusSpotId, setFocusSpotId] = useState<string | null>(null);
+  const [focusNonce, setFocusNonce] = useState(0);
+  const mapSectionRef = useRef<HTMLDivElement | null>(null);
 
   const cityCounts = useMemo(() => {
     const approved = safeSpots.filter((s) => s.isApproved);
@@ -72,6 +70,50 @@ export function SafeSpotsPage() {
   const approved = filtered.filter((s) => s.isApproved);
   const pending = filtered.filter((s) => !s.isApproved && s.submittedById === user?.id);
 
+  // Distance from the visitor to every spot, once location is shared.
+  const distances = useMemo(() => {
+    const map = new Map<string, number>();
+    if (userPos) {
+      approved.forEach((s) => {
+        if (s.lat != null && s.lng != null) {
+          map.set(s.id, haversineKm(userPos, { lat: s.lat, lng: s.lng }));
+        }
+      });
+    }
+    return map;
+  }, [approved, userPos]);
+
+  const focusSpot = (id: string) => {
+    setFocusSpotId(id);
+    setFocusNonce((n) => n + 1);
+    mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
+  const handleLocate = () => {
+    if (!('geolocation' in navigator)) {
+      toast.error('Location is not supported on this browser.');
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocating(false);
+        setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        toast.success('Showing safe spots near you.');
+      },
+      () => {
+        setLocating(false);
+        toast.error('Could not get your location. Please allow location access and try again.');
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+    );
+  };
+
+  const openDialog = () => {
+    setPicked(null);
+    setOpen(true);
+  };
+
   const handleSubmit = () => {
     if (!user) {
       toast.info('Log in to suggest a safe spot', {
@@ -80,12 +122,14 @@ export function SafeSpotsPage() {
       return;
     }
     if (!type) return void toast.error('Choose the type of spot');
-    const res = submitSafeSpot({ name, type, address, city: spotCity });
+    if (!picked) return void toast.error('Drop the pin on the map first.');
+    const res = submitSafeSpot({ name, type, address, city: spotCity, lat: picked.lat, lng: picked.lng });
     if (!res.ok) return void toast.error(res.error);
     setOpen(false);
     setName('');
     setType('');
     setAddress('');
+    setPicked(null);
     toast.success('Thanks! Your suggestion is pending a quick safety review.');
   };
 
@@ -108,7 +152,7 @@ export function SafeSpotsPage() {
         </div>
 
         {/* City filter */}
-        <div className="flex flex-wrap gap-2 mb-8" role="group" aria-label="Filter by city">
+        <div className="flex flex-wrap gap-2 mb-6" role="group" aria-label="Filter by city">
           <button
             type="button"
             onClick={() => setCity('all')}
@@ -121,7 +165,7 @@ export function SafeSpotsPage() {
           >
             All cities
           </button>
-          {cities.map((c) => (
+          {spotCities.map((c) => (
             <button
               key={c}
               type="button"
@@ -138,6 +182,34 @@ export function SafeSpotsPage() {
           ))}
         </div>
 
+        {/* Live map */}
+        <div ref={mapSectionRef} className="mb-8 scroll-mt-24">
+          <div className="relative z-0 ss-map-frame h-[320px] sm:h-[420px] rounded-2xl overflow-hidden border border-gray-200 dark:border-violet-700 shadow-card">
+            <SafeSpotsMap
+              spots={approved}
+              city={city}
+              dark={isDarkMode}
+              userPos={userPos}
+              focusSpotId={focusSpotId}
+              focusNonce={focusNonce}
+            />
+            <button
+              type="button"
+              onClick={handleLocate}
+              disabled={locating}
+              aria-label="Show safe spots near me"
+              className="absolute right-3 top-3 z-[1001] inline-flex items-center gap-2 rounded-full bg-white dark:bg-violet-800 pl-3 pr-4 py-2 text-sm font-semibold text-violet-700 dark:text-white shadow-lg border border-gray-200 dark:border-violet-600 hover:bg-violet-50 dark:hover:bg-violet-700 transition-colors disabled:opacity-60"
+            >
+              <LocateFixed className={`w-4 h-4 ${locating ? 'animate-spin' : ''}`} />
+              <span>{locating ? 'Locating…' : 'Near me'}</span>
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5 shrink-0" />
+            Tap a pin for directions — or pick a spot below to see it on the map.
+          </p>
+        </div>
+
         {/* Spots grid */}
         {approved.length === 0 && pending.length === 0 ? (
           <EmptyState
@@ -145,7 +217,7 @@ export function SafeSpotsPage() {
             title="No safe spots here yet"
             description="Be the first to suggest a safe meeting place in this city."
             action={
-              <Button onClick={() => setOpen(true)} className="bg-violet-600 hover:bg-violet-700">
+              <Button onClick={() => (user ? openDialog() : navigate('/login', { state: { from: '/safe-spots' } }))} className="bg-violet-600 hover:bg-violet-700">
                 <Plus className="w-4 h-4 mr-2" />
                 Suggest a spot
               </Button>
@@ -155,10 +227,12 @@ export function SafeSpotsPage() {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {approved.map((spot) => {
-                const meta = spotTypes.find((t) => t.value === spot.type);
+                const meta = spotTypeMeta.find((t) => t.value === spot.type);
                 const Icon = meta?.icon || MapPin;
+                const dist = distances.get(spot.id);
+                const pinnable = spot.lat != null && spot.lng != null;
                 return (
-                  <div key={spot.id} className="card-white dark:bg-violet-800 dark:border-violet-700 p-5">
+                  <div key={spot.id} className="card-white dark:bg-violet-800 dark:border-violet-700 p-5 flex flex-col">
                     <div className="flex items-start gap-4">
                       <div className="w-11 h-11 rounded-full bg-violet-100 dark:bg-violet-700 flex items-center justify-center shrink-0">
                         <Icon className="w-5 h-5 text-violet-600 dark:text-amber-400" />
@@ -174,12 +248,41 @@ export function SafeSpotsPage() {
                           <Badge variant="secondary" className="dark:bg-violet-700 dark:text-gray-200">
                             {spot.city}
                           </Badge>
+                          {dist != null && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-violet-700 dark:text-amber-300 bg-violet-50 dark:bg-violet-900/40 rounded-full px-2 py-0.5">
+                              <Navigation className="w-3 h-3 shrink-0" />
+                              {formatDistance(dist)}
+                            </span>
+                          )}
                           <span className="inline-flex items-center gap-1 text-[11px] font-medium text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/30 rounded-full px-2 py-0.5">
-                            <ShieldCheck className="w-3 h-3" />
+                            <ShieldCheck className="w-3 h-3 shrink-0" />
                             Community verified
                           </span>
                         </div>
                       </div>
+                    </div>
+                    <div className="flex items-center gap-5 mt-4 pt-3 border-t border-gray-100 dark:border-violet-700">
+                      {pinnable && (
+                        <button
+                          type="button"
+                          onClick={() => focusSpot(spot.id)}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-600 dark:text-amber-400 hover:underline underline-offset-2"
+                        >
+                          <MapPinned className="w-3.5 h-3.5 shrink-0" />
+                          View on map
+                        </button>
+                      )}
+                      {pinnable && (
+                        <a
+                          href={directionsUrl({ lat: spot.lat!, lng: spot.lng! })}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-600 dark:text-amber-400 hover:underline underline-offset-2"
+                        >
+                          <Navigation className="w-3.5 h-3.5 shrink-0" />
+                          Directions
+                        </a>
+                      )}
                     </div>
                   </div>
                 );
@@ -205,7 +308,7 @@ export function SafeSpotsPage() {
                         </p>
                       </div>
                       <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 rounded-full px-2.5 py-1">
-                        <Building2 className="w-3 h-3" />
+                        <Building2 className="w-3 h-3 shrink-0" />
                         Pending approval
                       </span>
                     </div>
@@ -224,7 +327,7 @@ export function SafeSpotsPage() {
               Suggest it and help the community trade safely. Our team reviews every submission.
             </p>
           </div>
-          <Button onClick={() => (user ? setOpen(true) : navigate('/login', { state: { from: '/safe-spots' } }))} className="bg-violet-600 hover:bg-violet-700 shrink-0">
+          <Button onClick={() => (user ? openDialog() : navigate('/login', { state: { from: '/safe-spots' } }))} className="bg-violet-600 hover:bg-violet-700 shrink-0">
             <Plus className="w-4 h-4 mr-2" />
             Suggest a spot
           </Button>
@@ -232,8 +335,8 @@ export function SafeSpotsPage() {
       </div>
 
       {/* Suggest dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="dark:bg-violet-900 dark:border-violet-700">
+      <Dialog open={open} onOpenChange={(v) => (v ? openDialog() : setOpen(false))}>
+        <DialogContent className="dark:bg-violet-900 dark:border-violet-700 max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="dark:text-white">Suggest a safe spot</DialogTitle>
             <DialogDescription className="dark:text-gray-300">
@@ -262,9 +365,30 @@ export function SafeSpotsPage() {
                   <SelectValue placeholder="Choose a type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {spotTypes.map((t) => (
+                  {spotTypeMeta.map((t) => (
                     <SelectItem key={t.value} value={t.value}>
                       {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="dark:text-gray-200">City</Label>
+              <Select
+                value={spotCity}
+                onValueChange={(v) => {
+                  setSpotCity(v);
+                  setPicked(null);
+                }}
+              >
+                <SelectTrigger className="mt-1 dark:bg-violet-700 dark:border-violet-600">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {spotCities.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -283,19 +407,28 @@ export function SafeSpotsPage() {
               />
             </div>
             <div>
-              <Label className="dark:text-gray-200">City</Label>
-              <Select value={spotCity} onValueChange={setSpotCity}>
-                <SelectTrigger className="mt-1 dark:bg-violet-700 dark:border-violet-600">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {cities.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="dark:text-gray-200">
+                Pin it on the map <span className="text-red-500">*</span>
+              </Label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">
+                Tap the map to drop the pin at the exact meeting point.
+              </p>
+              <div className="relative z-0 ss-map-frame h-56 rounded-xl overflow-hidden border border-gray-200 dark:border-violet-600">
+                <SafeSpotsMap mode="picker" spots={[]} city={spotCity} dark={isDarkMode} picked={picked} onPick={setPicked} />
+                {!picked && (
+                  <div className="pointer-events-none absolute inset-x-0 top-3 z-[1001] flex justify-center px-3">
+                    <span className="rounded-full bg-white/95 dark:bg-violet-900/95 px-3 py-1.5 text-xs font-medium text-violet-700 dark:text-amber-300 shadow-md border border-violet-200 dark:border-violet-700 whitespace-nowrap">
+                      Tap the map to drop the pin
+                    </span>
+                  </div>
+                )}
+              </div>
+              {picked && (
+                <p className="mt-2 text-xs font-medium text-green-700 dark:text-green-300 flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5 shrink-0" />
+                  Pin dropped — {picked.lat.toFixed(4)}, {picked.lng.toFixed(4)}
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-2">

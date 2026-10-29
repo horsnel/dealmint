@@ -190,6 +190,9 @@ export interface SafeSpot {
   type: SafeSpotType;
   address: string;
   city: string;
+  /** Pinned coordinates on the live map (optional for legacy data) */
+  lat?: number;
+  lng?: number;
   isApproved: boolean;
   submittedById?: string;
   createdAt: string;
