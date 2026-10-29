@@ -47,12 +47,11 @@ export function ListingCard({ listing }: { listing: Listing }) {
             }`}
           />
         </button>
-        {listing.isFeatured && (
-          <Badge className="absolute top-3 left-3 bg-amber-500 text-white">Featured</Badge>
-        )}
-        {!listing.isActive && (
-          <Badge className="absolute top-3 left-3 bg-gray-700 text-white">Paused</Badge>
-        )}
+        <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 max-w-[70%]">
+          {listing.isFeatured && <Badge className="bg-amber-500 text-white">Featured</Badge>}
+          {listing.isUrgent && <Badge className="bg-red-500 text-white">Urgent</Badge>}
+          {!listing.isActive && <Badge className="bg-gray-700 text-white">Paused</Badge>}
+        </div>
       </div>
 
       {/* Content */}

@@ -1,9 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, MailCheck, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
 import { DEMO_EMAIL, DEMO_PASSWORD } from '@/data/seed';
@@ -48,6 +55,36 @@ export function LoginPage() {
   const fillDemo = () => {
     setFormData({ ...formData, email: DEMO_EMAIL, password: DEMO_PASSWORD });
     setError('');
+  };
+
+  // Magic link (Postall-style passwordless sign-in) — simulated in this demo
+  const [magicOpen, setMagicOpen] = useState(false);
+  const [magicEmail, setMagicEmail] = useState('');
+  const [magicStage, setMagicStage] = useState<'form' | 'sending' | 'sent'>('form');
+  const [resendIn, setResendIn] = useState(0);
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = window.setInterval(() => setResendIn((s) => s - 1), 1000);
+    return () => window.clearInterval(t);
+  }, [resendIn]);
+
+  const openMagic = () => {
+    setMagicStage('form');
+    setMagicEmail(formData.email);
+    setMagicOpen(true);
+  };
+
+  const sendMagic = () => {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(magicEmail.trim())) {
+      toast.error('Enter a valid email address');
+      return;
+    }
+    setMagicStage('sending');
+    setTimeout(() => {
+      setMagicStage('sent');
+      setResendIn(60);
+    }, 1200);
   };
 
   return (
@@ -219,6 +256,17 @@ export function LoginPage() {
             </Button>
           </div>
 
+          {/* Magic link */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={openMagic}
+            className="w-full mt-4 dark:border-violet-600 dark:text-white"
+          >
+            <Mail className="w-5 h-5 mr-2 text-violet-600 dark:text-amber-400" />
+            Email me a magic link
+          </Button>
+
           {/* Sign Up Link */}
           <p className="text-center mt-8 text-gray-600 dark:text-gray-300">
             Don't have an account?{' '}
@@ -242,6 +290,96 @@ export function LoginPage() {
           </p>
         </div>
       </div>
+
+      {/* Magic link dialog */}
+      <Dialog open={magicOpen} onOpenChange={setMagicOpen}>
+        <DialogContent className="dark:bg-violet-900 dark:border-violet-700 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="dark:text-white">Sign in with a magic link</DialogTitle>
+            <DialogDescription className="dark:text-gray-300">
+              No password needed — we email you a one-tap sign-in link.
+            </DialogDescription>
+          </DialogHeader>
+          {magicStage === 'sent' ? (
+            <div className="py-4 text-center">
+              <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center mx-auto">
+                <MailCheck className="w-8 h-8 text-green-600 dark:text-green-400" />
+              </div>
+              <h3 className="mt-4 font-semibold text-gray-900 dark:text-white">Check your inbox</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 break-words">
+                We sent a sign-in link to {magicEmail}. It expires in 15 minutes.
+              </p>
+              <div className="mt-5 space-y-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={resendIn > 0}
+                  onClick={sendMagic}
+                  className="w-full dark:border-violet-600 dark:text-white"
+                >
+                  {resendIn > 0 ? `Resend link in ${resendIn}s` : 'Resend link'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setMagicOpen(false);
+                    fillDemo();
+                    toast.info('Demo account filled in — sign in while you wait for the email');
+                  }}
+                  className="w-full text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+                >
+                  Use the demo account instead
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4 py-1">
+              <div>
+                <label htmlFor="magic-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Email address
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Input
+                    id="magic-email"
+                    type="email"
+                    autoComplete="email"
+                    value={magicEmail}
+                    onChange={(e) => setMagicEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="pl-10 dark:bg-violet-700 dark:border-violet-600"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        sendMagic();
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+              <Button
+                type="button"
+                onClick={sendMagic}
+                disabled={magicStage === 'sending'}
+                className="w-full bg-violet-600 hover:bg-violet-700 text-white"
+              >
+                {magicStage === 'sending' ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Sending link...
+                  </>
+                ) : (
+                  'Send magic link'
+                )}
+              </Button>
+              <p className="text-[11px] text-center text-gray-400 dark:text-gray-500">
+                Demo mode — no real email is sent. Any address works.
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

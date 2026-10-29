@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Phone, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -25,6 +25,8 @@ export function RegisterPage() {
     confirm: '',
     agreeTerms: false,
   });
+  // Referral program: friends share a code like EMEK-047
+  const [referralCode, setReferralCode] = useState(() => new URLSearchParams(window.location.search).get('ref') || '');
   const role: 'student' | 'general' =
     localStorage.getItem('dealmint_selected_role') === 'student' ? 'student' : 'general';
 
@@ -58,6 +60,7 @@ export function RegisterPage() {
         phone: normalizePhone(formData.phone),
         password: formData.password,
         role,
+        referralCode: referralCode.trim() || undefined,
       });
       if (!result.ok) {
         setIsLoading(false);
@@ -195,6 +198,23 @@ export function RegisterPage() {
                 />
               </div>
               {fieldError('confirm')}
+            </div>
+
+            <div>
+              <label htmlFor="referral" className={labelClass}>
+                Referral code <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <div className="relative">
+                <Gift className={iconClass} />
+                <Input
+                  id="referral"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. DEMO-123"
+                  className={`${inputClass} font-mono uppercase`}
+                  maxLength={10}
+                />
+              </div>
             </div>
 
             <div className="flex items-start gap-2">

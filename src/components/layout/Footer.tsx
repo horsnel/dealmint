@@ -28,6 +28,7 @@ export function Footer() {
     support: [
       { name: 'Help Center', href: '/help' },
       { name: 'Safety', href: '/safety' },
+      { name: 'Safe Spots', href: '/safe-spots' },
       { name: 'Contact', href: '/contact' },
       { name: 'Community', href: '/community' },
     ],

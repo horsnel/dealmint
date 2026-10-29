@@ -11,21 +11,29 @@ import {
 import { toast } from 'sonner';
 import type {
   Conversation,
+  EscrowRecord,
   Listing,
   Message,
   Notification,
   Order,
   OrderStatus,
   PayoutAccount,
+  PriceAlert,
+  Referral,
   Review,
+  SafeSpot,
+  SafeSpotType,
+  SavedSearch,
   Transaction,
   User,
   UserSettings,
 } from '@/types';
-import { buildSeedDB, DB_VERSION, type DB, type StoredUser } from '@/data/seed';
+import { buildSeedDB, DB_VERSION, migrateDB, type DB, type StoredUser } from '@/data/seed';
 import { featuredTaskers } from '@/data/mockData';
-import { commissionRate } from '@/lib/categories';
+import { commissionRate, matchesCategory, BOOST_PRICES } from '@/lib/categories';
+import { matchesSearchFilters } from '@/lib/search';
 import { formatPrice, uid } from '@/lib/format';
+import { REFERRAL_REWARD, referralCodeFor } from '@/lib/referral';
 
 const DB_KEY = 'dealmint_db_v1';
 const SESSION_KEY = 'dealmint_session_user';
@@ -54,6 +62,8 @@ function loadDB(): DB {
     if (raw) {
       const parsed = JSON.parse(raw) as DB;
       if (parsed.version === DB_VERSION) return parsed;
+      // v1 -> v2: keep user data, fill in the new collections
+      return migrateDB(parsed);
     }
   } catch {
     // fall through to a fresh seed
@@ -75,6 +85,7 @@ export interface RegisterInput {
   phone: string;
   password: string;
   role: 'student' | 'general';
+  referralCode?: string;
 }
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
@@ -98,7 +109,7 @@ interface AppContextValue {
   requestPasswordReset: (email: string) => string | null;
   resetPassword: (email: string, code: string, next: string) => Result;
   verifyPhone: () => void;
-  submitIdVerification: () => void;
+  submitIdVerification: (docType?: string) => void;
   verifyStudent: (schoolEmail: string) => Result;
 
   // listings
@@ -111,6 +122,7 @@ interface AppContextValue {
   deleteListing: (id: string) => void;
   recordView: (id: string) => void;
   reportListing: (listingId: string, reason: string, details: string) => void;
+  boostListing: (listingId: string, kind: 'featured' | 'urgent') => Result;
 
   // favourites
   favourites: string[];
@@ -137,6 +149,7 @@ interface AppContextValue {
   disputeOrder: (id: string, reason: string) => void;
   withdrawDispute: (id: string) => void;
   simulateSeller: (id: string) => void;
+  recordDownload: (orderId: string) => void;
 
   // messages
   conversations: Conversation[];
@@ -145,6 +158,7 @@ interface AppContextValue {
   sendMessage: (conversationId: string, text: string, attachment?: { name: string; size: number }) => void;
   markConversationRead: (id: string) => void;
   toggleBlock: (id: string) => void;
+  toggleChatUnlock: (id: string) => void;
 
   // wallet
   transactions: Transaction[];
@@ -154,6 +168,28 @@ interface AppContextValue {
   addPayoutAccount: (a: Omit<PayoutAccount, 'id' | 'userId'>) => PayoutAccount | null;
   removePayoutAccount: (id: string) => void;
   escrowHeld: number;
+  // escrow ledger (Postall-style): one record per order with money held
+  escrowLedger: EscrowRecord[];
+
+  // saved searches & price alerts
+  savedSearches: SavedSearch[];
+  saveSearch: (input: { label: string; query: string; type: string; category: string; where: string; price: string; frequency: SavedSearch['frequency'] }) => Result;
+  removeSavedSearch: (id: string) => void;
+  toggleSavedSearchActive: (id: string) => void;
+  runSavedSearch: (id: string) => void;
+  matchesForSavedSearch: (s: SavedSearch) => number;
+  priceAlerts: PriceAlert[];
+  addPriceAlert: (listing: Listing, targetPrice: number) => Result;
+  removePriceAlert: (id: string) => void;
+
+  // safe spots
+  safeSpots: SafeSpot[];
+  submitSafeSpot: (input: { name: string; type: SafeSpotType; address: string; city: string }) => Result;
+
+  // referrals
+  myReferralCode: string;
+  referrals: Referral[];
+  inviteReferral: (email: string) => Result;
 
   // notifications
   notifications: Notification[];
@@ -354,13 +390,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
         showLocation: true,
       },
     };
-    commit((d) =>
-      pushNotification(
-        { ...d, users: [...d.users, newUser] },
+    commit((d0) => {
+      let next = pushNotification(
+        { ...d0, users: [...d0.users, newUser] },
         newUser.id,
         { type: 'system', title: 'Welcome to Dealmint', message: 'Verify your phone number to unlock ordering and posting.', link: '/verify-phone' }
-      )
-    );
+      );
+      // Referral program: record the signup against the referrer
+      const code = (input.referralCode || '').trim().toUpperCase();
+      if (code) {
+        const referrer = d0.users.find((u) => referralCodeFor(u.name) === code);
+        if (referrer && referrer.id !== newUser.id) {
+          next = {
+            ...next,
+            referrals: [
+              {
+                id: uid('ref'),
+                referrerId: referrer.id,
+                invitedEmail: email,
+                invitedName: newUser.name,
+                status: 'joined',
+                reward: REFERRAL_REWARD,
+                createdAt: nowIso(),
+              },
+              ...next.referrals,
+            ],
+          };
+          next = pushNotification(next, referrer.id, {
+            type: 'referral',
+            title: 'New referral!',
+            message: `${newUser.name} signed up with your code. You earn ${formatPrice(REFERRAL_REWARD)} once they complete their first order.`,
+            link: '/dashboard/referrals',
+          });
+        }
+      }
+      return next;
+    });
     try {
       sessionStorage.removeItem(SESSION_KEY);
       localStorage.setItem(SESSION_KEY, newUser.id);
@@ -421,6 +486,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       transactions: d.transactions.filter((t) => t.userId !== id),
       payoutAccounts: d.payoutAccounts.filter((p) => p.userId !== id),
       notifications: d.notifications.filter((n) => n.userId !== id),
+      savedSearches: d.savedSearches.filter((s) => s.userId !== id),
+      priceAlerts: d.priceAlerts.filter((a) => a.userId !== id),
+      referrals: d.referrals.filter((r) => r.referrerId !== id),
     }));
     logout();
   };
@@ -458,10 +526,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (id) commit((d) => pushNotification(d, id, { type: 'system', title: 'Phone verified', message: 'Your phone number is now verified.' }));
   };
 
-  const submitIdVerification = () => {
+  const submitIdVerification: AppContextValue['submitIdVerification'] = (docType) => {
     const id = uidNow();
     if (!id) return;
-    updateProfile({ idStatus: 'pending' });
+    updateProfile(docType ? { idStatus: 'pending', idDocType: docType } : { idStatus: 'pending' });
     commit((d) => pushNotification(d, id, { type: 'system', title: 'ID submitted', message: 'We are reviewing your ID. This usually takes a moment.' }));
     // Simulated review
     setTimeout(() => {
@@ -547,6 +615,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
             link: `/listing/${id}`,
           });
         }
+        // Target-price alerts (Postall-style deals): fire when the new price hits the target
+        for (const alert of d.priceAlerts) {
+          if (alert.listingId !== id || !alert.active || alert.triggered) continue;
+          if (patch.price <= alert.targetPrice) {
+            next = {
+              ...next,
+              priceAlerts: next.priceAlerts.map((a) => (a.id === alert.id ? { ...a, triggered: true } : a)),
+            };
+            next = pushNotification(next, alert.userId, {
+              type: 'system',
+              title: 'Price alert triggered',
+              message: `"${old.title}" is now ${formatPrice(patch.price)} — at or below your ${formatPrice(alert.targetPrice)} target.`,
+              link: `/listing/${id}`,
+            });
+          }
+        }
       }
       return next;
     });
@@ -572,6 +656,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...d,
       reports: [...d.reports, { id: uid('rp'), listingId, reason, details, reporterId: sessionId || 'guest', createdAt: nowIso() }],
     }));
+  };
+
+  // Paid boost: deduct the one-off fee and flag the listing
+  const boostListing: AppContextValue['boostListing'] = (listingId, kind) => {
+    const me = dbRef.current.users.find((u) => u.id === sessionId);
+    if (!me) return { ok: false, error: 'Please sign in first.' };
+    const price = BOOST_PRICES[kind];
+    if (me.walletBalance < price) {
+      return { ok: false, error: `You need ${formatPrice(price)} in your wallet for a ${kind} boost. Top up first.` };
+    }
+    commit((d) => {
+      let next = adjustBalance(d, me.id, -price);
+      next = addTx(next, {
+        userId: me.id,
+        type: 'payment',
+        amount: -price,
+        description: `${kind === 'featured' ? 'Featured' : 'Urgent'} listing boost`,
+      });
+      next = {
+        ...next,
+        listings: next.listings.map((l) =>
+          l.id === listingId ? { ...l, ...(kind === 'featured' ? { isFeatured: true } : { isUrgent: true }) } : l
+        ),
+      };
+      return next;
+    });
+    return { ok: true };
   };
 
   // ---------- favourites ----------
@@ -726,13 +837,59 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const refund = (d: DB, o: Order, description: string): DB => {
     let next = adjustBalance(d, o.buyerId, o.price);
     next = addTx(next, { userId: o.buyerId, type: 'refund', amount: o.price, description, orderId: o.id });
+    // escrow ledger: money leaves escrow back to the buyer
+    next = {
+      ...next,
+      escrowLedger: next.escrowLedger.map((e) =>
+        e.orderId === o.id && e.status === 'funded'
+          ? { ...e, status: 'refunded' as const, releasedAt: nowIso() }
+          : e
+      ),
+    };
     return next;
   };
 
+  // Seller payout: gross earning + a separate platform-fee record so the
+  // ledger adds up to the net (Postall pattern).
   const payout = (d: DB, o: Order): DB => {
-    const net = o.price - o.fee;
-    let next = adjustBalance(d, o.sellerId, net);
-    next = addTx(next, { userId: o.sellerId, type: 'earning', amount: net, fee: o.fee, description: `Payment for ${o.listingTitle}`, orderId: o.id });
+    let next = adjustBalance(d, o.sellerId, o.price);
+    next = addTx(next, { userId: o.sellerId, type: 'earning', amount: o.price, description: `Payment for ${o.listingTitle}`, orderId: o.id });
+    next = addTx(next, {
+      userId: o.sellerId,
+      type: 'platform_fee',
+      amount: -o.fee,
+      fee: o.fee,
+      description: `Platform fee on ${o.listingTitle}`,
+      orderId: o.id,
+    });
+    next = {
+      ...next,
+      escrowLedger: next.escrowLedger.map((e) =>
+        e.orderId === o.id && e.status === 'funded'
+          ? { ...e, status: 'released' as const, releasedAt: nowIso() }
+          : e
+      ),
+    };
+    return next;
+  };
+
+  // Referral rewards: pay the referrer ₦500 the first time a referred user
+  // completes an order (either side of a completed order counts as activity).
+  const rewardReferrals = (d: DB, userId: string): DB => {
+    const pending = d.referrals.find((r) => r.referrerId === userId && r.status === 'joined');
+    if (!pending) return d;
+    let next: DB = {
+      ...d,
+      referrals: d.referrals.map((r) => (r.id === pending.id ? { ...r, status: 'rewarded' as const } : r)),
+    };
+    next = adjustBalance(next, userId, pending.reward);
+    next = addTx(next, { userId, type: 'referral_bonus', amount: pending.reward, description: 'Referral reward — your invite completed an order' });
+    next = pushNotification(next, userId, {
+      type: 'referral',
+      title: 'Referral reward earned',
+      message: `${pending.invitedName || pending.invitedEmail} completed their first order. ${formatPrice(pending.reward)} is now in your wallet.`,
+      link: '/dashboard/referrals',
+    });
     return next;
   };
 
@@ -769,6 +926,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       createdAt: nowIso(),
       completedAt: instant ? nowIso() : undefined,
       demoSeller: !sellerAccount,
+      downloadToken: instant ? `dl_${Math.random().toString(36).slice(2, 12)}` : undefined,
+      downloads: 0,
       timeline: instant
         ? [
             { status: 'pending', at: nowIso() },
@@ -776,10 +935,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ]
         : [{ status: 'pending', at: nowIso() }],
     };
+    const escrowRecord: EscrowRecord = {
+      id: uid('e'),
+      orderId: order.id,
+      listingTitle: order.listingTitle,
+      amount: price,
+      buyerId: me.id,
+      sellerId: listing.seller.id,
+      status: 'funded',
+      fundedAt: order.createdAt,
+      autoReleaseAt: new Date(Date.now() + 7 * 86400000).toISOString(),
+      commission: order.fee,
+      payout: price - order.fee,
+    };
     commit((d) => {
       let next = adjustBalance(d, me.id, -price);
-      next = addTx(next, { userId: me.id, type: 'payment', amount: -price, description: `Payment for ${listing.title}`, orderId: order.id });
-      next = { ...next, orders: [order, ...next.orders] };
+      next = addTx(next, { userId: me.id, type: 'escrow_fund', amount: -price, description: `Escrow funding for ${listing.title}`, orderId: order.id });
+      next = { ...next, orders: [order, ...next.orders], escrowLedger: [escrowRecord, ...next.escrowLedger] };
       if (instant) next = payout(next, order);
       next = {
         ...next,
@@ -836,6 +1008,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     commit((d) => {
       let next = transition(d, id, 'completed', undefined, { completedAt: nowIso() });
       next = payout(next, o);
+      next = rewardReferrals(next, o.sellerId);
+      next = rewardReferrals(next, o.buyerId);
       next = {
         ...next,
         listings: next.listings.map((l) => (l.id === o.listingId ? { ...l, completedOrders: l.completedOrders + 1 } : l)),
@@ -865,18 +1039,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const disputeOrder = (id: string, reason: string) => {
     const o = getOrder(id);
     if (!o || o.buyerId !== sessionId || !['in_progress', 'delivered'].includes(o.status)) return;
-    commit((d) =>
-      pushNotification(transition(d, id, 'disputed', reason), o.sellerId, {
+    commit((d) => {
+      let next = pushNotification(transition(d, id, 'disputed', reason), o.sellerId, {
         type: 'order', title: 'Dispute opened', message: `${o.buyerName} opened a dispute on "${o.listingTitle}".`, link: `/dashboard/orders/${id}`,
-      })
-    );
+      });
+      next = {
+        ...next,
+        escrowLedger: next.escrowLedger.map((e) => (e.orderId === id && e.status === 'funded' ? { ...e, status: 'disputed' as const } : e)),
+      };
+      return next;
+    });
   };
 
   const withdrawDispute = (id: string) => {
     const o = getOrder(id);
     if (!o || o.buyerId !== sessionId || o.status !== 'disputed') return;
     const before = [...o.timeline].reverse().find((e) => e.status !== 'disputed')?.status || 'in_progress';
-    commit((d) => transition(d, id, before === 'delivered' ? 'delivered' : 'in_progress', 'Dispute withdrawn'));
+    commit((d) => {
+      let next = transition(d, id, before === 'delivered' ? 'delivered' : 'in_progress', 'Dispute withdrawn');
+      next = {
+        ...next,
+        escrowLedger: next.escrowLedger.map((e) => (e.orderId === id && e.status === 'disputed' ? { ...e, status: 'funded' as const } : e)),
+      };
+      return next;
+    });
+  };
+
+  // Counts a token-gated digital download
+  const recordDownload = (orderId: string) => {
+    commit((d) => ({
+      ...d,
+      orders: d.orders.map((o) => (o.id === orderId ? { ...o, downloads: (o.downloads || 0) + 1 } : o)),
+    }));
   };
 
   // Lets a person try the full order flow when the seller is a demo account
@@ -1022,6 +1216,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     commit((d) => ({ ...d, conversations: d.conversations.map((c) => (c.id === id ? { ...c, blocked: !c.blocked } : c)) }));
   };
 
+  // Escrow-gated chat: waive the lock on a request and reply directly
+  const toggleChatUnlock = (id: string) => {
+    commit((d) => ({
+      ...d,
+      conversations: d.conversations.map((c) => (c.id === id ? { ...c, escrowChatUnlocked: !c.escrowChatUnlocked } : c)),
+    }));
+  };
+
   // ---------- wallet ----------
   const transactions = useMemo(
     () => (sessionId ? db.transactions.filter((t) => t.userId === sessionId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : []),
@@ -1039,6 +1241,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
             .reduce((s, o) => s + o.price, 0)
         : 0,
     [db.orders, sessionId]
+  );
+  // Ledger entries where the user is the buyer or the seller
+  const escrowLedger = useMemo(
+    () =>
+      sessionId
+        ? db.escrowLedger
+            .filter((e) => e.buyerId === sessionId || e.sellerId === sessionId)
+            .sort((a, b) => b.fundedAt.localeCompare(a.fundedAt))
+        : [],
+    [db.escrowLedger, sessionId]
   );
 
   const deposit: AppContextValue['deposit'] = (amount, method) => {
@@ -1083,6 +1295,157 @@ export function AppProvider({ children }: { children: ReactNode }) {
     commit((d) => ({ ...d, payoutAccounts: d.payoutAccounts.filter((p) => p.id !== id) }));
   };
 
+  // ---------- saved searches & price alerts ----------
+  const savedSearches = useMemo(
+    () => (sessionId ? db.savedSearches.filter((s) => s.userId === sessionId) : []),
+    [db.savedSearches, sessionId]
+  );
+
+  const matchesForSavedSearch = (s: SavedSearch) =>
+    visibleListings.filter((l) =>
+      matchesSearchFilters(l, { query: s.query, type: s.type, category: s.category, where: s.where, price: s.price }, matchesCategory)
+    ).length;
+
+  const saveSearch: AppContextValue['saveSearch'] = (input) => {
+    if (!sessionId) return { ok: false, error: 'Please sign in first.' };
+    const dupe = dbRef.current.savedSearches.find(
+      (s) =>
+        s.userId === sessionId &&
+        s.query === input.query &&
+        s.type === input.type &&
+        s.category === input.category &&
+        s.where === input.where &&
+        s.price === input.price
+    );
+    if (dupe) return { ok: false, error: 'This search is already saved.' };
+    const entry: SavedSearch = {
+      ...input,
+      id: uid('sv'),
+      userId: sessionId,
+      baseline: -1,
+      createdAt: nowIso(),
+      active: true,
+    };
+    commit((d) => ({ ...d, savedSearches: [entry, ...d.savedSearches] }));
+    return { ok: true };
+  };
+
+  const removeSavedSearch = (id: string) =>
+    commit((d) => ({ ...d, savedSearches: d.savedSearches.filter((s) => s.id !== id) }));
+
+  const toggleSavedSearchActive = (id: string) =>
+    commit((d) => ({
+      ...d,
+      savedSearches: d.savedSearches.map((s) => (s.id === id ? { ...s, active: !s.active } : s)),
+    }));
+
+  const runSavedSearch = (id: string) =>
+    commit((d) => ({
+      ...d,
+      savedSearches: d.savedSearches.map((s) => {
+        if (s.id !== id) return s;
+        const count = visibleListings.filter((l) =>
+          matchesSearchFilters(l, { query: s.query, type: s.type, category: s.category, where: s.where, price: s.price }, matchesCategory)
+        ).length;
+        return { ...s, baseline: count };
+      }),
+    }));
+
+  const priceAlerts = useMemo(
+    () => (sessionId ? db.priceAlerts.filter((a) => a.userId === sessionId) : []),
+    [db.priceAlerts, sessionId]
+  );
+
+  const addPriceAlert: AppContextValue['addPriceAlert'] = (listing, targetPrice) => {
+    if (!sessionId) return { ok: false, error: 'Please sign in first.' };
+    if (!Number.isFinite(targetPrice) || targetPrice < 100) return { ok: false, error: 'Enter a target of at least ₦100.' };
+    if (targetPrice >= listing.price) return { ok: false, error: `Your target should be below the current ${formatPrice(listing.price)} price.` };
+    if (dbRef.current.priceAlerts.some((a) => a.userId === sessionId && a.listingId === listing.id)) {
+      return { ok: false, error: 'You already have an alert for this listing.' };
+    }
+    const alert: PriceAlert = {
+      id: uid('al'),
+      userId: sessionId,
+      listingId: listing.id,
+      listingTitle: listing.title,
+      targetPrice: Math.round(targetPrice),
+      startPrice: listing.price,
+      active: true,
+      triggered: false,
+      createdAt: nowIso(),
+    };
+    commit((d) => ({ ...d, priceAlerts: [alert, ...d.priceAlerts] }));
+    return { ok: true };
+  };
+
+  const removePriceAlert = (id: string) =>
+    commit((d) => ({ ...d, priceAlerts: d.priceAlerts.filter((a) => a.id !== id) }));
+
+  // ---------- safe spots ----------
+  const safeSpots = useMemo(() => db.safeSpots, [db.safeSpots]);
+
+  const submitSafeSpot: AppContextValue['submitSafeSpot'] = (input) => {
+    if (!sessionId) return { ok: false, error: 'Please sign in first.' };
+    if (input.name.trim().length < 4) return { ok: false, error: 'Give the spot a clear name.' };
+    if (!input.address.trim()) return { ok: false, error: 'Add the street address.' };
+    const spot: SafeSpot = {
+      id: uid('ss'),
+      name: input.name.trim(),
+      type: input.type,
+      address: input.address.trim(),
+      city: input.city,
+      isApproved: false,
+      submittedById: sessionId,
+      createdAt: nowIso(),
+    };
+    commit((d) => ({ ...d, safeSpots: [spot, ...d.safeSpots] }));
+    // Simulated moderation pass
+    setTimeout(() => {
+      commit((d2) => {
+        if (!d2.safeSpots.some((s) => s.id === spot.id)) return d2;
+        const next = { ...d2, safeSpots: d2.safeSpots.map((s) => (s.id === spot.id ? { ...s, isApproved: true } : s)) };
+        return pushNotification(next, sessionId, {
+          type: 'safety',
+          title: 'Safe spot approved',
+          message: `"${spot.name}" is now live on the Safe Spots map.`,
+          link: '/safe-spots',
+        });
+      });
+    }, 6000);
+    return { ok: true };
+  };
+
+  // ---------- referrals ----------
+  const referrals = useMemo(
+    () => (sessionId ? db.referrals.filter((r) => r.referrerId === sessionId) : []),
+    [db.referrals, sessionId]
+  );
+  const myReferralCode = useMemo(() => (user ? referralCodeFor(user.name) : ''), [user]);
+
+  const inviteReferral: AppContextValue['inviteReferral'] = (email) => {
+    if (!sessionId) return { ok: false, error: 'Please sign in first.' };
+    const clean = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) return { ok: false, error: 'Enter a valid email address.' };
+    if (dbRef.current.referrals.some((r) => r.referrerId === sessionId && r.invitedEmail === clean)) {
+      return { ok: false, error: 'You already invited this email.' };
+    }
+    commit((d) => ({
+      ...d,
+      referrals: [
+        {
+          id: uid('ref'),
+          referrerId: sessionId,
+          invitedEmail: clean,
+          status: 'invited',
+          reward: REFERRAL_REWARD,
+          createdAt: nowIso(),
+        },
+        ...d.referrals,
+      ],
+    }));
+    return { ok: true };
+  };
+
   // ---------- notifications ----------
   const notifications = useMemo(
     () => (sessionId ? db.notifications.filter((n) => n.userId === sessionId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : []),
@@ -1122,6 +1485,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     deleteListing,
     recordView,
     reportListing,
+    boostListing,
     favourites,
     toggleFavourite,
     reviewsForListing,
@@ -1141,12 +1505,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     disputeOrder,
     withdrawDispute,
     simulateSeller,
+    recordDownload,
     conversations,
     unreadMessages,
     startConversation,
     sendMessage,
     markConversationRead,
     toggleBlock,
+    toggleChatUnlock,
     transactions,
     payoutAccounts,
     deposit,
@@ -1154,6 +1520,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addPayoutAccount,
     removePayoutAccount,
     escrowHeld,
+    escrowLedger,
+    savedSearches,
+    saveSearch,
+    removeSavedSearch,
+    toggleSavedSearchActive,
+    runSavedSearch,
+    matchesForSavedSearch,
+    priceAlerts,
+    addPriceAlert,
+    removePriceAlert,
+    safeSpots,
+    submitSafeSpot,
+    myReferralCode,
+    referrals,
+    inviteReferral,
     notifications,
     unreadNotifications,
     markNotificationRead,

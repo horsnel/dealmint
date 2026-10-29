@@ -22,6 +22,7 @@ const ListingDetailPage = page(() => import('@/pages/ListingDetailPage'), 'Listi
 const SellerProfilePage = page(() => import('@/pages/SellerProfilePage'), 'SellerProfilePage');
 const HowItWorksPage = page(() => import('@/pages/HowItWorksPage'), 'HowItWorksPage');
 const SafetyCenterPage = page(() => import('@/pages/SafetyCenterPage'), 'SafetyCenterPage');
+const SafeSpotsPage = page(() => import('@/pages/SafeSpotsPage'), 'SafeSpotsPage');
 const AboutPage = page(() => import('@/pages/AboutPage'), 'AboutPage');
 const ContactPage = page(() => import('@/pages/ContactPage'), 'ContactPage');
 const NotFoundPage = page(() => import('@/pages/NotFoundPage'), 'NotFoundPage');
@@ -53,6 +54,9 @@ const FavouritesPage = page(() => import('@/pages/dashboard/FavouritesPage'), 'F
 const NotificationsPage = page(() => import('@/pages/dashboard/NotificationsPage'), 'NotificationsPage');
 const ReviewsPage = page(() => import('@/pages/dashboard/ReviewsPage'), 'ReviewsPage');
 const SettingsPage = page(() => import('@/pages/dashboard/SettingsPage'), 'SettingsPage');
+const SavedSearchesPage = page(() => import('@/pages/dashboard/SavedSearchesPage'), 'SavedSearchesPage');
+const ReferralsPage = page(() => import('@/pages/dashboard/ReferralsPage'), 'ReferralsPage');
+const VerifyIdPage = page(() => import('@/pages/dashboard/VerifyIdPage'), 'VerifyIdPage');
 
 const PostGigPage = page(() => import('@/pages/post/PostGigPage'), 'PostGigPage');
 const PostTaskPage = page(() => import('@/pages/post/PostTaskPage'), 'PostTaskPage');
@@ -91,6 +95,7 @@ function AppContent() {
               <Route path="/seller/:id" element={<SellerProfilePage />} />
               <Route path="/how-it-works" element={<HowItWorksPage />} />
               <Route path="/safety" element={<SafetyCenterPage />} />
+              <Route path="/safe-spots" element={<SafeSpotsPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/terms" element={<TermsPage />} />
@@ -122,6 +127,9 @@ function AppContent() {
               <Route path="/dashboard/notifications" element={protect(<NotificationsPage />)} />
               <Route path="/dashboard/reviews" element={protect(<ReviewsPage />)} />
               <Route path="/dashboard/settings" element={protect(<SettingsPage />)} />
+              <Route path="/dashboard/saved-searches" element={protect(<SavedSearchesPage />)} />
+              <Route path="/dashboard/referrals" element={protect(<ReferralsPage />)} />
+              <Route path="/dashboard/verify" element={protect(<VerifyIdPage />)} />
 
               {/* Protected Post Routes */}
               <Route path="/post/gig" element={protect(<PostGigPage />)} />

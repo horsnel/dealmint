@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Bell, MessageSquare, Package, Wallet, Star, Info, CheckCheck, Trash2 } from 'lucide-react';
+import { Bell, MessageSquare, Package, Wallet, Star, Info, CheckCheck, Trash2, Gift, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
@@ -14,6 +14,8 @@ const icons: Record<Notification['type'], typeof Bell> = {
   payment: Wallet,
   review: Star,
   system: Info,
+  referral: Gift,
+  safety: ShieldCheck,
 };
 
 export function NotificationsPage() {

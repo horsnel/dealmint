@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, X, MapPin, FileUp, Eye } from 'lucide-react';
+import { ArrowLeft, Upload, X, MapPin, FileUp, Eye, Star, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,8 +25,8 @@ import {
 import { ListingCard } from '@/components/common/ListingCard';
 import { useApp } from '@/context/AppContext';
 import { compressImage } from '@/lib/image';
-import { formatBytes } from '@/lib/format';
-import { subcategoryByType } from '@/lib/categories';
+import { formatBytes, formatPrice } from '@/lib/format';
+import { subcategoryByType, BOOST_PRICES } from '@/lib/categories';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import type { Listing, ListingType } from '@/types';
 
@@ -103,13 +103,15 @@ export function ListingForm({ type, listing }: Props) {
   const editing = !!listing;
   usePageTitle(editing ? 'Edit listing' : c.title);
   const navigate = useNavigate();
-  const { user, addListing, updateListing } = useApp();
+  const { user, addListing, updateListing, boostListing } = useApp();
   const imageInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Paid boost (Postall-style monetisation) — new listings only
+  const [boost, setBoost] = useState<'none' | 'featured' | 'urgent'>('none');
   const [images, setImages] = useState<string[]>(listing && listing.images[0] !== defaultImage[type] ? listing.images : []);
   const [file, setFile] = useState<{ name: string; size: number; type: string } | null>(
     listing?.fileName ? { name: listing.fileName, size: listing.fileSize || 0, type: listing.fileType || '' } : null
@@ -259,6 +261,15 @@ export function ListingForm({ type, listing }: Props) {
           toast.error('Something went wrong. Please try again.');
           setIsSubmitting(false);
           return;
+        }
+        // Apply the paid boost after the listing exists
+        if (boost !== 'none') {
+          const boosted = boostListing(created.id, boost);
+          if (boosted.ok) {
+            toast.success(`${boost === 'featured' ? 'Featured' : 'Urgent'} boost applied — ${formatPrice(BOOST_PRICES[boost])} deducted from your wallet`);
+          } else {
+            toast.info(boosted.error);
+          }
         }
         toast.success(asDraft ? 'Draft saved' : `${c.submit.replace('Post ', '').replace('Publish ', '')} posted successfully!`);
       }
@@ -594,6 +605,62 @@ export function ListingForm({ type, listing }: Props) {
                 {fieldError('images')}
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Up to {MAX_IMAGES} images, 8 MB each.</p>
               </div>
+
+              {/* Boost (new listings only) */}
+              {!editing && (
+                <div>
+                  <Label className="dark:text-gray-200">Boost your listing (optional)</Label>
+                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setBoost('none')}
+                      aria-pressed={boost === 'none'}
+                      className={`p-3 rounded-xl border text-left transition-colors ${
+                        boost === 'none'
+                          ? 'border-violet-600 bg-violet-50 dark:bg-violet-700 shadow-sm'
+                          : 'border-gray-200 dark:border-violet-600 hover:border-violet-300'
+                      }`}>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">None</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Free — standard reach</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBoost('featured')}
+                      aria-pressed={boost === 'featured'}
+                      className={`p-3 rounded-xl border text-left transition-colors ${
+                        boost === 'featured'
+                          ? 'border-violet-600 bg-violet-50 dark:bg-violet-700 shadow-sm'
+                          : 'border-gray-200 dark:border-violet-600 hover:border-violet-300'
+                      }`}>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-1.5">
+                        <Star className="w-4 h-4 text-amber-500" />
+                        Featured
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{formatPrice(BOOST_PRICES.featured)} — pinned to the top of Browse</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBoost('urgent')}
+                      aria-pressed={boost === 'urgent'}
+                      className={`p-3 rounded-xl border text-left transition-colors ${
+                        boost === 'urgent'
+                          ? 'border-violet-600 bg-violet-50 dark:bg-violet-700 shadow-sm'
+                          : 'border-gray-200 dark:border-violet-600 hover:border-violet-300'
+                      }`}>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-1.5">
+                        <Zap className="w-4 h-4 text-red-500" />
+                        Urgent
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{formatPrice(BOOST_PRICES.urgent)} — red Urgent badge, buyers see it first</p>
+                    </button>
+                  </div>
+                  {boost !== 'none' && user && user.walletBalance < BOOST_PRICES[boost] && (
+                    <p role="alert" className="text-xs text-red-600 dark:text-red-400 mt-2">
+                      You need {formatPrice(BOOST_PRICES[boost])} in your wallet. Top up from the Wallet page, or post without a boost.
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex flex-col sm:flex-row gap-3 pt-4">

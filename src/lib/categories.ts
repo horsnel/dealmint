@@ -62,3 +62,10 @@ export const subcategoryByType: Record<Listing['type'], string[]> = {
 export function commissionRate(role: 'student' | 'general' | 'admin') {
   return role === 'student' ? 0.1 : 0.15;
 }
+
+// Paid listing boosts (Postall-style monetisation): one-off fees that pin a
+// listing to the top of Browse or flag it as time-sensitive.
+export const BOOST_PRICES: Record<'featured' | 'urgent', number> = {
+  featured: 2000,
+  urgent: 1500,
+};

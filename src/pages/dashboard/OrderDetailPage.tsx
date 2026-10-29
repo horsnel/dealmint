@@ -81,6 +81,7 @@ export function OrderDetailPage() {
     disputeOrder,
     withdrawDispute,
     simulateSeller,
+    recordDownload,
     addReview,
     startConversation,
     getListing,
@@ -265,18 +266,26 @@ export function OrderDetailPage() {
   };
 
   const downloadProduct = () => {
+    recordDownload(order.id);
     downloadText(
       `${(listing?.fileName || order.listingTitle).replace(/[^a-z0-9._-]+/gi, '_')}-license.txt`,
       [
         `Licence for: ${order.listingTitle}`,
         `Licensed to: ${order.buyerName}`,
         `Order: ${order.id}`,
+        `Download token: ${order.downloadToken || 'n/a'}`,
+        order.downloads ? `Previous downloads: ${order.downloads}` : '',
         '',
         'Prototype note: the original product file is not stored in this demo build.',
         'In production this button downloads the file uploaded by the seller.',
-      ].join('\n')
+      ].filter(Boolean).join('\n')
     );
+    toast.success('Download started — link secured with your token');
   };
+
+  // Auto-release date (7 days after funding, Postall-style)
+  const autoReleaseAt = new Date(Date.parse(order.createdAt) + 7 * 86400000);
+  const feeRate = order.price > 0 ? Math.round((order.fee / order.price) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
@@ -359,19 +368,32 @@ export function OrderDetailPage() {
                       {s.state === 'done' ? (
                         <CheckCircle className="w-4 h-4" />
                       ) : s.state === 'current' ? (
-                        <span className="w-2 h-2 rounded-full bg-current animate-pulse" />
+                        <span className="relative flex items-center justify-center w-full h-full">
+                          <span
+                            aria-hidden="true"
+                            className="absolute inset-0 rounded-full bg-violet-400 dark:bg-amber-400 opacity-50 animate-ping"
+                          />
+                          <span className="relative w-2 h-2 rounded-full bg-current" />
+                        </span>
                       ) : (
                         <span className="w-2 h-2 rounded-full bg-current" />
                       )}
                     </span>
                     <div className="min-w-0">
-                      <p
-                        className={`font-medium leading-snug ${
-                          s.state === 'pending' ? 'text-gray-400 dark:text-violet-500' : 'text-gray-900 dark:text-white'
-                        }`}
-                      >
-                        {s.title}
-                      </p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p
+                          className={`font-medium leading-snug ${
+                            s.state === 'pending' ? 'text-gray-400 dark:text-violet-500' : 'text-gray-900 dark:text-white'
+                          }`}
+                        >
+                          {s.title}
+                        </p>
+                        {s.state === 'done' && (
+                          <span className="text-[10px] font-medium text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full">
+                            Done
+                          </span>
+                        )}
+                      </div>
                       <p
                         className={`text-sm leading-snug ${
                           s.state === 'pending' ? 'text-gray-400 dark:text-violet-600' : 'text-gray-600 dark:text-gray-300'
@@ -389,6 +411,11 @@ export function OrderDetailPage() {
                   <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0" />
                   Dispute under review — {formatPrice(order.price)} stays locked in escrow until this is resolved.
                 </div>
+              )}
+              {escrowHeld && (
+                <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                  Auto-releases to the seller on {formatDate(autoReleaseAt.toISOString())} unless you confirm the delivery earlier.
+                </p>
               )}
             </div>
 
@@ -475,7 +502,7 @@ export function OrderDetailPage() {
                   <span className="font-medium text-gray-900 dark:text-white">{formatPrice(order.price)}</span>
                 </div>
                 <div className="flex justify-between text-gray-600 dark:text-gray-300">
-                  <span>Platform fee</span>
+                  <span>Platform fee ({feeRate}%)</span>
                   <span className="font-medium text-gray-900 dark:text-white">{formatPrice(order.fee)}</span>
                 </div>
                 {isSeller && (
@@ -485,6 +512,11 @@ export function OrderDetailPage() {
                   </div>
                 )}
               </div>
+              {isSeller && order.status === 'completed' && (
+                <p className="mt-2 text-[11px] text-gray-400 dark:text-gray-500">
+                  Released as a {formatPrice(order.price)} earning minus the {feeRate}% platform fee.
+                </p>
+              )}
               {escrowHeld && (
                 <div className="mt-4 flex items-start gap-2 text-sm text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
                   <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0" />
@@ -552,10 +584,16 @@ export function OrderDetailPage() {
                 </Button>
               )}
               {isBuyer && order.status === 'completed' && order.listingType === 'digital' && (
-                <Button onClick={downloadProduct} className="w-full bg-violet-600 hover:bg-violet-700">
-                  <Download className="w-4 h-4 mr-2" />
-                  Download product
-                </Button>
+                <>
+                  <Button onClick={downloadProduct} className="w-full bg-violet-600 hover:bg-violet-700">
+                    <Download className="w-4 h-4 mr-2" />
+                    Download product
+                  </Button>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 text-center">
+                    Token-secured download{order.downloadToken ? ` · ${order.downloadToken}` : ''}
+                    {order.downloads ? ` · ${order.downloads} download${order.downloads === 1 ? '' : 's'}` : ''}
+                  </p>
+                </>
               )}
               {order.status === 'completed' && (
                 <Button variant="outline" onClick={receipt} className="w-full dark:border-violet-600 dark:text-white">

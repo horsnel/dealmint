@@ -1,5 +1,7 @@
+import { Link } from 'react-router-dom';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { Shield, Lock, Phone, Headphones, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Shield, Lock, Phone, Headphones, AlertTriangle, CheckCircle, MapPinned } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { safetyFeatures } from '@/data/mockData';
 
 export function SafetyCenterPage() {
@@ -18,6 +20,24 @@ export function SafetyCenterPage() {
           <p className="text-gray-600 dark:text-gray-300 text-lg max-w-2xl mx-auto">
             Your safety is our priority. Learn about the measures we take to keep our community secure.
           </p>
+        </div>
+
+        {/* Safe Spots CTA */}
+        <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-6 lg:p-8 mb-16 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="font-display font-bold text-xl text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+              <MapPinned className="w-5 h-5 text-violet-600 dark:text-amber-400" />
+              New: Safe Spots map
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 text-sm max-w-xl">
+              Community-vetted meeting points — police stations, malls, banks and cafes across Nigeria.
+            </p>
+          </div>
+          <Link to="/safe-spots" className="shrink-0">
+            <Button className="bg-violet-600 hover:bg-violet-700 rounded-full">
+              Explore Safe Spots
+            </Button>
+          </Link>
         </div>
 
         {/* Safety Features Grid */}

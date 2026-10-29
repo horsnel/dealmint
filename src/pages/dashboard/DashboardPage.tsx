@@ -7,7 +7,9 @@ import {
   Package, 
   Plus,
   ArrowRight,
-  Bell
+  Bell,
+  Bookmark,
+  Gift
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,6 +23,8 @@ const activityIcons = {
   payment: Wallet,
   review: Star,
   system: Bell,
+  referral: Gift,
+  safety: Bell,
 } as const;
 
 export function DashboardPage() {
@@ -49,6 +53,8 @@ export function DashboardPage() {
     { label: 'Post a Task', href: '/post/task', icon: Plus, color: 'bg-amber-500' },
     { label: 'My Orders', href: '/dashboard/orders', icon: Package, color: 'bg-green-500' },
     { label: 'Browse Jobs', href: '/browse?category=jobs', icon: Briefcase, color: 'bg-blue-500' },
+    { label: 'Saved Searches', href: '/dashboard/saved-searches', icon: Bookmark, color: 'bg-pink-500' },
+    { label: 'Referrals', href: '/dashboard/referrals', icon: Gift, color: 'bg-violet-500' },
   ];
 
   return (
@@ -107,7 +113,7 @@ export function DashboardPage() {
                 <CardTitle className="text-gray-900 dark:text-white">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                   {quickActions.map((action) => (
                     <Link
                       key={action.label}
@@ -207,7 +213,7 @@ export function DashboardPage() {
                       label: 'ID',
                       status: user.idStatus === 'verified' || user.idVerified ? 'Verified' : user.idStatus === 'pending' ? 'In review' : 'Pending',
                       ok: user.idStatus === 'verified' || user.idVerified,
-                      href: '/dashboard/profile',
+                      href: '/dashboard/verify',
                     },
                     { label: 'Student', status: user.studentVerified ? 'Verified' : 'Not verified', ok: !!user.studentVerified, href: '/dashboard/profile' },
                   ].map((item) => (

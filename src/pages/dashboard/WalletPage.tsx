@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowDownLeft,
@@ -39,9 +39,10 @@ import {
 import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
 import { EmptyState } from '@/components/common/EmptyState';
+import { PaystackModal } from '@/components/payment/PaystackModal';
 import { formatDate, formatPrice } from '@/lib/format';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import type { PayoutAccount, Transaction } from '@/types';
+import type { EscrowRecord, PayoutAccount, Transaction } from '@/types';
 
 const banks = [
   'Access Bank', 'First Bank', 'GTBank', 'UBA', 'Zenith Bank', 'Fidelity Bank', 'Stanbic IBTC',
@@ -74,6 +75,7 @@ export function WalletPage() {
     transactions,
     payoutAccounts,
     escrowHeld,
+    escrowLedger,
     deposit,
     withdraw,
     addPayoutAccount,
@@ -109,6 +111,10 @@ export function WalletPage() {
   const [depositAmount, setDepositAmount] = useState('');
   const [depositMethod, setDepositMethod] = useState('Card');
   const [depositError, setDepositError] = useState('');
+  // Mock Paystack checkout step
+  const [paystackOpen, setPaystackOpen] = useState(false);
+  const [paystackAmount, setPaystackAmount] = useState(0);
+  const paidRef = useRef(false);
 
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAccount, setWithdrawAccount] = useState('');
@@ -124,16 +130,26 @@ export function WalletPage() {
   const handleDeposit = () => {
     const amount = Number(depositAmount);
     if (!depositAmount || !Number.isFinite(amount)) return setDepositError('Enter an amount');
+    if (amount < 500) return setDepositError('The minimum deposit is ₦500.');
     setDepositError('');
-    setBusy(true);
-    setTimeout(() => {
-      const res = deposit(amount, depositMethod);
-      setBusy(false);
-      if (!res.ok) return setDepositError(res.error);
+    // Route through the mock Paystack checkout before crediting the wallet.
+    // The deposit dialog closes first so the checkout overlay owns the screen.
+    paidRef.current = false;
+    setPaystackAmount(amount);
+    setDepositOpen(false);
+    setPaystackOpen(true);
+  };
+
+  const handlePaystackSuccess = () => {
+    const amount = paystackAmount;
+    const res = deposit(amount, depositMethod === 'Card' ? 'Card (Paystack)' : depositMethod);
+    if (res.ok) {
+      paidRef.current = true;
       toast.success(`${formatPrice(amount)} added to your wallet`);
-      setDepositOpen(false);
       setDepositAmount('');
-    }, 1200);
+    } else {
+      toast.error(res.error);
+    }
   };
 
   const openWithdraw = () => {
@@ -266,10 +282,20 @@ export function WalletPage() {
       <p className="text-center text-gray-500 dark:text-gray-400 py-8">Nothing here yet</p>
     );
 
-  const earnings = transactions.filter((t) => t.type === 'earning' || t.type === 'bonus' || t.type === 'refund');
+  const earnings = transactions.filter((t) => ['earning', 'bonus', 'refund', 'referral_bonus'].includes(t.type));
   const deposits = transactions.filter((t) => t.type === 'deposit');
   const withdrawals = transactions.filter((t) => t.type === 'withdrawal');
-  const payments = transactions.filter((t) => t.type === 'payment');
+  const payments = transactions.filter((t) => ['payment', 'escrow_fund', 'platform_fee'].includes(t.type));
+
+  const escrowStatusChip = (s: EscrowRecord['status']) => {
+    const map: Record<EscrowRecord['status'], string> = {
+      funded: 'bg-violet-100 text-violet-700 dark:bg-violet-700/60 dark:text-violet-100',
+      released: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+      refunded: 'bg-gray-100 text-gray-600 dark:bg-violet-700/40 dark:text-gray-300',
+      disputed: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+    };
+    return map[s];
+  };
 
   const tabClass = 'dark:data-[state=active]:bg-violet-600';
 
@@ -470,6 +496,49 @@ export function WalletPage() {
                 </p>
               </CardContent>
             </Card>
+
+            {/* Escrow ledger (Postall-style) */}
+            <Card className="mt-6 dark:bg-violet-800 dark:border-violet-700">
+              <CardHeader>
+                <CardTitle className="text-gray-900 dark:text-white flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-amber-500" />
+                  Escrow ledger
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {escrowLedger.length === 0 ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Every order's escrow trail will show up here — funded, released or refunded.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {escrowLedger.slice(0, 5).map((e) => (
+                      <div key={e.id} className="p-3 rounded-lg border border-gray-200 dark:border-violet-700 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{e.listingTitle}</p>
+                          <span className={`shrink-0 text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${escrowStatusChip(e.status)}`}>
+                            {e.status}
+                          </span>
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400">
+                          <span className="font-medium text-gray-700 dark:text-gray-200">{formatPrice(e.amount)}</span>
+                          <span>Funded {formatDate(e.fundedAt)}</span>
+                        </div>
+                        <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
+                          {e.status === 'funded'
+                            ? `Auto-releases ${formatDate(e.autoReleaseAt)}`
+                            : e.status === 'released'
+                              ? `Released ${e.releasedAt ? formatDate(e.releasedAt) : ''} · fee ${formatPrice(e.commission)}`
+                              : e.status === 'refunded'
+                                ? 'Returned to the buyer'
+                                : 'Locked pending dispute review'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
@@ -534,7 +603,7 @@ export function WalletPage() {
               </div>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Prototype note: no real payment is taken. Funds are added instantly for testing.
+              Deposits are processed through secure Paystack checkout (demo mode, test card pre-filled).
             </p>
             {depositError && (
               <p role="alert" className="text-sm text-red-600 dark:text-red-400">{depositError}</p>
@@ -615,6 +684,20 @@ export function WalletPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Mock Paystack checkout (deposit) */}
+      <PaystackModal
+        open={paystackOpen}
+        onClose={() => {
+          setPaystackOpen(false);
+          // Bring the amount dialog back if the payment was not completed
+          if (!paidRef.current) setDepositOpen(true);
+        }}
+        onSuccess={handlePaystackSuccess}
+        amount={paystackAmount}
+        email={user?.email || 'demo@dealmint.ng'}
+        description="Wallet deposit"
+      />
 
       {/* Add account */}
       <Dialog open={accountOpen} onOpenChange={setAccountOpen}>

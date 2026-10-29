@@ -13,7 +13,8 @@ import {
 import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
 import { EmptyState } from '@/components/common/EmptyState';
-import { formatBytes, formatTime } from '@/lib/format';
+import { ChatLock } from '@/components/chat/ChatLock';
+import { formatBytes, formatPrice, formatTime } from '@/lib/format';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
 /* ---------------------------------- helpers --------------------------------- */
@@ -68,7 +69,7 @@ const quickReplies = [
 
 export function MessagesPage() {
   usePageTitle('Messages');
-  const { user, conversations, sendMessage, markConversationRead, toggleBlock } = useApp();
+  const { user, conversations, sendMessage, markConversationRead, toggleBlock, toggleChatUnlock, getListing, orders } = useApp();
   const [params, setParams] = useSearchParams();
   const [selectedId, setSelectedId] = useState<string | null>(params.get('c'));
   const [showChat, setShowChat] = useState(!!params.get('c'));
@@ -134,6 +135,41 @@ export function MessagesPage() {
       c.messages.some((m) => m.content.toLowerCase().includes(t))
     );
   });
+
+  // ---------- escrow-gated chat (Postall-style) ----------
+  // Applies to request-style first contacts about task/gig listings where no
+  // order exists between the two parties yet.
+  const convListing = selected?.listingId ? getListing(selected.listingId) : undefined;
+  const hasOrderBetween =
+    !!selected &&
+    !!user &&
+    orders.some(
+      (o) =>
+        o.listingId === selected.listingId &&
+        ((o.buyerId === user.id && o.sellerId === selected.otherId) ||
+          (o.sellerId === user.id && o.buyerId === selected.otherId))
+    );
+  const isTaskOrGigChat = convListing?.type === 'task' || convListing?.type === 'gig';
+  const iAmListingOwner = !!convListing && !!user && convListing.seller.id === user.id;
+  // I received the request (stranger initiated) and I am not the one who would fund escrow
+  const chatLocked =
+    !!selected &&
+    !!user &&
+    isTaskOrGigChat &&
+    isRequest(selected) &&
+    !hasOrderBetween &&
+    !selected.escrowChatUnlocked &&
+    iAmListingOwner;
+  // The requester (potential buyer) gets a nudge instead of a hard lock:
+  // they wrote first, the seller has not replied yet and no escrow is funded.
+  const iInitiated =
+    !!selected &&
+    !!user &&
+    selected.messages.length > 0 &&
+    selected.messages[0].senderId === user.id;
+  const otherReplied = !!selected && selected.messages.some((m) => m.senderId === selected.otherId);
+  const showEscrowNudge =
+    !!selected && !!user && isTaskOrGigChat && !hasOrderBetween && !iAmListingOwner && iInitiated && !otherReplied;
 
   const open = (id: string) => {
     setSelectedId(id);
@@ -481,7 +517,30 @@ export function MessagesPage() {
                 </div>
               )}
 
-              {/* Composer */}
+              {/* Escrow nudge for the requester on task/gig requests */}
+              {showEscrowNudge && !selected.blocked && convListing && (
+                <div className="mx-4 mb-2 flex items-start gap-2 text-xs text-gray-700 dark:text-gray-200 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-2.5 shrink-0">
+                  <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                  <span className="min-w-0">
+                    <span className="font-semibold">Faster replies with escrow.</span> {selected.otherName} sees this as a request. Place an order and the chat unlocks instantly — your {formatPrice(convListing.price)} sits safely in escrow until the work is done.
+                  </span>
+                </div>
+              )}
+
+              {/* Composer / chat lock */}
+              {chatLocked && selected && convListing ? (
+                <ChatLock
+                  mode="waiting"
+                  otherName={selected.otherName}
+                  listingTitle={selected.listingTitle || convListing.title}
+                  listingId={convListing.id}
+                  price={convListing.price}
+                  onWaive={() => {
+                    toggleChatUnlock(selected.id);
+                    toast.success(`Chat unlocked — you can now reply to ${selected.otherName}`);
+                  }}
+                />
+              ) : (
               <div className="p-3 border-t dark:border-violet-700 shrink-0">
                 {selected.blocked ? (
                   <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-1">
@@ -545,6 +604,7 @@ export function MessagesPage() {
                   </>
                 )}
               </div>
+              )}
             </div>
           )}
         </div>

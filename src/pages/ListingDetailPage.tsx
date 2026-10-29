@@ -16,6 +16,7 @@ import {
   Pencil,
   Wallet,
   Search,
+  Bell,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +44,8 @@ import { useApp } from '@/context/AppContext';
 import { ListingCard } from '@/components/common/ListingCard';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Stars, StarInput } from '@/components/common/Stars';
+import { UserBadgeRow } from '@/components/common/VerificationBadges';
+import { WhatsAppButton } from '@/components/share/WhatsAppButton';
 import { formatPrice, formatBytes, timeAgo, priceSuffix } from '@/lib/format';
 import { typeLabel } from '@/lib/categories';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -84,6 +87,9 @@ export function ListingDetailPage() {
     getSeller,
     getSellerResponsiveness,
     replyToReview,
+    priceAlerts,
+    addPriceAlert,
+    removePriceAlert,
   } = useApp();
 
   const listing = getListing(id);
@@ -100,6 +106,7 @@ export function ListingDetailPage() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [replyText, setReplyText] = useState<Record<string, string>>({});
+  const [alertTarget, setAlertTarget] = useState('');
 
   useEffect(() => {
     if (id) recordView(id);
@@ -248,6 +255,20 @@ export function ListingDetailPage() {
     toast.success('Thanks for your review!');
   };
 
+  // Price alert (Postall-style deals): notify me when the price drops to my target
+  const myAlert = user ? priceAlerts.find((a) => a.listingId === listing.id) : undefined;
+
+  const handlePriceAlert = () => {
+    if (!user) return requireLogin();
+    const res = addPriceAlert(listing, Number(alertTarget));
+    if (!res.ok) {
+      toast.error(res.error);
+      return;
+    }
+    setAlertTarget('');
+    toast.success(`We will watch this listing and alert you at your target price.`);
+  };
+
   return (
     <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -350,6 +371,14 @@ export function ListingDetailPage() {
                     />
                     <div>
                       <h3 className="font-semibold text-gray-900 dark:text-white text-lg">{seller.name}</h3>
+                      <UserBadgeRow
+                        isVerified={seller.isVerified}
+                        idVerified={seller.idVerified}
+                        rating={seller.rating}
+                        reviewCount={seller.reviewCount}
+                        responsivenessLabel={responsiveness?.label}
+                        className="mt-1"
+                      />
                       <div className="flex items-center gap-2">
                         <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
                         <span className="text-gray-900 dark:text-white">
@@ -548,12 +577,21 @@ export function ListingDetailPage() {
                   <Shield className="w-4 h-4 text-green-500" />
                   <span>Protected payments</span>
                 </div>
-                {seller.isVerified && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span>Verified seller</span>
-                  </div>
-                )}
+                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                  <UserBadgeRow
+                    isVerified={seller.isVerified}
+                    idVerified={seller.idVerified}
+                    rating={seller.rating}
+                    reviewCount={seller.reviewCount}
+                    responsivenessLabel={responsiveness?.label}
+                  />
+                  {!seller.isVerified && !seller.idVerified && (
+                    <span className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Verified seller</span>
+                    </span>
+                  )}
+                </div>
                 {responsiveness && (
                   <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                     <Clock className="w-4 h-4 text-violet-500 dark:text-amber-400" />
@@ -567,7 +605,61 @@ export function ListingDetailPage() {
                 )}
               </div>
 
-              <div className="flex items-center justify-center gap-4 mt-6">
+              {/* Price alert (not for owners) */}
+              {!isOwner && (
+                <div className="mt-6 pt-6 border-t dark:border-violet-700">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-violet-600 dark:text-amber-400" />
+                    Price alert
+                  </p>
+                  {myAlert ? (
+                    <div className="mt-2 flex items-center justify-between gap-2 text-sm min-w-0">
+                      <span className="text-gray-600 dark:text-gray-300 truncate">
+                        Watching for {formatPrice(myAlert.targetPrice)}
+                        {myAlert.triggered ? ' · triggered' : ''}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          removePriceAlert(myAlert.id);
+                          toast.success('Price alert removed');
+                        }}
+                        className="shrink-0 text-xs text-red-500 hover:underline py-2 -my-2"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        handlePriceAlert();
+                      }}
+                      className="mt-2 flex gap-2"
+                    >
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min="100"
+                        value={alertTarget}
+                        onChange={(e) => setAlertTarget(e.target.value)}
+                        placeholder="Your target price"
+                        aria-label="Alert me at this price"
+                        className="flex-1 min-w-0 dark:bg-violet-700 dark:border-violet-600"
+                      />
+                      <Button type="submit" variant="outline" className="shrink-0 dark:border-violet-600 dark:text-white">
+                        <Bell className="w-4 h-4" />
+                        <span className="sr-only">Set price alert</span>
+                      </Button>
+                    </form>
+                  )}
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">
+                    Get notified the moment the seller drops the price to your target.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mt-6">
                 <button
                   onClick={handleLike}
                   className="flex items-center gap-2 py-2.5 -my-2.5 px-2 -mx-2 text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-amber-400"
@@ -582,6 +674,7 @@ export function ListingDetailPage() {
                   <Share2 className="w-5 h-5" />
                   <span className="text-sm">Share</span>
                 </button>
+                <WhatsAppButton title={listing.title} price={formatPrice(listing.price)} />
                 {!isOwner && (
                   <button
                     onClick={() => (user ? setReportOpen(true) : requireLogin())}

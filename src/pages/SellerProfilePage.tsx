@@ -18,6 +18,7 @@ import { useApp } from '@/context/AppContext';
 import { ListingCard } from '@/components/common/ListingCard';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Stars } from '@/components/common/Stars';
+import { UserBadgeRow } from '@/components/common/VerificationBadges';
 import { timeAgo } from '@/lib/format';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
@@ -100,6 +101,13 @@ export function SellerProfilePage() {
                 {seller.role === 'student' && (
                   <Badge className="bg-violet-600 text-white">Student</Badge>
                 )}
+                <UserBadgeRow
+                  isVerified={seller.isVerified}
+                  idVerified={seller.idVerified}
+                  rating={stats.count > 0 ? stats.rating : seller.rating}
+                  reviewCount={stats.count > 0 ? stats.count : seller.reviewCount}
+                  responsivenessLabel={responsiveness?.label}
+                />
               </div>
 
               <div className="flex flex-wrap items-center gap-4 mb-4">

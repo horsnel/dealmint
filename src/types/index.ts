@@ -18,6 +18,7 @@ export interface User {
   phone?: string;
   website?: string;
   idStatus?: 'none' | 'pending' | 'verified';
+  idDocType?: string;
   studentVerified?: boolean;
   settings?: UserSettings;
   theme?: 'light' | 'dark';
@@ -54,6 +55,7 @@ export interface Listing {
   tags: string[];
   createdAt: string;
   isFeatured: boolean;
+  isUrgent?: boolean;
   isActive: boolean;
   isDraft?: boolean;
   views?: number;
@@ -116,13 +118,15 @@ export interface Conversation {
   updatedAt: string;
   blocked?: boolean;
   demoReplies?: boolean;
+  // Escrow-gated chat: the request recipient can waive the lock and reply anyway
+  escrowChatUnlocked?: boolean;
 }
 
 // Wallet Types
 export interface Transaction {
   id: string;
   userId: string;
-  type: 'deposit' | 'withdrawal' | 'payment' | 'earning' | 'refund' | 'bonus';
+  type: 'deposit' | 'withdrawal' | 'payment' | 'earning' | 'refund' | 'bonus' | 'escrow_fund' | 'platform_fee' | 'referral_bonus';
   amount: number;
   status: 'pending' | 'completed' | 'failed';
   description: string;
@@ -130,6 +134,76 @@ export interface Transaction {
   reference?: string;
   orderId?: string;
   fee?: number;
+}
+
+// Escrow ledger: one record per order that has (or had) money held
+export interface EscrowRecord {
+  id: string;
+  orderId: string;
+  listingTitle: string;
+  amount: number;
+  buyerId: string;
+  sellerId: string;
+  status: 'funded' | 'released' | 'refunded' | 'disputed';
+  fundedAt: string;
+  autoReleaseAt: string;
+  releasedAt?: string;
+  commission: number;
+  payout: number;
+}
+
+// Saved searches & price alerts
+export interface SavedSearch {
+  id: string;
+  userId: string;
+  label: string;
+  query: string;
+  type: string;
+  category: string;
+  where: string;
+  price: string;
+  frequency: 'instant' | 'daily' | 'weekly';
+  // match count when the search was last run; -1 = never computed
+  baseline: number;
+  createdAt: string;
+  active: boolean;
+}
+
+export interface PriceAlert {
+  id: string;
+  userId: string;
+  listingId: string;
+  listingTitle: string;
+  targetPrice: number;
+  startPrice: number;
+  active: boolean;
+  triggered: boolean;
+  createdAt: string;
+}
+
+// Community safe meetup spots
+export type SafeSpotType = 'police_station' | 'mall' | 'bank' | 'restaurant' | 'library';
+
+export interface SafeSpot {
+  id: string;
+  name: string;
+  type: SafeSpotType;
+  address: string;
+  city: string;
+  isApproved: boolean;
+  submittedById?: string;
+  createdAt: string;
+}
+
+// Referral program
+export interface Referral {
+  id: string;
+  referrerId: string;
+  invitedEmail: string;
+  invitedName?: string;
+  status: 'invited' | 'joined' | 'rewarded';
+  reward: number;
+  createdAt: string;
 }
 
 export interface PayoutAccount {
@@ -179,13 +253,16 @@ export interface Order {
   reviewed?: boolean;
   // true when the seller is a demo account that nobody can sign in as
   demoSeller?: boolean;
+  // token-gated download for digital purchases
+  downloadToken?: string;
+  downloads?: number;
 }
 
 // Notification Types
 export interface Notification {
   id: string;
   userId: string;
-  type: 'message' | 'order' | 'review' | 'system' | 'payment';
+  type: 'message' | 'order' | 'review' | 'system' | 'payment' | 'referral' | 'safety';
   title: string;
   message: string;
   isRead: boolean;

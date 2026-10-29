@@ -5,7 +5,11 @@ import type {
   Notification,
   Order,
   PayoutAccount,
+  PriceAlert,
+  Referral,
   Review,
+  SafeSpot,
+  SavedSearch,
   Transaction,
   User,
 } from '@/types';
@@ -28,9 +32,15 @@ export interface DB {
   notifications: Notification[];
   reports: { id: string; listingId: string; reason: string; details: string; reporterId: string; createdAt: string }[];
   resetRequests: { email: string; code: string; createdAt: string }[];
+  // v2 additions (borrowed from the Postall architecture review)
+  escrowLedger: import('@/types').EscrowRecord[];
+  savedSearches: SavedSearch[];
+  priceAlerts: PriceAlert[];
+  safeSpots: SafeSpot[];
+  referrals: Referral[];
 }
 
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 export const DEMO_EMAIL = 'demo@dealmint.ng';
 export const DEMO_PASSWORD = 'Demo1234';
 
@@ -341,6 +351,8 @@ function seedOrders(): Order[] {
       deliveryNote: 'Final files attached: PNG, SVG and brand colours.',
       createdAt: daysAgo(4),
       demoSeller: true,
+      downloadToken: 'dl_seed1demo',
+      downloads: 0,
       timeline: [
         { status: 'pending', at: daysAgo(4) },
         { status: 'in_progress', at: daysAgo(3.5) },
@@ -369,6 +381,105 @@ function seedOrders(): Order[] {
   ];
 }
 
+function seedEscrowLedger(): import('@/types').EscrowRecord[] {
+  const l1 = featuredListings[0];
+  const fee = Math.round(l1.price * 0.15);
+  return [
+    {
+      id: 'e_seed_1',
+      orderId: 'o_seed_1',
+      listingTitle: l1.title,
+      amount: l1.price,
+      buyerId: 'u1',
+      sellerId: l1.seller.id,
+      status: 'funded',
+      fundedAt: daysAgo(4),
+      autoReleaseAt: new Date(Date.now() + 3 * 86400000).toISOString(),
+      commission: fee,
+      payout: l1.price - fee,
+    },
+    {
+      id: 'e_seed_2',
+      orderId: 'o_seed_2',
+      listingTitle: 'Data Entry & Spreadsheet Cleanup',
+      amount: 8000,
+      buyerId: 's2',
+      sellerId: 'u1',
+      status: 'funded',
+      fundedAt: daysAgo(0, 1),
+      autoReleaseAt: new Date(Date.now() + 7 * 86400000).toISOString(),
+      commission: 1200,
+      payout: 6800,
+    },
+  ];
+}
+
+function seedSafeSpots(): SafeSpot[] {
+  const at = (d: number) => daysAgo(d);
+  return [
+    { id: 'ss1', name: 'Ikeja Police Division', type: 'police_station', address: '2 Obafemi Awolowo Way, Allen Avenue', city: 'Lagos', isApproved: true, createdAt: at(30) },
+    { id: 'ss2', name: 'Ikeja City Mall', type: 'mall', address: 'Obafemi Awolowo Way, Alausa', city: 'Lagos', isApproved: true, createdAt: at(28) },
+    { id: 'ss3', name: 'GTBank Lekki Phase 1', type: 'bank', address: 'Admiralty Way, Lekki Phase 1', city: 'Lagos', isApproved: true, createdAt: at(25) },
+    { id: 'ss4', name: 'Cafe Neo Victoria Island', type: 'restaurant', address: '24 Akin Adesola Street', city: 'Lagos', isApproved: true, createdAt: at(21) },
+    { id: 'ss5', name: 'Wuse II Police Station', type: 'police_station', address: 'Aminu Kano Crescent, Wuse II', city: 'Abuja', isApproved: true, createdAt: at(20) },
+    { id: 'ss6', name: 'Jabi Lake Mall', type: 'mall', address: 'Bala Sokoto Way, Jabi', city: 'Abuja', isApproved: true, createdAt: at(18) },
+    { id: 'ss7', name: 'Nike Lake Resort Cafe', type: 'restaurant', address: 'Nike Lake Road, Trans-Ekulu', city: 'Port Harcourt', isApproved: true, createdAt: at(15) },
+    { id: 'ss8', name: 'Port Harcourt Main Library', type: 'library', address: '4 Birabi Street, GRA', city: 'Port Harcourt', isApproved: true, createdAt: at(12) },
+    { id: 'ss9', name: 'Heritage Mall Ibadan', type: 'mall', address: 'Dugbe Market Area', city: 'Ibadan', isApproved: true, createdAt: at(10) },
+    { id: 'ss10', name: 'First Bank Bodija', type: 'bank', address: 'Onireke GRA, Bodija', city: 'Ibadan', isApproved: true, createdAt: at(8) },
+  ];
+}
+
+function seedSavedSearches(): SavedSearch[] {
+  return [
+    {
+      id: 'sv1',
+      userId: 'u1',
+      label: 'Logo design',
+      query: 'logo',
+      type: 'gig',
+      category: 'all',
+      where: 'all',
+      price: 'all',
+      frequency: 'instant',
+      baseline: -1,
+      createdAt: daysAgo(3),
+      active: true,
+    },
+    {
+      id: 'sv2',
+      userId: 'u1',
+      label: 'Delivery in Lagos',
+      query: '',
+      type: 'task',
+      category: 'delivery',
+      where: 'Lagos',
+      price: 'all',
+      frequency: 'daily',
+      baseline: -1,
+      createdAt: daysAgo(6),
+      active: true,
+    },
+  ];
+}
+
+function seedPriceAlerts(): PriceAlert[] {
+  const l3 = featuredListings.find((l) => l.id === '3') || featuredListings[2];
+  return [
+    {
+      id: 'al1',
+      userId: 'u1',
+      listingId: l3.id,
+      listingTitle: l3.title,
+      targetPrice: Math.round(l3.price * 0.9),
+      startPrice: l3.price,
+      active: true,
+      triggered: false,
+      createdAt: daysAgo(5),
+    },
+  ];
+}
+
 export function buildSeedDB(): DB {
   return {
     version: DB_VERSION,
@@ -385,6 +496,27 @@ export function buildSeedDB(): DB {
     notifications: demoNotifications,
     reports: [],
     resetRequests: [],
+    escrowLedger: seedEscrowLedger(),
+    savedSearches: seedSavedSearches(),
+    priceAlerts: seedPriceAlerts(),
+    safeSpots: seedSafeSpots(),
+    referrals: [],
+  };
+}
+
+// Upgrade a v1 database in place so returning visitors keep their data.
+export function migrateDB(prev: DB): DB {
+  if (prev.version === DB_VERSION) return prev;
+  const fresh = buildSeedDB();
+  return {
+    ...fresh,
+    ...prev,
+    version: DB_VERSION,
+    escrowLedger: prev.escrowLedger || fresh.escrowLedger,
+    savedSearches: prev.savedSearches || [],
+    priceAlerts: prev.priceAlerts || [],
+    safeSpots: prev.safeSpots && prev.safeSpots.length > 0 ? prev.safeSpots : fresh.safeSpots,
+    referrals: prev.referrals || [],
   };
 }
 

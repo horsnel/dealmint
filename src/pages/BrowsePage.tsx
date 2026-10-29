@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Search, Briefcase, SlidersHorizontal, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Search, Briefcase, SlidersHorizontal, X, ChevronLeft, ChevronRight, BookmarkPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,7 @@ import { categories } from '@/data/mockData';
 import { useApp } from '@/context/AppContext';
 import { ListingCard } from '@/components/common/ListingCard';
 import { EmptyState } from '@/components/common/EmptyState';
+import { toast } from 'sonner';
 import { matchesCategory, slugify, typeLabel } from '@/lib/categories';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import type { Listing, ListingType } from '@/types';
@@ -56,8 +57,10 @@ function sortListings(list: Listing[], sortBy: string, rate: (l: Listing) => num
 
 export function BrowsePage() {
   usePageTitle('Browse');
-  const { listings, getListingStats } = useApp();
+  const { listings, getListingStats, user, saveSearch } = useApp();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [justSaved, setJustSaved] = useState(false);
 
   const q = searchParams.get('q') || '';
   const category = searchParams.get('category') || 'all';
@@ -128,6 +131,33 @@ export function BrowsePage() {
     Number(!!q);
 
   const clearAll = () => setSearchParams(new URLSearchParams(), { replace: true });
+
+  // Save this search (Postall-style smart alerts)
+  const handleSaveSearch = () => {
+    if (!user) {
+      toast.info('Log in to save searches', {
+        action: { label: 'Log in', onClick: () => navigate('/login', { state: { from: '/browse' } }) },
+      });
+      return;
+    }
+    const res = saveSearch({
+      label: q.trim() || categoryName || 'Browse',
+      query: q,
+      type: listingType,
+      category,
+      where,
+      price: priceRange,
+      frequency: 'instant',
+    });
+    if (!res.ok) {
+      toast.info(res.error);
+      return;
+    }
+    setJustSaved(true);
+    toast.success('Search saved — we will track new matches for you', {
+      action: { label: 'View', onClick: () => navigate('/dashboard/saved-searches') },
+    });
+  };
 
   const FilterSelects = ({ stacked }: { stacked?: boolean }) => (
     <div className={stacked ? 'space-y-6' : 'flex flex-col lg:flex-row gap-4'}>
@@ -359,10 +389,23 @@ export function BrowsePage() {
         </div>
 
         {/* Results Count */}
-        <div className="mb-6">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <p className="text-gray-600 dark:text-gray-300" aria-live="polite">
             Showing {filtered.length} result{filtered.length !== 1 ? 's' : ''}
           </p>
+          <button
+            type="button"
+            onClick={handleSaveSearch}
+            aria-label="Save this search"
+            className={`flex items-center gap-1.5 text-sm font-medium rounded-full px-3.5 py-2 border transition-colors ${
+              justSaved
+                ? 'border-violet-600 text-violet-700 dark:text-amber-400 bg-violet-50 dark:bg-violet-800'
+                : 'border-gray-300 dark:border-violet-600 text-gray-600 dark:text-gray-200 hover:border-violet-400 hover:text-violet-600 dark:hover:text-amber-400'
+            }`}
+          >
+            <BookmarkPlus className="w-4 h-4" />
+            {justSaved ? 'Search saved' : 'Save this search'}
+          </button>
         </div>
 
         {/* Listings Grid */}
