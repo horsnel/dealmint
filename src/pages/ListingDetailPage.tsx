@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Star,
@@ -90,6 +90,7 @@ export function ListingDetailPage() {
     priceAlerts,
     addPriceAlert,
     removePriceAlert,
+    safeSpots,
   } = useApp();
 
   const listing = getListing(id);
@@ -107,6 +108,7 @@ export function ListingDetailPage() {
   const [reviewComment, setReviewComment] = useState('');
   const [replyText, setReplyText] = useState<Record<string, string>>({});
   const [alertTarget, setAlertTarget] = useState('');
+  const [meetupSpotId, setMeetupSpotId] = useState('none');
 
   useEffect(() => {
     if (id) recordView(id);
@@ -166,6 +168,7 @@ export function ListingDetailPage() {
       return;
     }
     setOffer(String(listing.price));
+    setMeetupSpotId('none');
     setCheckoutOpen(true);
   };
 
@@ -207,6 +210,17 @@ export function ListingDetailPage() {
   const balance = user?.walletBalance ?? 0;
   const shortfall = offerValid ? Math.max(0, offerAmount - balance) : 0;
 
+  // Community Safe Spots near this listing, offered as in-person meetup points
+  const meetupEligible = !isDigital;
+  const citySpots = useMemo(
+    () =>
+      safeSpots.filter(
+        (s) => s.isApproved && s.lat != null && (!listing.location || s.city === listing.location)
+      ),
+    [safeSpots, listing.location]
+  );
+  const selectedSpot = citySpots.find((s) => s.id === meetupSpotId);
+
   const handleCheckout = () => {
     if (!offerValid) {
       toast.error('Enter an amount of at least ₦100');
@@ -214,7 +228,17 @@ export function ListingDetailPage() {
     }
     setSubmitting(true);
     setTimeout(() => {
-      const result = createOrder(listing, note, isNegotiable ? offerAmount : undefined);
+      const meetup = selectedSpot
+        ? {
+            spotId: selectedSpot.id,
+            name: selectedSpot.name,
+            address: selectedSpot.address,
+            city: selectedSpot.city,
+            lat: selectedSpot.lat,
+            lng: selectedSpot.lng,
+          }
+        : undefined;
+      const result = createOrder(listing, note, isNegotiable ? offerAmount : undefined, meetup);
       setSubmitting(false);
       if (!result.ok) {
         toast.error(result.error);
@@ -222,6 +246,7 @@ export function ListingDetailPage() {
       }
       setCheckoutOpen(false);
       setNote('');
+      setMeetupSpotId('none');
       toast.success(isDigital ? 'Purchase complete!' : isJob ? 'Application sent!' : 'Order placed! Your payment is held safely in escrow.');
       if (result.data) navigate(`/dashboard/orders/${result.data.id}`);
     }, 600);
@@ -760,6 +785,37 @@ export function ListingDetailPage() {
                 className="mt-1 dark:bg-violet-700 dark:border-violet-600"
               />
             </div>
+
+            {meetupEligible && (
+              <div>
+                <Label className="dark:text-gray-200">Meetup point (optional)</Label>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">
+                  Suggest a community Safe Spot to meet in person — busy, public and well-lit.
+                </p>
+                <Select value={meetupSpotId} onValueChange={setMeetupSpotId}>
+                  <SelectTrigger className="dark:bg-violet-700 dark:border-violet-600">
+                    <SelectValue placeholder="Choose a Safe Spot" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No in-person meetup needed</SelectItem>
+                    {citySpots.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name} — {s.address}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {citySpots.length === 0 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+                    No Safe Spots pinned here yet —{' '}
+                    <Link to="/safe-spots" className="text-violet-600 dark:text-amber-400 underline underline-offset-2">
+                      suggest one
+                    </Link>
+                    .
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="rounded-xl border dark:border-violet-700 p-4 space-y-2 text-sm">
               <div className="flex justify-between text-gray-600 dark:text-gray-300">

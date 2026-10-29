@@ -13,6 +13,7 @@ import type {
   Conversation,
   EscrowRecord,
   Listing,
+  MeetupPoint,
   Message,
   Notification,
   Order,
@@ -140,7 +141,7 @@ interface AppContextValue {
 
   // orders
   orders: Order[];
-  createOrder: (listing: Listing, note: string, offer?: number) => Result<Order>;
+  createOrder: (listing: Listing, note: string, offer?: number, meetup?: MeetupPoint) => Result<Order>;
   acceptOrder: (id: string) => void;
   declineOrder: (id: string) => void;
   deliverOrder: (id: string, note: string) => void;
@@ -893,7 +894,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return next;
   };
 
-  const createOrder: AppContextValue['createOrder'] = (listing, note, offer) => {
+  const createOrder: AppContextValue['createOrder'] = (listing, note, offer, meetup) => {
     const d0 = dbRef.current;
     const me = d0.users.find((u) => u.id === sessionId);
     if (!me) return { ok: false, error: 'Please sign in to continue.' };
@@ -923,6 +924,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       price,
       fee: Math.round(price * rate),
       note: note.trim() || undefined,
+      meetup,
       createdAt: nowIso(),
       completedAt: instant ? nowIso() : undefined,
       demoSeller: !sellerAccount,

@@ -240,6 +240,36 @@
   transform: scale(1.08);
 }
 
+/* Cluster bubble: violet circle with the grouped-spot count */
+.ss-cluster {
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  background: #5b3aa8;
+  border: 3px solid #ffffff;
+  box-shadow: 0 2px 8px rgb(46 16 101 / 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 150ms ease;
+}
+
+.ss-cluster:hover {
+  transform: scale(1.08);
+}
+
+.ss-cluster span {
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.dark .ss-cluster {
+  border-color: #2e1065;
+  background: #6b46c1;
+}
+
 /* Visitor position: amber dot with a soft pulse */
 .ss-user-dot {
   width: 16px;

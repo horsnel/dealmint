@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Building2,
   Check,
@@ -54,6 +54,7 @@ export function SafeSpotsPage() {
   const [focusSpotId, setFocusSpotId] = useState<string | null>(null);
   const [focusNonce, setFocusNonce] = useState(0);
   const mapSectionRef = useRef<HTMLDivElement | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const cityCounts = useMemo(() => {
     const approved = safeSpots.filter((s) => s.isApproved);
@@ -89,24 +90,78 @@ export function SafeSpotsPage() {
     mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
 
+  // Deep link: /safe-spots?focus=<spotId> (used by order "View on map")
+  const focusParam = searchParams.get('focus');
+  useEffect(() => {
+    if (!focusParam) return;
+    const spot = safeSpots.find((s) => s.id === focusParam && s.isApproved && s.lat != null);
+    if (!spot) return;
+    setCity(spot.city); // make sure the spot is in the rendered list
+    setFocusSpotId(spot.id);
+    setFocusNonce((n) => n + 1);
+    const t = setTimeout(
+      () => mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }),
+      250
+    );
+    const next = new URLSearchParams(searchParams);
+    next.delete('focus');
+    setSearchParams(next, { replace: true });
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusParam]);
+
+  // Robust locate flow: embedded previews (in-app browsers, IM preview panes)
+  // block geolocation entirely; GPS fixes can be slow or unavailable, so we
+  // retry on network location before giving up, with a clear message per case.
   const handleLocate = () => {
-    if (!('geolocation' in navigator)) {
+    if (!('geolocation' in navigator) || !navigator.geolocation) {
       toast.error('Location is not supported on this browser.');
       return;
     }
+    if (window.self !== window.top) {
+      toast.info('Location is blocked inside embedded previews.', {
+        description: 'Open Dealmint in a full browser tab, then tap Near me again.',
+        action: {
+          label: 'Open in new tab',
+          onClick: () => window.open(window.location.href, '_blank', 'noopener'),
+        },
+      });
+      return;
+    }
     setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLocating(false);
-        setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        toast.success('Showing safe spots near you.');
-      },
-      () => {
-        setLocating(false);
-        toast.error('Could not get your location. Please allow location access and try again.');
-      },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
-    );
+    const onSuccess = (pos: GeolocationPosition) => {
+      setLocating(false);
+      setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      toast.success('Showing safe spots near you.');
+    };
+    const attempt = (highAccuracy: boolean, timeout: number) => {
+      navigator.geolocation.getCurrentPosition(
+        onSuccess,
+        (err) => {
+          if (err.code === err.PERMISSION_DENIED) {
+            setLocating(false);
+            toast.error('Location is turned off for this site.', {
+              description:
+                'Allow location access for Dealmint in your browser settings, then tap Near me again.',
+            });
+            return;
+          }
+          if (highAccuracy) {
+            // GPS fix failed or timed out — network location is slower but
+            // usually works where GPS does not.
+            attempt(false, 12000);
+            return;
+          }
+          setLocating(false);
+          toast.error('Could not pin your location right now.', {
+            description:
+              'Your device could not get a position fix. Move somewhere with a clearer signal and try again.',
+          });
+        },
+        { enableHighAccuracy: highAccuracy, timeout, maximumAge: 30000 }
+      );
+    };
+    attempt(true, 8000);
   };
 
   const openDialog = () => {
@@ -155,7 +210,7 @@ export function SafeSpotsPage() {
         <div className="flex flex-wrap gap-2 mb-6" role="group" aria-label="Filter by city">
           <button
             type="button"
-            onClick={() => setCity('all')}
+            onClick={() => { setCity('all'); setFocusSpotId(null); setFocusNonce(0); }}
             aria-pressed={city === 'all'}
             className={`rounded-full px-4 py-2 text-sm font-medium border transition-colors ${
               city === 'all'
@@ -169,7 +224,7 @@ export function SafeSpotsPage() {
             <button
               key={c}
               type="button"
-              onClick={() => setCity(c)}
+              onClick={() => { setCity(c); setFocusSpotId(null); setFocusNonce(0); }}
               aria-pressed={city === c}
               className={`rounded-full px-4 py-2 text-sm font-medium border transition-colors ${
                 city === c

@@ -1,6 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
 import type { SafeSpot } from '@/types';
 import { NIGERIA_VIEW, cityCenter, directionsUrl, type LatLng } from '@/lib/safe-spots';
 import { spotTypeMeta } from '@/pages/SafeSpotsPage.meta';
@@ -46,6 +48,14 @@ const userDot = () =>
     iconAnchor: [8, 8],
   });
 
+// Violet cluster bubble with the number of grouped spots
+const clusterIcon = (cluster: L.MarkerCluster) =>
+  L.divIcon({
+    className: 'ss-marker-wrap',
+    html: `<div class="ss-cluster"><span>${cluster.getChildCount()}</span></div>`,
+    iconSize: L.point(40, 40),
+  });
+
 export function SafeSpotsMap({
   spots,
   city,
@@ -60,6 +70,7 @@ export function SafeSpotsMap({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const tilesRef = useRef<L.TileLayer | null>(null);
+  const clusterRef = useRef<L.MarkerClusterGroup | null>(null);
   const markersRef = useRef<Record<string, L.Marker>>({});
   const userMarkerRef = useRef<L.Marker | null>(null);
   const userCircleRef = useRef<L.Circle | null>(null);
@@ -73,12 +84,24 @@ export function SafeSpotsMap({
     const map = L.map(containerRef.current, {
       center: [NIGERIA_VIEW.center.lat, NIGERIA_VIEW.center.lng],
       zoom: NIGERIA_VIEW.zoom,
+      maxZoom: 19,
       scrollWheelZoom: false,
       zoomControl: false,
       attributionControl: true,
     });
     mapRef.current = map;
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
+
+    // Spots live in a cluster group so country-wide zooms collapse the pins
+    // into violet count bubbles that split apart as you zoom in.
+    clusterRef.current = L.markerClusterGroup({
+      showCoverageOnHover: false,
+      spiderfyOnMaxZoom: true,
+      maxClusterRadius: 44,
+      animate: true,
+      iconCreateFunction: clusterIcon,
+    });
+    map.addLayer(clusterRef.current);
 
     const ro = new ResizeObserver(() => map.invalidateSize());
     ro.observe(containerRef.current);
@@ -87,6 +110,7 @@ export function SafeSpotsMap({
       ro.disconnect();
       map.remove();
       mapRef.current = null;
+      clusterRef.current = null;
       markersRef.current = {};
       userMarkerRef.current = null;
       userCircleRef.current = null;
@@ -105,24 +129,65 @@ export function SafeSpotsMap({
     }).addTo(map);
   }, [dark]);
 
-  // Spot markers + city framing (view mode).
+  // Spot markers (view mode). Keyed by a stable signature so changing the
+  // city filter never rebuilds the cluster mid-animation — it only reframes.
+  const pinSignature = useMemo(
+    () => spots.filter((s) => s.lat != null && s.lng != null).map((s) => s.id).join(','),
+    [spots]
+  );
+
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || mode !== 'view') return;
+    const cluster = clusterRef.current;
+    if (!map || !cluster || mode !== 'view') return;
 
-    Object.values(markersRef.current).forEach((m) => m.remove());
+    // Never mutate layers mid-animation
+    map.stop();
+    cluster.clearLayers();
     markersRef.current = {};
 
-    const pins = spots.filter((s) => s.lat != null && s.lng != null);
-    pins.forEach((s) => {
-      const meta = spotTypeMeta.find((t) => t.value === s.type);
-      const html = `<div class="ss-popup"><p class="ss-popup__name">${esc(s.name)}</p><p class="ss-popup__meta">${esc(meta?.label ?? 'Safe spot')} &middot; ${esc(s.city)}</p><p class="ss-popup__addr">${esc(s.address)}</p><a class="ss-popup__dir" href="${directionsUrl({ lat: s.lat!, lng: s.lng! })}" target="_blank" rel="noreferrer">Get directions<span aria-hidden="true"> &rarr;</span></a></div>`;
-      const marker = L.marker([s.lat!, s.lng!], { icon: spotPin(), title: s.name, alt: s.name })
-        .addTo(map)
-        .bindPopup(html, { closeButton: true, maxWidth: 260, minWidth: 200 });
-      markersRef.current[s.id] = marker;
-    });
+    spots
+      .filter((s) => s.lat != null && s.lng != null)
+      .forEach((s) => {
+        const meta = spotTypeMeta.find((t) => t.value === s.type);
+        const html = `<div class="ss-popup"><p class="ss-popup__name">${esc(s.name)}</p><p class="ss-popup__meta">${esc(meta?.label ?? 'Safe spot')} &middot; ${esc(s.city)}</p><p class="ss-popup__addr">${esc(s.address)}</p><a class="ss-popup__dir" href="${directionsUrl({ lat: s.lat!, lng: s.lng! })}" target="_blank" rel="noreferrer">Get directions<span aria-hidden="true"> &rarr;</span></a></div>`;
+        const marker = L.marker([s.lat!, s.lng!], { icon: spotPin(), title: s.name, alt: s.name })
+          .bindPopup(html, {
+            closeButton: true,
+            maxWidth: 260,
+            minWidth: 200,
+            // keep popups clear of the "Near me" button and screen edges
+            autoPanPadding: L.point(44, 52),
+          });
+        cluster.addLayer(marker);
+        markersRef.current[s.id] = marker;
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pinSignature, mode]);
 
+  // Framing + focus, in one effect so they never race: when a spot is being
+  // focused we go straight to it; otherwise we frame the active city.
+  useEffect(() => {
+    const map = mapRef.current;
+    const cluster = clusterRef.current;
+    if (!map || !cluster || mode !== 'view') return;
+
+    const marker = focusSpotId ? markersRef.current[focusSpotId] : undefined;
+    if (focusSpotId && marker) {
+      const parent = (marker as unknown as { __parent?: unknown }).__parent;
+      if (parent != null) {
+        map.stop();
+        // Zoom until the marker splits out of its cluster, then fly close and
+        // open the popup once the flight lands so autoPan can frame it.
+        cluster.zoomToShowLayer(marker, () => {
+          map.flyTo(marker.getLatLng(), Math.max(map.getZoom(), 15), { duration: 0.7 });
+          map.once('moveend', () => marker.openPopup());
+        });
+        return;
+      }
+    }
+
+    const pins = spots.filter((s) => s.lat != null && s.lng != null);
     if (city === 'all') {
       if (pins.length > 0) {
         map.fitBounds(
@@ -144,18 +209,11 @@ export function SafeSpotsMap({
         map.flyTo([c.lat, c.lng], c.zoom, { duration: 0.8 });
       }
     }
-  }, [spots, city, mode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [city, mode, focusSpotId, focusNonce]);
 
-  // Fly to + open a spot chosen from the list.
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || mode !== 'view' || !focusSpotId || focusNonce === 0) return;
-    const marker = markersRef.current[focusSpotId];
-    if (!marker) return;
-    map.flyTo(marker.getLatLng(), Math.max(map.getZoom(), 15), { duration: 0.7 });
-    // Open after the flight lands so autoPan can fully frame the popup.
-    map.once('moveend', () => marker.openPopup());
-  }, [focusSpotId, focusNonce, mode]);
+  // Fly to + open a spot chosen from the list is handled by the framing+focus
+  // effect above (keyed on focusSpotId/focusNonce).
 
   // Visitor position marker.
   useEffect(() => {

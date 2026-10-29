@@ -136,3 +136,48 @@ user-submitted spots created before this release keep working in the list
 
 ### Deploy
 - Push to GitHub main (triggers Vercel); Cloudflare Pages wrangler deploy.
+
+## 2026-10-30 — Safe Spot meetups, marker clusters, inbox redesign, near-me fix
+
+User follow-up round on the live map, plus the two accepted map follow-ups
+(clusters + order meetups) and the new inbox chrome.
+
+### What shipped
+- **Safe Spot meetup points on orders** — the offer/checkout dialog on gigs,
+  tasks, jobs and services (not digital) gains an optional "Meetup point"
+  selector listing approved pinned Safe Spots in the listing's city; the
+  chosen spot is snapshotted onto the order (`order.meetup`). OrderDetail
+  shows a "Meetup point" card with a "View on map" deep link to
+  `/safe-spots?focus=<spotId>`, which auto-switches the city, flies to the
+  pin and opens its popup.
+- **Marker clustering** — leaflet.markercluster with custom violet count
+  bubbles: country zoom collapses pins into clusters that split apart as you
+  zoom; list "View on map" now zooms clusters open via `zoomToShowLayer`.
+  Map init needs `maxZoom: 19` (markercluster requirement); marker rebuilds
+  are keyed by a stable id signature and animations are stopped before layer
+  mutations so nothing races.
+- **Inbox redesign** — `/dashboard/messages` hides the global navigation and
+  renders its own slim header (Dealmint logo left, account avatar right,
+  amber ring) with an edge-to-edge full-height layout: "Messages" title,
+  folder tabs and the conversation sidebar only. Desktop keeps the two-pane
+  card; empty state centers in the viewport.
+- **Near me robustness** — the locate flow now (1) detects embedded previews
+  (iframe) and offers "Open in new tab" since permissions policy blocks
+  geolocation in frames, (2) distinguishes PERMISSION_DENIED from fix
+  failures with accurate copy, (3) retries on network location (low accuracy,
+  longer timeout) when the high-accuracy GPS fix times out or is
+  unavailable, instead of failing outright.
+- Popup `autoPanPadding` keeps popups clear of the "Near me" button.
+
+### Verification
+- `tsc --noEmit` clean; production build clean (cluster plugin stays in the
+  lazy SafeSpotsPage chunk).
+- Interactive checks: clusters render/split/zoom, deep-link focus from an
+  order (city switch + fly + popup), card focus through clusters, near-me
+  success + permission-denied copy, meetup select → order → order card →
+  map loop, digital checkout has no meetup picker, inbox header/list/chat
+  in light + dark at 390×844 and 1280×800 — zero horizontal overflow, no
+  new console errors. Requests tab, ChatLock and quick replies untouched.
+
+### Deploy
+- Push to GitHub main (Vercel auto-deploy); Cloudflare wrangler deploy.

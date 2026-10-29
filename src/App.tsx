@@ -82,7 +82,8 @@ function AppContent() {
   return (
     <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
       <ScrollToTop />
-      <Navigation user={user} />
+      {/* The inbox renders its own slim header (logo + avatar), chat-app style */}
+      {location.pathname !== '/dashboard/messages' && <Navigation user={user} />}
       <main>
         <ErrorBoundary>
           <Suspense fallback={<PageSkeleton />}>

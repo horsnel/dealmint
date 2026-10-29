@@ -5,6 +5,7 @@ import {
   CheckCircle,
   Circle,
   Download,
+  MapPin,
   MessageSquare,
   Search,
   ShieldAlert,
@@ -418,6 +419,38 @@ export function OrderDetailPage() {
                 </p>
               )}
             </div>
+
+            {/* Meetup point */}
+            {order.meetup && (
+              <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-5">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Meetup point</h3>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-violet-100 dark:bg-violet-700 flex items-center justify-center shrink-0">
+                      <MapPin className="w-5 h-5 text-violet-600 dark:text-amber-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 dark:text-white">{order.meetup.name}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                        {order.meetup.address} · {order.meetup.city}
+                      </p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                        Meet in a busy, public place. Confirm the exact spot in chat before you set off.
+                      </p>
+                    </div>
+                  </div>
+                  {order.meetup.spotId && (
+                    <Link
+                      to={`/safe-spots?focus=${order.meetup.spotId}`}
+                      className="shrink-0 inline-flex items-center gap-1.5 text-sm font-semibold text-violet-600 dark:text-amber-400 hover:underline underline-offset-2"
+                    >
+                      <MapPin className="w-4 h-4 shrink-0" />
+                      View on map
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Notes */}
             {(order.note || order.deliveryNote) && (

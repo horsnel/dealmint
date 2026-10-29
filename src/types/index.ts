@@ -250,6 +250,8 @@ export interface Order {
   fee: number;
   note?: string;
   deliveryNote?: string;
+  // Agreed in-person meeting point (a community Safe Spot snapshot)
+  meetup?: MeetupPoint;
   createdAt: string;
   completedAt?: string;
   timeline: OrderEvent[];
@@ -259,6 +261,16 @@ export interface Order {
   // token-gated download for digital purchases
   downloadToken?: string;
   downloads?: number;
+}
+
+// Snapshot of the Safe Spot chosen as an order's meetup point
+export interface MeetupPoint {
+  spotId?: string;
+  name: string;
+  address: string;
+  city: string;
+  lat?: number;
+  lng?: number;
 }
 
 // Notification Types

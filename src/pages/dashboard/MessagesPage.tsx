@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ChatLock } from '@/components/chat/ChatLock';
+import { Logo } from '@/components/common/Logo';
 import { formatBytes, formatPrice, formatTime } from '@/lib/format';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
@@ -376,25 +377,43 @@ export function MessagesPage() {
   /* --------------------------------- rendering --------------------------------- */
 
   return (
-    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="h-[100dvh] flex flex-col bg-lavender dark:bg-violet-950">
+      {/* Slim dedicated header — the inbox hides the global nav and runs
+          chat-app style: brand logo on the left, account avatar on the right */}
+      <header className="shrink-0 h-14 lg:h-16 bg-white dark:bg-violet-900 border-b border-gray-200 dark:border-violet-700 flex items-center justify-between px-4 sm:px-6 z-10">
+        <Logo />
+        <Link
+          to="/dashboard"
+          aria-label="Go to dashboard"
+          className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2"
+        >
+          <img
+            src={user?.avatar || '/images/avatar_default.jpg'}
+            alt={user?.name || 'Account'}
+            className="w-8 h-8 lg:w-9 lg:h-9 rounded-full object-cover border-2 border-amber-500"
+          />
+        </Link>
+      </header>
+
+      <div className="flex-1 min-h-0 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 flex">
         {conversations.length === 0 ? (
-          <div className="card-white dark:bg-violet-800 dark:border-violet-700">
-            <EmptyState
-              icon={MessageSquare}
-              title="No messages yet"
-              description="Start a conversation from any listing or seller profile using the Contact button."
-              action={
-                <Link to="/browse">
-                  <Button className="bg-violet-600 hover:bg-violet-700">Browse listings</Button>
-                </Link>
-              }
-            />
+          <div className="flex-1 flex items-center justify-center">
+            <div className="card-white dark:bg-violet-800 dark:border-violet-700 w-full max-w-md">
+              <EmptyState
+                icon={MessageSquare}
+                title="No messages yet"
+                description="Start a conversation from any listing or seller profile using the Contact button."
+                action={
+                  <Link to="/browse">
+                    <Button className="bg-violet-600 hover:bg-violet-700">Browse listings</Button>
+                  </Link>
+                }
+              />
+            </div>
           </div>
         ) : (
         <div
-          className="card-white dark:bg-violet-800 dark:border-violet-700 overflow-hidden flex"
-          style={{ height: 'calc(100vh - 10rem)', minHeight: 480 }}
+          className="card-white dark:bg-violet-800 dark:border-violet-700 overflow-hidden flex flex-1 min-h-0"
         >
           {listPane}
 
