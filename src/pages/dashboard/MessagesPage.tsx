@@ -251,16 +251,31 @@ export function MessagesPage() {
         ) : (
           <>
             <div className="flex items-center justify-between gap-2">
-              <h2 className="font-display font-semibold text-lg text-gray-900 dark:text-white">Messages</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label="Search conversations"
-                className="rounded-full dark:text-gray-300"
-                onClick={() => setSearchOpen(true)}
-              >
-                <Search className="w-4 h-4" />
-              </Button>
+              <h1 className="font-display font-bold text-2xl lg:text-3xl text-gray-900 dark:text-white">
+                Messages
+              </h1>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Search conversations"
+                  className="rounded-full dark:text-gray-300"
+                  onClick={() => setSearchOpen(true)}
+                >
+                  <Search className="w-4 h-4" />
+                </Button>
+                <Link
+                  to="/dashboard"
+                  aria-label="Go to dashboard"
+                  className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 shrink-0"
+                >
+                  <img
+                    src={user?.avatar || '/images/avatar_default.jpg'}
+                    alt={user?.name || 'Account'}
+                    className="w-9 h-9 rounded-full object-cover border-2 border-amber-500 block"
+                  />
+                </Link>
+              </div>
             </div>
             {/* Inbox / Requests tabs */}
             <div className="flex items-center gap-5 mt-3" role="tablist" aria-label="Message folders">

@@ -309,3 +309,19 @@ Stage Summary:
 - Notification drawer + corrected distraction-free messages inbox LIVE on https://dealmint-five.vercel.app and https://dealmint.pages.dev
 - Bell (desktop + mobile menu) opens quiet drawer: bottom sheet on phones, side panel on desktop; business events stay in bell/drawer, toasts = action confirmations only
 - /dashboard/messages now headerless by design: only sidebar ("Messages" title + tabs) and chat pane
+
+---
+Task ID: 15
+Agent: main (Z.ai)
+Task: Messages title = page-title size + avatar & sidebar visible on the messages page
+
+Work Log:
+- Inbox header retitled per user: sidebar "Messages" h2 (text-lg) → h1 with the exact standard page-title classes (font-display font-bold text-2xl lg:text-3xl text-gray-900 dark:text-white), same as Notifications/Orders/Settings
+- Account avatar restored visible (user request "the sidebar and the avatar should be visible too"; logo stays out): amber-ring avatar img top-right of the inbox header next to the search button, links to /dashboard (aria-label "Go to dashboard", focus ring, w-9 h-9); lives inside the list pane so it shows with the conversation sidebar and hides only while a chat is open on mobile (standard inbox behavior)
+- Verified (agent-browser): mobile 390 (light + dark) and desktop 1280 — h1 classes applied, avatar visible, sidebar visible, zero horizontal overflow; chat open/back regression fine
+- Note: sandbox recycle wiped dealmint/node_modules — restored via bun install (376 pkgs) before build
+- Deploy: build clean; clone+rsync (modes normalized to 644), push; Vercel auto + Cloudflare wrangler; smoke both platforms
+
+Stage Summary:
+- Messages page now: big page-size "Messages" title + account avatar (amber ring) + Inbox/Requests tabs + conversation sidebar; no logo, per spec evolution
+- LIVE on https://dealmint-five.vercel.app and https://dealmint.pages.dev
