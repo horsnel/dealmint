@@ -9,7 +9,8 @@ import {
   ArrowRight,
   Bell,
   Bookmark,
-  Gift
+  Gift,
+  Heart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,7 +53,7 @@ export function DashboardPage() {
     { label: 'Post a Gig', href: '/post/gig', icon: Plus, color: 'bg-violet-600' },
     { label: 'Post a Task', href: '/post/task', icon: Plus, color: 'bg-amber-500' },
     { label: 'My Orders', href: '/dashboard/orders', icon: Package, color: 'bg-green-500' },
-    { label: 'Browse Jobs', href: '/browse?category=jobs', icon: Briefcase, color: 'bg-blue-500' },
+    { label: 'Favourites', href: '/dashboard/favourites', icon: Heart, color: 'bg-rose-500' },
     { label: 'Saved Searches', href: '/dashboard/saved-searches', icon: Bookmark, color: 'bg-pink-500' },
     { label: 'Referrals', href: '/dashboard/referrals', icon: Gift, color: 'bg-violet-500' },
   ];

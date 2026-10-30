@@ -325,3 +325,22 @@ Work Log:
 Stage Summary:
 - Messages page now: big page-size "Messages" title + account avatar (amber ring) + Inbox/Requests tabs + conversation sidebar; no logo, per spec evolution
 - LIVE on https://dealmint-five.vercel.app and https://dealmint.pages.dev
+
+---
+Task ID: 16
+Agent: main (Z.ai)
+Task: App-like navigation — full-height mobile drawer, avatar into drawer, Messages tab in header (avatar's old slot), Orders/Favourites out of the menu
+
+Work Log:
+- User decision call (3 options offered): chose the INTEGRATED option — full-height drawer restructure + header Messages tab; floating-icon option rejected (PostFab owns the floating layer; FABs are for actions, not destinations); pure-restructure option softened by keeping Orders/Favourites reachable as dashboard quick links
+- Navigation.tsx mobile header: avatar button (→/dashboard) removed from the header row; Messages Link (MessageSquare w-6, amber Badge unread count, aria-label "Messages, N unread") now sits exactly where the avatar was, left of the hamburger; rendered only for logged-in users (logged-out keeps Log in / Get Started in the menu)
+- Navigation.tsx mobile menu → full-height drawer: h-[calc(100dvh-4rem)] (runs all the way down, 100dvh with the h-16 bar), overflow-y-auto + safe-area bottom padding, animate-in fade/slide; restructured = profile card top (amber-ring avatar w-12 + name + email + ChevronRight → /dashboard), lean nav (Browse/Categories/Safe Spots), account section (Notifications → quiet drawer with count, Settings), Log out PINNED bottom via mt-auto (red; NEW — mobile previously had no logout at all); Orders/Messages/Favourites items REMOVED per user
+- DashboardPage: "Browse Jobs" quick action → "Favourites" (Heart, rose-500) so Favourites keeps a one-tap home; "My Orders" already covered Orders; grid stays 6 tiles (clean at 2/3/6 cols)
+- Desktop untouched: header keeps bell + Messages link + avatar dropdown (full account menu incl. Orders/Favourites); App.tsx stale comment fixed (inbox is chrome-free, no logo)
+- Verified (agent-browser, preview of dist): mobile 390 — drawer 780px on 844 viewport (all the way down), profile card/lean nav/logout correct, zero horizontal overflow; messages tab → chrome-free inbox; drawer Notifications button opens NotificationDrawer; Favourites quick action → /dashboard/favourites; dark mode drawer clean; desktop 1280 — dropdown intact (Dashboard/My Listings/Orders/Favourites/Wallet/Reviews/Settings/Logout); PostFab opens its sheet; zero console/page errors
+- Build: tsc clean, new entry index-B-Y1QcJY.js; deploy clone+rsync (modes normalized 644), Vercel auto + Cloudflare wrangler; production smoke both platforms
+
+Stage Summary:
+- Mobile navigation is now app-like: full-height drawer with avatar profile card, lean item set, pinned Log out; Messages is a persistent header tab with live unread badge in the avatar's former slot
+- Orders → dashboard "My Orders" quick action; Favourites → new dashboard quick action; Messages → header tab; nothing orphaned
+- LIVE on https://dealmint-five.vercel.app and https://dealmint.pages.dev

@@ -10,6 +10,7 @@ import {
   Wallet,
   LogOut,
   ChevronDown,
+  ChevronRight,
   Bell,
   Heart,
   Package,
@@ -252,29 +253,23 @@ export function Navigation({ user }: NavigationProps) {
             )}
           </div>
 
-          {/* Mobile: avatar (dashboard shortcut) + menu button */}
+          {/* Mobile: messages tab (the avatar's old spot) + menu button.
+              The avatar itself moved into the menu drawer as a profile card. */}
           <div className="lg:hidden flex items-center gap-1">
-            <button
-              onClick={() => navigate('/dashboard')}
-              aria-label="Go to dashboard"
-              className={`p-1.5 rounded-full transition-colors ${
-                isScrolled || !isLandingPage
-                  ? 'hover:bg-gray-100 dark:hover:bg-violet-800'
-                  : 'hover:bg-white/10'
-              }`}
-            >
-              {user ? (
-                <img
-                  src={user.avatar || '/images/avatar_default.jpg'}
-                  alt={user.name}
-                  className="w-8 h-8 rounded-full object-cover border-2 border-amber-500"
-                />
-              ) : (
-                <span className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-800 border-2 border-amber-500 flex items-center justify-center text-violet-600 dark:text-amber-400">
-                  <UserIcon className="w-5 h-5" />
-                </span>
-              )}
-            </button>
+            {user && (
+              <Link
+                to="/dashboard/messages"
+                aria-label={`Messages${unreadMessages ? `, ${unreadMessages} unread` : ''}`}
+                className={`relative p-2 rounded-full transition-colors ${
+                  isScrolled || !isLandingPage
+                    ? 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-violet-800'
+                    : 'text-white/90 hover:bg-white/10'
+                }`}
+              >
+                <MessageSquare className="w-6 h-6" />
+                <Badge count={unreadMessages} />
+              </Link>
+            )}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
@@ -300,71 +295,86 @@ export function Navigation({ user }: NavigationProps) {
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile menu — a full-height drawer that runs all the way down the
+          screen: profile card up top (the avatar's new home), lean nav in the
+          middle, account actions pinned to the bottom. Orders / Favourites
+          live as dashboard quick links; Messages lives in the header where
+          the avatar used to be. */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden bg-white dark:bg-violet-900 border-t dark:border-violet-800">
-          <div className="px-4 py-4 space-y-4">
-            {navLinks.map((link) => (
-              <Link
-                key={link.name}
-                to={link.href}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block py-2 text-gray-700 dark:text-gray-200 hover:text-violet-600 dark:hover:text-amber-400 font-medium"
-              >
-                {link.name}
-              </Link>
-            ))}
-            
-            {/* Post options moved to the mobile FAB bottom sheet (PostFab) */}
-
+        <div className="lg:hidden h-[calc(100dvh-4rem)] bg-white dark:bg-violet-900 border-t dark:border-violet-800 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="h-full overflow-y-auto px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col">
             {user ? (
-              <div className="border-t dark:border-violet-800 pt-4 space-y-2">
+              <>
+                {/* Profile card — the avatar's new home */}
                 <Link
-                  to="/dashboard/orders"
+                  to="/dashboard"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-2 py-2 text-gray-700 dark:text-gray-200"
+                  className="flex items-center gap-3 rounded-2xl border border-violet-100 dark:border-violet-700 bg-violet-50/60 dark:bg-violet-800/60 p-3 mb-4 transition-colors active:bg-violet-100 dark:active:bg-violet-800/80"
                 >
-                  <Package className="w-4 h-4" />
-                  Orders
+                  <img
+                    src={user.avatar || '/images/avatar_default.jpg'}
+                    alt={user.name}
+                    className="w-12 h-12 rounded-full object-cover border-2 border-amber-500 shrink-0"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-display font-semibold text-gray-900 dark:text-white truncate">
+                      {user.name}
+                    </span>
+                    <span className="block text-sm text-gray-500 dark:text-gray-400 truncate">
+                      {user.email}
+                    </span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
                 </Link>
-                <Link
-                  to="/dashboard/messages"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-2 py-2 text-gray-700 dark:text-gray-200"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  Messages{unreadMessages > 0 ? ` (${unreadMessages})` : ''}
-                </Link>
+
+                <nav className="space-y-1">
+                  {navLinks.map((link) => (
+                    <Link
+                      key={link.name}
+                      to={link.href}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center px-3 py-3 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-violet-800 font-medium transition-colors"
+                    >
+                      {link.name}
+                    </Link>
+                  ))}
+                </nav>
+
+                <div className="border-t dark:border-violet-800 mt-3 pt-3 space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setNotifOpen(true);
+                    }}
+                    className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-violet-800 font-medium transition-colors"
+                  >
+                    <Bell className="w-5 h-5" />
+                    <span>Notifications{unreadNotifications > 0 ? ` (${unreadNotifications})` : ''}</span>
+                  </button>
+                  <Link
+                    to="/dashboard/settings"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-violet-800 font-medium transition-colors"
+                  >
+                    <Settings className="w-5 h-5" />
+                    Settings
+                  </Link>
+                </div>
+
+                {/* Log out — pinned to the bottom of the drawer (mobile had no
+                    logout entry before; it lived only in the desktop dropdown) */}
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    setNotifOpen(true);
-                  }}
-                  className="flex items-center gap-2 py-2 w-full text-gray-700 dark:text-gray-200"
+                  onClick={handleLogout}
+                  className="mt-auto flex items-center gap-3 w-full px-3 py-3 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 font-medium transition-colors"
                 >
-                  <Bell className="w-4 h-4" />
-                  Notifications{unreadNotifications > 0 ? ` (${unreadNotifications})` : ''}
+                  <LogOut className="w-5 h-5" />
+                  Log out
                 </button>
-                <Link
-                  to="/dashboard/favourites"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-2 py-2 text-gray-700 dark:text-gray-200"
-                >
-                  <Heart className="w-4 h-4" />
-                  Favourites
-                </Link>
-                <Link
-                  to="/dashboard/settings"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-2 py-2 text-gray-700 dark:text-gray-200"
-                >
-                  <Settings className="w-4 h-4" />
-                  Settings
-                </Link>
-              </div>
+              </>
             ) : (
-              <div className="border-t dark:border-violet-800 pt-4 space-y-2">
+              <div className="mt-auto border-t dark:border-violet-800 pt-4 space-y-2 pb-2">
                 <Link
                   to="/login"
                   onClick={() => setIsMobileMenuOpen(false)}
