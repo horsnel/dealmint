@@ -82,6 +82,9 @@ export function authErrorMessage(e: unknown): string {
       return 'Too many attempts. Wait a moment and try again.';
     case 'user_session_not_found':
       return 'Your session expired. Please sign in again.';
+    case 'user_invalid_token':
+    case 'user_verification_token_invalid':
+      return 'This link is invalid or has expired. Sign in and request a fresh one.';
     default:
       if (err?.message?.includes('password')) return 'Password does not meet the requirements.';
       return err?.message || 'Something went wrong. Please try again.';

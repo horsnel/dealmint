@@ -13,7 +13,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 export function RegisterPage() {
   usePageTitle('Create account');
   const navigate = useNavigate();
-  const { user, register } = useApp();
+  const { user, register, oauthSignIn, authMode } = useApp();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -68,7 +68,11 @@ export function RegisterPage() {
         return;
       }
       localStorage.removeItem('dealmint_selected_role');
-      toast.success('Account created successfully!');
+      toast.success(
+        authMode === 'cloud'
+          ? 'Account created! Check your inbox for a verification link.'
+          : 'Account created successfully!'
+      );
       navigate('/verify-phone', { replace: true });
     } catch {
       setIsLoading(false);
@@ -268,7 +272,7 @@ export function RegisterPage() {
               type="button"
               variant="outline"
               className="dark:border-violet-600 dark:text-white"
-              onClick={() => toast.info('Google signup coming soon!')}
+              onClick={() => oauthSignIn('google')}
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path
@@ -294,7 +298,7 @@ export function RegisterPage() {
               type="button"
               variant="outline"
               className="dark:border-violet-600 dark:text-white"
-              onClick={() => toast.info('Apple signup coming soon!')}
+              onClick={() => oauthSignIn('apple')}
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.08zm-5.85-15.1c.07-2.04 1.76-3.79 3.78-3.94.29 2.32-1.93 4.48-3.78 3.94z" />

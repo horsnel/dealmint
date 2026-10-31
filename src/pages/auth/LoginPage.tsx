@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, MailCheck, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,7 +20,8 @@ export function LoginPage() {
   usePageTitle('Log in');
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, login } = useApp();
+  const { user, login, oauthSignIn } = useApp();
+  const [params] = useSearchParams();
   const from = (location.state as { from?: string } | null)?.from || '/dashboard';
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -110,6 +111,13 @@ export function LoginPage() {
               Fill in the demo account
             </button>
           </div>
+
+          {params.get('oauth') === 'failed' && (
+            <div role="alert" className="mb-6 rounded-xl bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-700 dark:text-red-300">
+              {params.get('provider') === 'apple' ? 'Apple' : 'Google'} sign-in was cancelled or didn't complete. Try
+              email sign-in instead.
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6" noValidate={false}>
@@ -224,7 +232,7 @@ export function LoginPage() {
               type="button"
               variant="outline"
               className="dark:border-violet-600 dark:text-white"
-              onClick={() => toast.info('Google login coming soon!')}
+              onClick={() => oauthSignIn('google')}
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path
@@ -250,7 +258,7 @@ export function LoginPage() {
               type="button"
               variant="outline"
               className="dark:border-violet-600 dark:text-white"
-              onClick={() => toast.info('Apple login coming soon!')}
+              onClick={() => oauthSignIn('apple')}
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.08zm-5.85-15.1c.07-2.04 1.76-3.79 3.78-3.94.29 2.32-1.93 4.48-3.78 3.94z" />

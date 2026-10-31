@@ -35,6 +35,8 @@ import { commissionRate, matchesCategory, BOOST_PRICES } from '@/lib/categories'
 import { matchesSearchFilters } from '@/lib/search';
 import { formatPrice, uid } from '@/lib/format';
 import { REFERRAL_REWARD, referralCodeFor } from '@/lib/referral';
+import type { Models } from 'appwrite';
+import { OAuthProvider } from 'appwrite';
 import { account, authErrorMessage, cloudConfigured, probeCloud, setStorageAuthed, ID } from '@/lib/appwrite';
 import {
   bootstrapCloudSeed,
@@ -129,6 +131,15 @@ interface AppContextValue {
   verifyPhone: () => void;
   submitIdVerification: (docType?: string) => void;
   verifyStudent: (schoolEmail: string) => Result;
+  // Social sign-in (Appwrite OAuth2): navigates to the provider and back;
+  // /oauth/callback then calls completeOAuthSignIn to finish the session.
+  oauthSignIn: (provider: 'google' | 'apple') => void;
+  completeOAuthSignIn: () => Promise<Result>;
+  // Appwrite account.emailVerification — null = unknown or local mode;
+  // false drives the verify-your-email banner.
+  emailVerified: boolean | null;
+  sendEmailVerification: () => Promise<Result>;
+  markEmailVerified: () => void;
   // 'cloud' = Appwrite sessions + sync active; 'local' = device-only fallback
   authMode: 'cloud' | 'local';
 
@@ -234,6 +245,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [sessionId, setSessionId] = useState<string | null>(() => loadSession());
   const [isLoading, setIsLoading] = useState(true);
   const [authMode, setAuthMode] = useState<'cloud' | 'local'>('local');
+  const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
   const dbRef = useRef(db);
   const sessionIdRef = useRef(sessionId);
   const warnedStorage = useRef(false);
@@ -319,7 +331,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setAuthMode('cloud');
       let me: string | null = null;
       try {
-        me = (await account.get()).$id;
+        const acc = await account.get();
+        me = acc.$id;
+        setEmailVerified(acc.emailVerification);
       } catch {
         me = null;
       }
@@ -485,6 +499,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const acc = await account.get().catch(() => null);
       if (!acc) return { ok: false, error: 'Could not establish a session. Please try again.' };
       adoptSession(acc.$id);
+      setEmailVerified(acc.emailVerification);
       // make sure a profile document exists for this identity
       if (!dbRef.current.users.some((u) => u.id === acc.$id)) {
         if (local && local.id === acc.$id) {
@@ -555,6 +570,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         return { ok: false, error: authErrorMessage(e) };
       }
+      // Ask Appwrite to email the verification link (lands on /verify-email).
+      // Best-effort: a mail hiccup must never block the signup itself — the
+      // user can resend any time from the banner or /verify-email.
+      try {
+        await account.createVerification(`${window.location.origin}/verify-email`);
+      } catch {
+        // ignore — resendable
+      }
+      setEmailVerified(false);
       // adopt BEFORE the commit so the profile document publishes to the cloud
       adoptSession(newId);
     }
@@ -648,6 +672,87 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     setSessionId(null);
   };
+
+  // ---------- social sign-in (Appwrite OAuth2) ----------
+  const oauthSignIn: AppContextValue['oauthSignIn'] = (provider) => {
+    if (!isCloudActive() || !account) {
+      toast.error('Social sign-in needs the cloud backend. Use email and password for now.');
+      return;
+    }
+    // Redirects the browser to the provider and back. Appwrite sets the
+    // session cookie on the API domain; /oauth/callback finishes the flow.
+    void account.createOAuth2Session(
+      provider === 'apple' ? OAuthProvider.Apple : OAuthProvider.Google,
+      `${window.location.origin}/oauth/callback`,
+      `${window.location.origin}/login?oauth=failed&provider=${provider}`
+    );
+  };
+
+  const completeOAuthSignIn: AppContextValue['completeOAuthSignIn'] = async () => {
+    if (!account) return { ok: false, error: 'Cloud backend unavailable.' };
+    // The provider redirect just landed and the session cookie already exists
+    // on the API domain — even if the boot probe has not flipped cloud mode
+    // yet, so read the account directly (with one patient retry).
+    let acc: Models.User<Models.Preferences> | null = null;
+    for (let attempt = 0; attempt < 2 && !acc; attempt++) {
+      acc = await account.get().catch(() => null);
+      if (!acc && attempt === 0) await new Promise((r) => setTimeout(r, 800));
+    }
+    if (!acc) return { ok: false, error: 'Sign-in did not complete. Please try again.' };
+    setCloudActive(true);
+    setAuthMode('cloud');
+    adoptSession(acc.$id);
+    setEmailVerified(acc.emailVerification);
+    // A brand-new social account has no profile document yet — publish one
+    // so the dashboard works and the profile is visible to other users.
+    if (!dbRef.current.users.some((u) => u.id === acc.$id)) {
+      const fresh: StoredUser = {
+        id: acc.$id,
+        name: acc.name || (acc.email ? acc.email.split('@')[0] : '') || 'New user',
+        email: acc.email || '',
+        password: '',
+        phone: acc.phone || '',
+        role: 'general',
+        isVerified: false,
+        phoneVerified: false,
+        idVerified: false,
+        idStatus: 'none',
+        studentVerified: false,
+        rating: 0,
+        reviewCount: 0,
+        avatar: '/images/avatar_default.jpg',
+        joinedAt: nowIso(),
+        walletBalance: 0,
+        skills: [],
+        settings: {
+          emailNotifications: true,
+          orderUpdates: true,
+          messageAlerts: true,
+          marketing: false,
+          showPhone: false,
+          showLocation: true,
+        },
+      };
+      commit((d) => ({ ...d, users: [...d.users, fresh] }));
+    }
+    void bootstrapCloudSeed(dbRef.current, acc.$id);
+    await applyPull(acc.$id);
+    void flushSync();
+    return { ok: true };
+  };
+
+  // ---------- email verification (cloud) ----------
+  const sendEmailVerification: AppContextValue['sendEmailVerification'] = async () => {
+    if (!isCloudActive() || !account) return { ok: false, error: 'Email verification needs the cloud backend.' };
+    try {
+      await account.createVerification(`${window.location.origin}/verify-email`);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: authErrorMessage(e) };
+    }
+  };
+
+  const markEmailVerified = () => setEmailVerified(true);
 
   const updateProfile: AppContextValue['updateProfile'] = (patch) => {
     const id = uidNow();
@@ -1733,6 +1838,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     verifyPhone,
     submitIdVerification,
     verifyStudent,
+    oauthSignIn,
+    completeOAuthSignIn,
+    emailVerified,
+    sendEmailVerification,
+    markEmailVerified,
     listings: visibleListings,
     myListings,
     getListing,

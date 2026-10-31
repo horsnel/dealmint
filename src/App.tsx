@@ -8,6 +8,7 @@ import { ScrollToTop } from '@/components/common/ScrollToTop';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { PageSkeleton } from '@/components/common/PageSkeleton';
 import { AppProvider, useApp } from '@/context/AppContext';
+import { EmailVerifyBanner } from '@/components/auth/EmailVerifyBanner';
 import { HomePage } from '@/pages/HomePage';
 import './App.css';
 
@@ -58,6 +59,8 @@ const SavedSearchesPage = page(() => import('@/pages/dashboard/SavedSearchesPage
 const ReferralsPage = page(() => import('@/pages/dashboard/ReferralsPage'), 'ReferralsPage');
 const VerifyIdPage = page(() => import('@/pages/dashboard/VerifyIdPage'), 'VerifyIdPage');
 const ResetPasswordPage = page(() => import('@/pages/auth/ResetPasswordPage'), 'ResetPasswordPage');
+const VerifyEmailPage = page(() => import('@/pages/auth/VerifyEmailPage'), 'VerifyEmailPage');
+const OAuthCallbackPage = page(() => import('@/pages/auth/OAuthCallbackPage'), 'OAuthCallbackPage');
 
 const PostGigPage = page(() => import('@/pages/post/PostGigPage'), 'PostGigPage');
 const PostTaskPage = page(() => import('@/pages/post/PostTaskPage'), 'PostTaskPage');
@@ -86,6 +89,8 @@ function AppContent() {
       {/* The inbox renders chrome-free — its own conversation sidebar with
           page-size title and avatar — chat-app style */}
       {location.pathname !== '/dashboard/messages' && <Navigation user={user} />}
+      {/* Nudge signed-in cloud users to verify their email (skipped on the immersive inbox too) */}
+      {location.pathname !== '/dashboard/messages' && <EmailVerifyBanner />}
       <main>
         <ErrorBoundary>
           <Suspense fallback={<PageSkeleton />}>
@@ -116,6 +121,8 @@ function AppContent() {
               <Route path="/role-selection" element={<RoleSelectionPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/verify-email" element={<VerifyEmailPage />} />
+              <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
               <Route path="/verify-phone" element={<VerifyPhonePage />} />
 
               {/* Protected Dashboard Routes */}
