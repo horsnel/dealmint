@@ -384,12 +384,10 @@ Stage Summary:
 - Blocked on: fresh API key secret (the 228-char one is invalid) → then one command provisions 16 collections + bucket + platforms, seed runs, and the cloud path smoke-tests for real (permissions, realtime, demo-account lift)
 - Key hygiene kept: provisioning key never entered dealmint/, dist, or any committed file
 
-## Task 17 — Appwrite provisioning round 1 + seed pipeline (blocked on key scopes)
-- New key verified: 265-char `standard_`-prefixed secret works against FRA; probe matrix: health/databases/users/storage 200
-- Scope audit: key HAS databases.write, storage.buckets.write, users.read/write; MISSING collections.write (+attributes/indexes/documents.write) → database `dealmint` + bucket `media` created, 16 collections blocked
-- Appwrite Cloud does not expose /platforms REST to API keys (404) → web platforms must be added in console
-- Client: endpoint pinned to `https://fra.cloud.appwrite.io/v1` (public .env), rebuilt + redeployed both platforms
-- Parity fix: users schema + userToDoc now carry `joinedAt` (member-since survives cloud round-trip)
-- Seeder `scripts/seed_appwrite.ts` (bun): imports REAL sync.ts mappers + docPermissions → byte-identical docs; seed ids survive as document ids; $createdAt passthrough with fallback; idempotent 409→PATCH
-- Auth accounts CREATED server-side: demo@dealmint.ng (Demo1234, userId u1) + 6 NPC sellers (random passwords, blocks email squatting)
-- `perm_smoke.sh` ready: guest/demo/cross-user matrix over 14 assertions
+## Task 18 — Appwrite Cloud provisioning COMPLETE + seeded + permissions verified
+- User updated key scopes in place (same secret) + registered both domains; CORS verified: exact ACAO for vercel + pages.dev
+- Round-2 findings: (1) Appwrite Cloud v2.6.2 serves doubles at /attributes/float (returns type:double; /attributes/double 404s at edge); (2) defaults forbidden on required attributes; (3) MariaDB 65,535-byte row limit forces slim strings -> listings description 3000/requirements 1500/avatars 512; orders timeline 4000 (last 20 events), meetup/note 800; reviews avatar 512; client mapper caps matched in sync.ts
+- v2 query syntax: queries are JSON objects now ({"method":"equal","attribute":"x","values":[..]}) — perm_smoke.sh rewritten accordingly; classic limit(5) syntax 400s
+- Provisioned: 17 collections, 191 attributes (all available), 25 indexes; joinedAt shipped
+- Seeded 163 docs / 0 failures: 7 users, 30 listings, 81 reviews, 12 messages, 4 conversations, 5 transactions, 2 orders + escrow, 10 safe spots, favourites/saved/alerts/payouts/notifs; seed ids preserved as document ids
+- Permission matrix verified 15/15 from outside (guest read scope, owner-only private, buyer+seller orders, cross-user edit denied 401)
