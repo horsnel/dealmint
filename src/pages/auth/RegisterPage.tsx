@@ -53,8 +53,8 @@ export function RegisterPage() {
       return;
     }
     setIsLoading(true);
-    setTimeout(() => {
-      const result = register({
+    try {
+      const result = await register({
         name: formData.name,
         email: formData.email,
         phone: normalizePhone(formData.phone),
@@ -70,7 +70,10 @@ export function RegisterPage() {
       localStorage.removeItem('dealmint_selected_role');
       toast.success('Account created successfully!');
       navigate('/verify-phone', { replace: true });
-    }, 600);
+    } catch {
+      setIsLoading(false);
+      toast.error('Something went wrong. Please try again.');
+    }
   };
 
   const fieldError = (k: string) =>

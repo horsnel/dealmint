@@ -1,5 +1,9 @@
-// Reads an image file and shrinks it so it can safely be kept in localStorage.
-export function compressImage(file: File, maxSize = 900, quality = 0.78): Promise<string> {
+// Reads an image file and shrinks it. In cloud mode the compressed blob is
+// uploaded to the Appwrite media bucket and the public URL is returned, so
+// photos survive across devices; otherwise a data URL is kept in localStorage.
+import { isStorageAuthed, uploadToStorage } from './appwrite';
+
+function readCompressed(file: File, maxSize: number, quality: number): Promise<string> {
   return new Promise((resolve, reject) => {
     if (!file.type.startsWith('image/')) {
       reject(new Error('Please choose an image file'));
@@ -27,4 +31,18 @@ export function compressImage(file: File, maxSize = 900, quality = 0.78): Promis
     };
     reader.readAsDataURL(file);
   });
+}
+
+export async function compressImage(file: File, maxSize = 900, quality = 0.78): Promise<string> {
+  const dataUrl = await readCompressed(file, maxSize, quality);
+  if (isStorageAuthed()) {
+    try {
+      const blob = await (await fetch(dataUrl)).blob();
+      const url = await uploadToStorage(blob, `img_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.jpg`);
+      if (url) return url;
+    } catch {
+      // fall through to the data URL
+    }
+  }
+  return dataUrl;
 }

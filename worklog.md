@@ -344,3 +344,42 @@ Stage Summary:
 - Mobile navigation is now app-like: full-height drawer with avatar profile card, lean item set, pinned Log out; Messages is a persistent header tab with live unread badge in the avatar's former slot
 - Orders → dashboard "My Orders" quick action; Favourites → new dashboard quick action; Messages → header tab; nothing orphaned
 - LIVE on https://dealmint-five.vercel.app and https://dealmint.pages.dev
+
+---
+Task ID: 17
+Agent: main (Z.ai)
+Task: Appwrite migration kickoff — credentials triage + full provisioning pipeline staged
+
+Work Log:
+- User created the Appwrite Cloud account and sent credentials; triage found the "standard_ff35..." string is the API KEY's ID (console displays key IDs with standard_ prefix), not the Project ID — project lookup 404s (project_not_found) without a key header
+- API key itself may still be valid: Appwrite validates the key BEFORE resolving the project, so valid-key-wrong-project also yields api_key_invalid — need the real Project ID to retest
+- Edge quirk found: Appwrite Cloud 403s Python's default urllib User-Agent; provisioning script sends a custom UA
+- Built scripts/provision_appwrite.py (sandbox-side, never committed): idempotent provisioner mapping the full localStorage DB (DB_VERSION 3) to Appwrite — 16 collections (users, listings, favourites, orders, conversations, messages, transactions, escrow_ledger, payout_accounts, reviews, notifications, reports, saved_searches, price_alerts, safe_spots, referrals, trusted_contacts) with attributes/enum/int/double/bool/string-array, unique+filter indexes, document-security permissions (public read for listings/reviews/safe_spots, per-user docs elsewhere, buyer+seller on orders, participant pair on conversations), 'media' storage bucket (public read, 5MB, jpg/png/webp/gif), web platforms (dealmint-five.vercel.app, dealmint.pages.dev, localhost)
+- Schema decisions: doc $id = app entity id (seed ids survive), $createdAt replaces createdAt, nested objects (settings/timeline/meetup/attachment) as JSON strings, password NOT stored (Appwrite Auth owns it), reset_requests dropped in favour of Appwrite recovery, sellerName/sellerAvatar denormalized onto listings for logged-out public pages
+- Probe mode verified against live API (correct 401s while project ID unknown); provision mode pending real Project ID; no app code changed this turn
+
+Stage Summary:
+- One command (python3 scripts/provision_appwrite.py provision) provisions the entire backend once the Project ID arrives
+- Blocked on: Project ID (Appwrite console -> project -> Settings -> Project ID); key rotation advised after migration since it transited chat
+
+---
+Task ID: 18
+Agent: main (Z.ai)
+Task: Appwrite migration phase 1 — real Project ID verified, full client data layer wired to Appwrite (offline-first mirror + sync engine)
+
+Work Log:
+- Project ID 6ae5486d001ad9d9a5ea arrived; probe matrix was decisive: empty-key control → general_unauthorized_scope (project RESOLVES), raw 228-char key → api_key_invalid, standard_-prefixed key → same → the KEY SECRET is bad (truncated in mobile copy or rotated); Project ID confirmed valid and kept in .env
+- User asked to send a fresh API key (Console → Integrations → API keys, all scopes) — provisioning + seeding still blocked on it; meanwhile the entire client side was built because the browser needs only the public project ID
+- deps: appwrite@29.2.0 via bun (npm registry unreachable in sandbox; bun install restores node_modules in ~5s)
+- NEW src/lib/appwrite.ts — public Cloud client (VITE_APPWRITE_ENDPOINT/VITE_APPWRITE_PROJECT_ID from committed .env — public by design like a Firebase config), probeCloud() classifying active/unprovisioned/down (401 general_unauthorized_scope or listings list 200 = alive; database_not_found = unprovisioned), storage upload helper (authed-only flag), authErrorMessage mapper
+- NEW src/lib/sync.ts (~1200 lines) — the sync engine: toDoc/fromDoc mappers for 16 collections mirroring the provision schema (string clamps to attr sizes, JSON-string payloads for settings/timeline/meetup/attachment, $createdAt as createdAt, seller denormalized on listings); pull (guest scope = listings/safe spots/reviews; user scope adds users/orders both-sides/conversations+messages/notifications/transactions/favourites/payout accounts/saved searches/price alerts/escrow/referrals, paginated 100/页 cursor); buildMergedDB merge (server wins per-id, unacked local docs preserved, conversation views rebuilt per canonical PAIR with message union); push queue (post-commit diff → upsert/delete ops, per-doc permissions, 3 retries, offline pause, 900ms debounce, ack bookkeeping in localStorage); canonical conversation bridge (doc id cv_<a>_<b> sorted pair, message doc id <convId>_<mid>, lastReadA/B side mapping); realtime merge handler (messages/conversations/notifications/orders/listings/users/reviews/safe spots/transactions/escrow); detectOrderTransition for money events; bootstrapCloudSeed (first authed user on an EMPTY cloud publishes the seed marketplace + NPC seller profiles marked settings.npc=true, flag-guarded)
+- Permission model enforced client-side per doc: listings/reviews/safe spots read(any); orders/escrow/conversations read+write both participants; messages read both + write sender; notifications read/write recipient only; owner-scoped for favourites/transactions/payout accounts/saved searches/price alerts/referrals; user docs read(users)+self-write, NPC profiles read(any)
+- AppContext.tsx: commit() now diffs for the push queue (skipSync opt for view counts + full pulls); async auth (login/register/changePassword/requestPasswordReset) with cloud branch — Appwrite sessions, ID.custom(uid('u')) so mirror ids = auth ids, ONE-TIME LIFT: existing local accounts are created on Appwrite with the SAME id on first login so all local data rides along (demo@dealmint.ng auto-upgrades with Demo1234); cloud register adopts session BEFORE commit so the profile doc publishes; logout/deleteAccount end cloud sessions; boot effect: probe → setCloudActive → account.get → bootstrap seed → applyPull (skipSync merge) → subscribeRealtime → flushSync, 8s safety timeout, falls back to pure-local on unprovisioned/down; realtime handler merges inbound docs and settles money on the receiving side (refund-buyer credits the buyer's own wallet, payout-seller credits seller + platform_fee + referral reward + listing counter) — no client ever writes another user's wallet doc; order mutations split by side (createOrder funds escrow buyer-side only, decline/cancel mark ledger refunded and let the other device self-credit, completeOrder skips seller payout in cloud); startConversation uses canonical pair ids in cloud; NEW authMode ('cloud'|'local') on the context
+- NEW /reset-password route + ResetPasswordPage (completes Appwrite recovery userId+secret); ForgotPasswordPage: cloud branch shows "reset link sent" panel (Appwrite emails the link), local branch keeps the demo code flow; LoginPage/RegisterPage/SettingsPage await the now-async auth calls
+- image.ts: compressImage now uploads to the media bucket when authed (returns public preview URL, fits the 2048 attr) and falls back to dataURLs otherwise — listing photos + avatars become cross-device
+- Verified: tsc clean; build ok (appwrite adds ~90KB gzip to the main chunk); bundle scanned — API key absent, public project id present as designed; browser regression on vite preview (local-mode fallback since backend unprovisioned): demo login → dashboard stats/messages tab → chat send + canned demo reply → orders → full-height drawer → dark toggle (switch 6) → logout → register Test Buyer → verify-phone → fresh-user isolation (₦0/0 listings, no demo bleed) → cleared storage guest sees all 24 listing cards → desktop 1280 no overflow; zero console/page errors end to end
+
+Stage Summary:
+- The app now speaks Appwrite end to end but gracefully degrades to the exact previous local behaviour when the backend is absent — safe to ship BEFORE provisioning
+- Blocked on: fresh API key secret (the 228-char one is invalid) → then one command provisions 16 collections + bucket + platforms, seed runs, and the cloud path smoke-tests for real (permissions, realtime, demo-account lift)
+- Key hygiene kept: provisioning key never entered dealmint/, dist, or any committed file

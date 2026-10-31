@@ -35,6 +35,23 @@ import { commissionRate, matchesCategory, BOOST_PRICES } from '@/lib/categories'
 import { matchesSearchFilters } from '@/lib/search';
 import { formatPrice, uid } from '@/lib/format';
 import { REFERRAL_REWARD, referralCodeFor } from '@/lib/referral';
+import { account, authErrorMessage, cloudConfigured, probeCloud, setStorageAuthed, ID } from '@/lib/appwrite';
+import {
+  bootstrapCloudSeed,
+  buildMergedDB,
+  COL,
+  convoDocId,
+  detectOrderTransition,
+  enqueueDiff,
+  flushSync,
+  isCloudActive,
+  mergeRealtimeDoc,
+  primeConvoCache,
+  pullCloud,
+  setCloudActive,
+  subscribeRealtime,
+  type Doc,
+} from '@/lib/sync';
 
 const DB_KEY = 'dealmint_db_v1';
 const SESSION_KEY = 'dealmint_session_user';
@@ -99,19 +116,21 @@ interface AppContextValue {
   isDarkMode: boolean;
   toggleDarkMode: () => void;
 
-  // auth
-  login: (email: string, password: string, remember: boolean) => Result;
-  register: (input: RegisterInput) => Result<User>;
+  // auth (async in cloud mode; resolves instantly in local mode)
+  login: (email: string, password: string, remember: boolean) => Promise<Result>;
+  register: (input: RegisterInput) => Promise<Result<User>>;
   logout: () => void;
   updateProfile: (patch: Partial<User>) => void;
   updateSettings: (patch: Partial<UserSettings>) => void;
-  changePassword: (current: string, next: string) => Result;
+  changePassword: (current: string, next: string) => Promise<Result>;
   deleteAccount: () => void;
-  requestPasswordReset: (email: string) => string | null;
+  requestPasswordReset: (email: string) => Promise<string | null>;
   resetPassword: (email: string, code: string, next: string) => Result;
   verifyPhone: () => void;
   submitIdVerification: (docType?: string) => void;
   verifyStudent: (schoolEmail: string) => Result;
+  // 'cloud' = Appwrite sessions + sync active; 'local' = device-only fallback
+  authMode: 'cloud' | 'local';
 
   // listings
   listings: Listing[];
@@ -214,17 +233,113 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [db, setDb] = useState<DB>(() => loadDB());
   const [sessionId, setSessionId] = useState<string | null>(() => loadSession());
   const [isLoading, setIsLoading] = useState(true);
+  const [authMode, setAuthMode] = useState<'cloud' | 'local'>('local');
   const dbRef = useRef(db);
+  const sessionIdRef = useRef(sessionId);
   const warnedStorage = useRef(false);
 
-  useEffect(() => {
-    setIsLoading(false);
-  }, []);
+  sessionIdRef.current = sessionId;
 
-  const commit = useCallback((fn: (d: DB) => DB) => {
-    const next = fn(dbRef.current);
+  const commit = useCallback((fn: (d: DB) => DB, opts?: { skipSync?: boolean }) => {
+    const prev = dbRef.current;
+    const next = fn(prev);
     dbRef.current = next;
     setDb(next);
+    if (!opts?.skipSync) enqueueDiff(prev, next, sessionIdRef.current);
+  }, []);
+
+  // ---------- cloud boot + realtime ----------
+  const applyPull = async (me: string | null) => {
+    const pull = await pullCloud(me);
+    if (!pull) return;
+    primeConvoCache(pull.convoDocs);
+    const merged = buildMergedDB(dbRef.current, pull.db, me);
+    dbRef.current = merged;
+    setDb(merged);
+  };
+
+  const adoptSession = (id: string) => {
+    sessionIdRef.current = id;
+    setSessionId(id);
+    setStorageAuthed(true);
+  };
+
+  // Inbound realtime docs merge into the mirror; order transitions that move
+  // money trigger this side's own ledger entries (each device credits only
+  // documents it owns — buyer refunds self, seller pays self).
+  const handleRealtime = (col: string, doc: Doc, _events: string[]) => {
+    const me = sessionIdRef.current;
+    commit((d) => {
+      const next = mergeRealtimeDoc(d, col, doc, me);
+      if (next === d) return d;
+      if (col === COL.orders && me) {
+        const prevOrder = d.orders.find((o) => o.id === doc.$id);
+        const nextOrder = next.orders.find((o) => o.id === doc.$id);
+        const kind = nextOrder ? detectOrderTransition(prevOrder, nextOrder, me) : null;
+        if (kind === 'refund-buyer' && nextOrder) {
+          return refund(next, nextOrder, `Refund for ${nextOrder.listingTitle}`);
+        }
+        if (kind === 'payout-seller' && nextOrder) {
+          let n2 = payout(next, nextOrder);
+          n2 = rewardReferrals(n2, me);
+          n2 = {
+            ...n2,
+            listings: n2.listings.map((l) =>
+              l.id === nextOrder.listingId ? { ...l, completedOrders: l.completedOrders + 1 } : l
+            ),
+          };
+          return n2;
+        }
+      }
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    let unsubRealtime: (() => void) | undefined;
+    const safety = window.setTimeout(() => setIsLoading(false), 8000);
+    const onOnline = () => void flushSync();
+    window.addEventListener('online', onOnline);
+
+    (async () => {
+      if (!cloudConfigured || !account) {
+        setIsLoading(false);
+        return;
+      }
+      const probe = await probeCloud();
+      if (cancelled) return;
+      // 'unprovisioned' (setup script has not run) and 'down' both fall back
+      // to the local mirror so the app never hard-fails.
+      if (probe !== 'active') {
+        setIsLoading(false);
+        return;
+      }
+      setCloudActive(true);
+      setAuthMode('cloud');
+      let me: string | null = null;
+      try {
+        me = (await account.get()).$id;
+      } catch {
+        me = null;
+      }
+      setStorageAuthed(!!me);
+      if (me) adoptSession(me);
+      if (me) await bootstrapCloudSeed(dbRef.current, me);
+      await applyPull(me);
+      if (cancelled) return;
+      unsubRealtime = subscribeRealtime(me, handleRealtime);
+      void flushSync();
+      if (!cancelled) setIsLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(safety);
+      window.removeEventListener('online', onOnline);
+      unsubRealtime?.();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Persist
@@ -344,8 +459,75 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   // ---------- auth ----------
-  const login: AppContextValue['login'] = (email, password, remember) => {
-    const found = dbRef.current.users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+  const login: AppContextValue['login'] = async (email, password, remember) => {
+    const emailNorm = email.trim().toLowerCase();
+    if (isCloudActive() && account) {
+      const local = dbRef.current.users.find((u) => u.email.toLowerCase() === emailNorm);
+      try {
+        await account.createEmailPasswordSession(emailNorm, password);
+      } catch (e) {
+        const type = (e as { type?: string }).type;
+        // One-time lift: an account that only exists in this browser's mirror
+        // is created on Appwrite with the SAME id, so every local document
+        // keeps its owner key and the data rides along.
+        const canUpgrade =
+          (type === 'user_invalid_credentials' || type === 'user_not_found') &&
+          !!local &&
+          local.password === password;
+        if (!canUpgrade) return { ok: false, error: authErrorMessage(e) };
+        try {
+          await account.create(ID.custom(local!.id), emailNorm, password, local!.name);
+          await account.createEmailPasswordSession(emailNorm, password);
+        } catch (e2) {
+          return { ok: false, error: authErrorMessage(e2) };
+        }
+      }
+      const acc = await account.get().catch(() => null);
+      if (!acc) return { ok: false, error: 'Could not establish a session. Please try again.' };
+      adoptSession(acc.$id);
+      // make sure a profile document exists for this identity
+      if (!dbRef.current.users.some((u) => u.id === acc.$id)) {
+        if (local && local.id === acc.$id) {
+          // lifted account — republish the profile; the password now lives in Auth
+          commit((d) => ({ ...d, users: d.users.map((u) => (u.id === acc.$id ? { ...u, password: '' } : u)) }));
+        } else {
+          const fresh: StoredUser = {
+            id: acc.$id,
+            name: acc.name || 'New user',
+            email: emailNorm,
+            password: '',
+            phone: '',
+            role: 'general',
+            isVerified: false,
+            phoneVerified: false,
+            idVerified: false,
+            idStatus: 'none',
+            studentVerified: false,
+            rating: 0,
+            reviewCount: 0,
+            avatar: '/images/avatar_default.jpg',
+            joinedAt: new Date().toISOString(),
+            walletBalance: 0,
+            skills: [],
+            settings: {
+              emailNotifications: true,
+              orderUpdates: true,
+              messageAlerts: true,
+              marketing: false,
+              showPhone: false,
+              showLocation: true,
+            },
+          };
+          commit((d) => ({ ...d, users: [...d.users, fresh] }));
+        }
+      }
+      void bootstrapCloudSeed(dbRef.current, acc.$id);
+      await applyPull(acc.$id);
+      void flushSync();
+      void remember;
+      return { ok: true };
+    }
+    const found = dbRef.current.users.find((u) => u.email.toLowerCase() === emailNorm);
     if (!found) return { ok: false, error: 'No account found with that email address.' };
     if (found.password !== password) return { ok: false, error: 'Incorrect password. Please try again.' };
     try {
@@ -359,13 +541,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return { ok: true };
   };
 
-  const register: AppContextValue['register'] = (input) => {
+  const register: AppContextValue['register'] = async (input) => {
     const email = input.email.trim().toLowerCase();
     if (dbRef.current.users.some((u) => u.email.toLowerCase() === email)) {
       return { ok: false, error: 'An account with this email already exists. Try signing in instead.' };
     }
+    const newId = uid('u');
+    const cloud = isCloudActive() && !!account;
+    if (cloud && account) {
+      try {
+        await account.create(ID.custom(newId), email, input.password, input.name.trim());
+        await account.createEmailPasswordSession(email, input.password);
+      } catch (e) {
+        return { ok: false, error: authErrorMessage(e) };
+      }
+      // adopt BEFORE the commit so the profile document publishes to the cloud
+      adoptSession(newId);
+    }
     const newUser: StoredUser = {
-      id: uid('u'),
+      id: newId,
       name: input.name.trim(),
       email,
       password: input.password,
@@ -427,17 +621,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       return next;
     });
-    try {
-      sessionStorage.removeItem(SESSION_KEY);
-      localStorage.setItem(SESSION_KEY, newUser.id);
-    } catch {
-      // ignore
+    if (cloud) {
+      void bootstrapCloudSeed(dbRef.current, newId).then(() => flushSync());
+    } else {
+      try {
+        sessionStorage.removeItem(SESSION_KEY);
+        localStorage.setItem(SESSION_KEY, newUser.id);
+      } catch {
+        // ignore
+      }
+      setSessionId(newUser.id);
     }
-    setSessionId(newUser.id);
     return { ok: true, data: stripPassword(newUser) };
   };
 
   const logout = () => {
+    if (isCloudActive() && account) {
+      void account.deleteSession('current').catch(() => {});
+    }
+    setStorageAuthed(false);
     try {
       localStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(SESSION_KEY);
@@ -467,8 +669,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateProfile({ settings: { ...(storedUser.settings as UserSettings), ...patch } });
   };
 
-  const changePassword: AppContextValue['changePassword'] = (current, next) => {
+  const changePassword: AppContextValue['changePassword'] = async (current, next) => {
     if (!storedUser) return { ok: false, error: 'You need to be signed in.' };
+    if (isCloudActive() && account) {
+      try {
+        await account.updatePassword(next, current);
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: authErrorMessage(e) };
+      }
+    }
     if (storedUser.password !== current) return { ok: false, error: 'Your current password is incorrect.' };
     if (current === next) return { ok: false, error: 'Choose a password you have not used before.' };
     commit((d) => ({ ...d, users: d.users.map((u) => (u.id === storedUser.id ? { ...u, password: next } : u)) }));
@@ -478,6 +688,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const deleteAccount = () => {
     const id = uidNow();
     if (!id) return;
+    if (isCloudActive() && account) {
+      // Best-effort: end the session and drop the profile doc (the auth user
+      // itself can only be removed server-side — acceptable for now).
+      void account.deleteSession('current').catch(() => {});
+      setStorageAuthed(false);
+    }
     commit((d) => ({
       ...d,
       users: d.users.filter((u) => u.id !== id),
@@ -494,7 +710,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     logout();
   };
 
-  const requestPasswordReset: AppContextValue['requestPasswordReset'] = (email) => {
+  const requestPasswordReset: AppContextValue['requestPasswordReset'] = async (email) => {
+    if (isCloudActive() && account) {
+      // Appwrite emails a secure reset link (lands on /reset-password).
+      try {
+        await account.createRecovery(email.trim().toLowerCase(), `${window.location.origin}/reset-password`);
+      } catch {
+        // same response either way — never reveal whether the account exists
+      }
+      return null;
+    }
     const found = dbRef.current.users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
     if (!found) return null;
     const code = String(Math.floor(100000 + Math.random() * 900000));
@@ -646,10 +871,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const recordView = (id: string) => {
+    // views are a device-local cosmetic counter — skip cloud sync (the listing
+    // doc belongs to its seller and guests cannot write it anyway)
     commit((d) => ({
       ...d,
       listings: d.listings.map((l) => (l.id === id && l.seller.id !== sessionId ? { ...l, views: (l.views || 0) + 1 } : l)),
-    }));
+    }), { skipSync: true });
   };
 
   const reportListing: AppContextValue['reportListing'] = (listingId, reason, details) => {
@@ -954,11 +1181,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       let next = adjustBalance(d, me.id, -price);
       next = addTx(next, { userId: me.id, type: 'escrow_fund', amount: -price, description: `Escrow funding for ${listing.title}`, orderId: order.id });
       next = { ...next, orders: [order, ...next.orders], escrowLedger: [escrowRecord, ...next.escrowLedger] };
-      if (instant) next = payout(next, order);
-      next = {
-        ...next,
-        listings: next.listings.map((l) => (l.id === listing.id ? { ...l, completedOrders: l.completedOrders + (instant ? 1 : 0) } : l)),
-      };
+      // cloud mode: the seller's own device credits their wallet + listing
+      // counter when it sees the completed order; local mode does both sides
+      if (instant && !isCloudActive()) next = payout(next, order);
+      if (!isCloudActive()) {
+        next = {
+          ...next,
+          listings: next.listings.map((l) => (l.id === listing.id ? { ...l, completedOrders: l.completedOrders + (instant ? 1 : 0) } : l)),
+        };
+      }
       const verb = listing.type === 'job' ? 'applied for' : listing.type === 'task' ? 'made an offer on' : 'ordered';
       return pushNotification(next, listing.seller.id, {
         type: 'order',
@@ -985,11 +1216,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const declineOrder = (id: string) => {
     const o = getOrder(id);
     if (!o || o.status !== 'pending' || o.sellerId !== sessionId) return;
+    // cloud mode: the seller cannot touch the buyer's wallet — mark the
+    // escrow refunded and let the buyer's device credit itself on the event
+    const settle = (d: DB): DB => {
+      const next = transition(d, id, 'cancelled', 'Declined by seller');
+      if (!isCloudActive()) return refund(next, o, `Refund for ${o.listingTitle}`);
+      return { ...next, escrowLedger: next.escrowLedger.map((e) => (e.orderId === o.id && e.status === 'funded' ? { ...e, status: 'refunded' as const, releasedAt: nowIso() } : e)) };
+    };
     commit((d) =>
-      pushNotification(
-        refund(transition(d, id, 'cancelled', 'Declined by seller'), o, `Refund for ${o.listingTitle}`),
-        o.buyerId,
-        { type: 'order', title: 'Order declined', message: `${o.sellerName} could not take "${o.listingTitle}". You were refunded.`, link: `/dashboard/orders/${id}` }
+      pushNotification(settle(d), o.buyerId, {
+        type: 'order', title: 'Order declined', message: `${o.sellerName} could not take "${o.listingTitle}". You were refunded.`, link: `/dashboard/orders/${id}` }
       )
     );
   };
@@ -1009,13 +1245,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!o || (o.status !== 'delivered') || o.buyerId !== sessionId) return;
     commit((d) => {
       let next = transition(d, id, 'completed', undefined, { completedAt: nowIso() });
-      next = payout(next, o);
-      next = rewardReferrals(next, o.sellerId);
+      // cloud mode: the seller's device pays itself when it sees this event
+      if (!isCloudActive()) {
+        next = payout(next, o);
+        next = rewardReferrals(next, o.sellerId);
+        next = {
+          ...next,
+          listings: next.listings.map((l) => (l.id === o.listingId ? { ...l, completedOrders: l.completedOrders + 1 } : l)),
+        };
+      }
       next = rewardReferrals(next, o.buyerId);
-      next = {
-        ...next,
-        listings: next.listings.map((l) => (l.id === o.listingId ? { ...l, completedOrders: l.completedOrders + 1 } : l)),
-      };
       return pushNotification(next, o.sellerId, {
         type: 'payment', title: 'Payment released', message: `You earned ₦${(o.price - o.fee).toLocaleString()} for "${o.listingTitle}".`, link: '/dashboard/wallet',
       });
@@ -1029,9 +1268,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const isSeller = o.sellerId === sessionId;
     const allowed = (isBuyer && o.status === 'pending') || (isSeller && o.status === 'in_progress');
     if (!allowed) return;
+    // cloud mode: only the buyer's device can credit the buyer's wallet
+    const settle = (d: DB): DB => {
+      const next = transition(d, id, 'cancelled', isBuyer ? 'Cancelled by buyer' : 'Cancelled by seller');
+      if (isCloudActive() && !isBuyer) {
+        return { ...next, escrowLedger: next.escrowLedger.map((e) => (e.orderId === o.id && e.status === 'funded' ? { ...e, status: 'refunded' as const, releasedAt: nowIso() } : e)) };
+      }
+      return refund(next, o, `Refund for ${o.listingTitle}`);
+    };
     commit((d) =>
       pushNotification(
-        refund(transition(d, id, 'cancelled', isBuyer ? 'Cancelled by buyer' : 'Cancelled by seller'), o, `Refund for ${o.listingTitle}`),
+        settle(d),
         isBuyer ? o.sellerId : o.buyerId,
         { type: 'order', title: 'Order cancelled', message: `"${o.listingTitle}" was cancelled.`, link: `/dashboard/orders/${id}` }
       )
@@ -1108,11 +1355,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!sessionId) return null;
     if (other.id === sessionId) return null;
     const rid = taskerAlias[other.id] || other.id;
-    const existing = dbRef.current.conversations.find((c) => c.userId === sessionId && c.otherId === rid);
+    const cloud = isCloudActive();
+    // cloud conversations use the canonical pair id so both devices agree
+    const convoId = cloud ? convoDocId(sessionId, rid) : uid('c');
+    const existing = dbRef.current.conversations.find((c) =>
+      cloud ? c.id === convoId : c.userId === sessionId && c.otherId === rid
+    );
     if (existing) return existing.id;
     const isReal = dbRef.current.users.some((u) => u.id === rid);
     const convo: Conversation = {
-      id: uid('c'),
+      id: convoId,
       userId: sessionId,
       otherId: rid,
       otherName: other.name,
@@ -1465,6 +1717,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value: AppContextValue = {
     isLoading,
+    authMode,
     isDarkMode,
     toggleDarkMode,
     user,

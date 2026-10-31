@@ -40,8 +40,8 @@ export function LoginPage() {
     setError('');
     setIsLoading(true);
 
-    setTimeout(() => {
-      const result = login(formData.email, formData.password, formData.rememberMe);
+    try {
+      const result = await login(formData.email, formData.password, formData.rememberMe);
       setIsLoading(false);
       if (!result.ok) {
         setError(result.error);
@@ -49,7 +49,10 @@ export function LoginPage() {
       }
       toast.success('Welcome back!');
       navigate(from, { replace: true });
-    }, 500);
+    } catch {
+      setIsLoading(false);
+      setError('Something went wrong. Please try again.');
+    }
   };
 
   const fillDemo = () => {

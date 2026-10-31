@@ -57,6 +57,7 @@ const SettingsPage = page(() => import('@/pages/dashboard/SettingsPage'), 'Setti
 const SavedSearchesPage = page(() => import('@/pages/dashboard/SavedSearchesPage'), 'SavedSearchesPage');
 const ReferralsPage = page(() => import('@/pages/dashboard/ReferralsPage'), 'ReferralsPage');
 const VerifyIdPage = page(() => import('@/pages/dashboard/VerifyIdPage'), 'VerifyIdPage');
+const ResetPasswordPage = page(() => import('@/pages/auth/ResetPasswordPage'), 'ResetPasswordPage');
 
 const PostGigPage = page(() => import('@/pages/post/PostGigPage'), 'PostGigPage');
 const PostTaskPage = page(() => import('@/pages/post/PostTaskPage'), 'PostTaskPage');
@@ -114,6 +115,7 @@ function AppContent() {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/role-selection" element={<RoleSelectionPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/verify-phone" element={<VerifyPhonePage />} />
 
               {/* Protected Dashboard Routes */}

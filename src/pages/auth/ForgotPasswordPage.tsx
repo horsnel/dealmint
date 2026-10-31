@@ -20,8 +20,9 @@ export function ForgotPasswordPage() {
     if (window.history.state?.idx > 0) navigate(-1);
     else navigate('/login');
   };
-  const { requestPasswordReset, resetPassword } = useApp();
-  const [step, setStep] = useState<'email' | 'reset'>('email');
+  const { requestPasswordReset, resetPassword, authMode } = useApp();
+  const cloud = authMode === 'cloud';
+  const [step, setStep] = useState<'email' | 'sent' | 'reset'>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
@@ -29,7 +30,7 @@ export function ForgotPasswordPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const sendCode = (e: React.FormEvent) => {
+  const sendCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     if (!isValidEmail(email)) {
@@ -37,33 +38,35 @@ export function ForgotPasswordPage() {
       return;
     }
     setBusy(true);
-    setTimeout(() => {
-      const sent = requestPasswordReset(email);
-      setBusy(false);
-      // Same message whether or not the account exists
-      if (sent) toast.info(`Demo reset code: ${sent}`, { duration: 20000 });
-      toast.success('If that email has an account, a reset code is on its way.');
-      setStep('reset');
-    }, 500);
+    const sent = await requestPasswordReset(email);
+    setBusy(false);
+    if (cloud) {
+      // Appwrite emails a secure link — no code step on this page
+      toast.success('If that email has an account, a reset link is on its way.');
+      setStep('sent');
+      return;
+    }
+    // Same message whether or not the account exists
+    if (sent) toast.info(`Demo reset code: ${sent}`, { duration: 20000 });
+    toast.success('If that email has an account, a reset code is on its way.');
+    setStep('reset');
   };
 
-  const submitReset = (e: React.FormEvent) => {
+  const submitReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     if (code.length < 6) return setError('Enter the 6-digit code');
     if (!passwordStrength(password).valid) return setError('Use 8+ characters with at least one letter and one number');
     if (password !== confirm) return setError('Passwords do not match');
     setBusy(true);
-    setTimeout(() => {
-      const res = resetPassword(email, code, password);
-      setBusy(false);
-      if (!res.ok) {
-        setError(res.error);
-        return;
-      }
-      toast.success('Password updated. You can sign in now.');
-      navigate('/login', { replace: true });
-    }, 500);
+    const res = resetPassword(email, code, password);
+    setBusy(false);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
+    toast.success('Password updated. You can sign in now.');
+    navigate('/login', { replace: true });
   };
 
   const labelClass = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2';
@@ -79,7 +82,9 @@ export function ForgotPasswordPage() {
             <p className="text-gray-600 dark:text-gray-300">
               {step === 'email'
                 ? 'Enter your email and we will send you a reset code'
-                : `Enter the code sent to ${email} and choose a new password`}
+                : step === 'sent'
+                  ? `We sent a reset link to ${email}`
+                  : `Enter the code sent to ${email} and choose a new password`}
             </p>
           </div>
 
@@ -115,6 +120,20 @@ export function ForgotPasswordPage() {
                 {busy ? 'Sending...' : 'Send Reset Code'}
               </Button>
             </form>
+          ) : step === 'sent' ? (
+            <div className="space-y-6">
+              <div className="rounded-xl bg-violet-50 dark:bg-violet-700/50 p-4 text-sm text-violet-800 dark:text-violet-100">
+                Open the email and tap <span className="font-semibold">Reset Password</span> — it brings you
+                straight back here to set a new one. The link expires shortly, so use it while it is fresh.
+              </div>
+              <Button
+                type="button"
+                onClick={goBack}
+                className="w-full bg-violet-600 hover:bg-violet-700 text-white"
+              >
+                Back to sign in
+              </Button>
+            </div>
           ) : (
             <form onSubmit={submitReset} className="space-y-6" noValidate>
               <div className="flex justify-center">

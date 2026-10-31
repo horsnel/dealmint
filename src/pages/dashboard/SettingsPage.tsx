@@ -64,22 +64,20 @@ export function SettingsPage() {
     toast.success('Preference saved');
   };
 
-  const handlePassword = (e: React.FormEvent) => {
+  const handlePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPwError('');
     if (!current) return setPwError('Enter your current password');
     if (!passwordStrength(next).valid) return setPwError('Use 8+ characters with at least one letter and one number');
     if (next !== confirm) return setPwError('The new passwords do not match');
     setSaving(true);
-    setTimeout(() => {
-      const res = changePassword(current, next);
-      setSaving(false);
-      if (!res.ok) return setPwError(res.error);
-      setCurrent('');
-      setNext('');
-      setConfirm('');
-      toast.success('Password updated');
-    }, 500);
+    const res = await changePassword(current, next);
+    setSaving(false);
+    if (!res.ok) return setPwError(res.error);
+    setCurrent('');
+    setNext('');
+    setConfirm('');
+    toast.success('Password updated');
   };
 
   const handleDelete = () => {
