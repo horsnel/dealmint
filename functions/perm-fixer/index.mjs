@@ -97,9 +97,9 @@ export default async ({ req, res, log, error }) => {
       return res.json({ ok: false, reason: 'no-key' });
     }
     const event = (req.headers['x-appwrite-event'] || '') + '';
-    // events: databases.<db>.collections.<col>.documents.<docId>.create
-    const m = event.match(/databases\.([^.]+)\.collections\.([^.]+)\.documents\.[^.]+\.create$/);
-    if (!m) return res.json({ ok: true, skipped: 'not-a-create-event' });
+    // events: databases.<db>.collections.<col>.documents.<docId>.create|update
+    const m = event.match(/databases\.([^.]+)\.collections\.([^.]+)\.documents\.[^.]+\.(create|update)$/);
+    if (!m) return res.json({ ok: true, skipped: 'not-a-managed-event' });
     const dbId = m[1];
     const col = m[2];
     if (!COLLECTIONS.includes(col)) return res.json({ ok: true, skipped: 'collection-not-managed' });
@@ -116,6 +116,13 @@ export default async ({ req, res, log, error }) => {
     if (!perms || perms.length === 0) {
       log(`perm-fixer: no perms derived for ${col}/${docId}`);
       return res.json({ ok: true, skipped: 'no-perms-derived' });
+    }
+
+    // self-heal guard: skip the write when the doc already carries the
+    // canonical set (update events fire on every content change)
+    const current = Array.isArray(doc.$permissions) ? doc.$permissions : [];
+    if (current.length === perms.length && [...perms].sort().join('|') === [...current].sort().join('|')) {
+      return res.json({ ok: true, col, docId, skipped: 'perms-current' });
     }
 
     const r = await aw('PATCH', `/databases/${dbId}/collections/${col}/documents/${docId}`, {

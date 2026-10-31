@@ -780,7 +780,9 @@ async function upsertDoc(col: string, id: string, payload: Record<string, unknow
     const code = (e as { code?: number }).code;
     if (code === 409) {
       try {
-        await databases.updateDocument(AW_DB, col, id, payload, perms);
+        // NOTE: no permissions arg here — updates must never clobber the
+        // canonical permission set that the perm-fixer function completed.
+        await databases.updateDocument(AW_DB, col, id, payload);
         markAcked(col, id);
         return true;
       } catch {
