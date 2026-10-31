@@ -384,10 +384,10 @@ Stage Summary:
 - Blocked on: fresh API key secret (the 228-char one is invalid) → then one command provisions 16 collections + bucket + platforms, seed runs, and the cloud path smoke-tests for real (permissions, realtime, demo-account lift)
 - Key hygiene kept: provisioning key never entered dealmint/, dist, or any committed file
 
-## Task 18 — Appwrite Cloud provisioning COMPLETE + seeded + permissions verified
-- User updated key scopes in place (same secret) + registered both domains; CORS verified: exact ACAO for vercel + pages.dev
-- Round-2 findings: (1) Appwrite Cloud v2.6.2 serves doubles at /attributes/float (returns type:double; /attributes/double 404s at edge); (2) defaults forbidden on required attributes; (3) MariaDB 65,535-byte row limit forces slim strings -> listings description 3000/requirements 1500/avatars 512; orders timeline 4000 (last 20 events), meetup/note 800; reviews avatar 512; client mapper caps matched in sync.ts
-- v2 query syntax: queries are JSON objects now ({"method":"equal","attribute":"x","values":[..]}) — perm_smoke.sh rewritten accordingly; classic limit(5) syntax 400s
-- Provisioned: 17 collections, 191 attributes (all available), 25 indexes; joinedAt shipped
-- Seeded 163 docs / 0 failures: 7 users, 30 listings, 81 reviews, 12 messages, 4 conversations, 5 transactions, 2 orders + escrow, 10 safe spots, favourites/saved/alerts/payouts/notifs; seed ids preserved as document ids
-- Permission matrix verified 15/15 from outside (guest read scope, owner-only private, buyer+seller orders, cross-user edit denied 401)
+## Task 19 — Appwrite migration LIVE: perm-fixer function + multi-party permissions solved
+- Blocker discovered E2E: Appwrite sessions may only grant permissions to themselves ("Permissions must be one of: any, users, user:<me>...") -> every multi-party write (messages/orders/conversations/escrow/reviews/cross-notifications) 401'd silently via the retry queue
+- Fix: client docPermissions now creator-self only for multi-party collections; new event-triggered Appwrite Function `perm-fixer` (node-22, REST fetch, idempotent PATCH) completes canonical permission sets on create using a server-side key stored as function variable (AW_API_KEY)
+- Function deployed via REST: 6 create-event triggers, scopes documents.read+write, entrypoint index.mjs (index.js failed: node runtime is CJS - "Unexpected token export")
+- v2 variables API needs variableId in POST body; v2 query syntax is JSON objects ({"method":"equal","attribute":..,"values":[..]}) - classic limit(5) syntax rejected
+- E2E verified: session-created message got read(user:s1) added by the function ~9s after create; execution completed clean
+- Redeployed client (creator-perms + earlier mapper caps) to both platforms

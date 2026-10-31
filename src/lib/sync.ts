@@ -566,7 +566,12 @@ export const referralToDoc = (r: Referral) => ({
 // permissions
 // ---------------------------------------------------------------------------
 const P = Permission;
-const both = (a: string, b: string) => [P.read(Role.user(a)), P.read(Role.user(b)), P.update(Role.user(a)), P.update(Role.user(b)), P.delete(Role.user(a)), P.delete(Role.user(b))];
+
+// Sessions may only grant permissions to THEMSELVES (Appwrite anti-escalation:
+// "Permissions must be one of: any, users, user:<me>..."). Multi-party docs are
+// created with creator-only perms; the `perm-fixer` function completes the
+// counterparty's read/update/delete a moment later using the server-side key.
+const selfOnly = (me: string) => [P.read(Role.user(me)), P.update(Role.user(me)), P.delete(Role.user(me))];
 
 export function docPermissions(col: string, entity: unknown, me: string): string[] {
   switch (col) {
@@ -582,31 +587,24 @@ export function docPermissions(col: string, entity: unknown, me: string): string
       return [P.read(Role.any()), P.update(Role.user(l.seller.id)), P.delete(Role.user(l.seller.id))];
     }
     case COL.reviews: {
+      // update(seller) is added by the perm-fixer function
       const r = entity as Review;
-      return [P.read(Role.any()), P.update(Role.user(r.reviewerId)), P.update(Role.user(r.sellerId))];
+      return [P.read(Role.any()), P.update(Role.user(r.reviewerId))];
     }
     case COL.safeSpots: {
       return [P.read(Role.any()), P.update(Role.user(me)), P.delete(Role.user(me))];
     }
-    case COL.orders: {
-      const o = entity as Order;
-      return both(o.buyerId, o.sellerId);
-    }
-    case COL.escrow: {
-      const e = entity as EscrowRecord;
-      return both(e.buyerId, e.sellerId);
-    }
-    case COL.conversations: {
-      const c = entity as Conversation;
-      return both(c.userId, c.otherId);
-    }
+    case COL.orders:
+    case COL.escrow:
+    case COL.conversations:
+      return selfOnly(me);
     case COL.messages: {
-      const m = entity as { senderId: string; participants: [string, string] };
-      return [P.read(Role.user(m.participants[0])), P.read(Role.user(m.participants[1])), P.update(Role.user(m.senderId)), P.delete(Role.user(m.senderId))];
+      // creator-side only; perm-fixer adds the other participant's read
+      return [P.read(Role.user(me)), P.update(Role.user(me)), P.delete(Role.user(me))];
     }
     case COL.notifications: {
-      const nt = entity as Notification;
-      return [P.read(Role.user(nt.userId)), P.update(Role.user(nt.userId)), P.delete(Role.user(nt.userId))];
+      // creator-self now; perm-fixer replaces with recipient-side perms
+      return selfOnly(me);
     }
     case COL.reports:
       return [];
