@@ -383,3 +383,13 @@ Stage Summary:
 - The app now speaks Appwrite end to end but gracefully degrades to the exact previous local behaviour when the backend is absent — safe to ship BEFORE provisioning
 - Blocked on: fresh API key secret (the 228-char one is invalid) → then one command provisions 16 collections + bucket + platforms, seed runs, and the cloud path smoke-tests for real (permissions, realtime, demo-account lift)
 - Key hygiene kept: provisioning key never entered dealmint/, dist, or any committed file
+
+## Task 17 — Appwrite provisioning round 1 + seed pipeline (blocked on key scopes)
+- New key verified: 265-char `standard_`-prefixed secret works against FRA; probe matrix: health/databases/users/storage 200
+- Scope audit: key HAS databases.write, storage.buckets.write, users.read/write; MISSING collections.write (+attributes/indexes/documents.write) → database `dealmint` + bucket `media` created, 16 collections blocked
+- Appwrite Cloud does not expose /platforms REST to API keys (404) → web platforms must be added in console
+- Client: endpoint pinned to `https://fra.cloud.appwrite.io/v1` (public .env), rebuilt + redeployed both platforms
+- Parity fix: users schema + userToDoc now carry `joinedAt` (member-since survives cloud round-trip)
+- Seeder `scripts/seed_appwrite.ts` (bun): imports REAL sync.ts mappers + docPermissions → byte-identical docs; seed ids survive as document ids; $createdAt passthrough with fallback; idempotent 409→PATCH
+- Auth accounts CREATED server-side: demo@dealmint.ng (Demo1234, userId u1) + 6 NPC sellers (random passwords, blocks email squatting)
+- `perm_smoke.sh` ready: guest/demo/cross-user matrix over 14 assertions

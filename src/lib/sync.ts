@@ -140,6 +140,7 @@ export function userToDoc(u: StoredUser) {
     idDocType: s(u.idDocType, 64),
     studentVerified: !!u.studentVerified,
     walletBalance: u.walletBalance ?? 0,
+    joinedAt: s(u.joinedAt, 64),
     ...(u.theme ? { theme: u.theme } : {}),
     settings: JSON.stringify({ ...(u.settings || {}) }).slice(0, 4096),
   };
