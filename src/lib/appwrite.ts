@@ -61,7 +61,11 @@ export async function uploadToStorage(blob: Blob, name: string): Promise<string 
   try {
     const file = new File([blob], name, { type: blob.type || 'image/jpeg' });
     const created = await storage.createFile(AW_BUCKET, ID.unique(), file);
-    return storage.getFilePreview(AW_BUCKET, created.$id).toString();
+    // getFileView, NOT getFilePreview: the preview endpoint runs server-side
+    // image transformations, which Appwrite Cloud blocks on the Free plan
+    // (HTTP 403 storage_image_transformations_blocked → broken images).
+    // The view endpoint streams the stored file as-is and works on Free.
+    return storage.getFileView(AW_BUCKET, created.$id).toString();
   } catch {
     return null;
   }

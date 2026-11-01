@@ -10,7 +10,6 @@ import {
   CheckCircle,
   Shield,
   Calendar,
-  ArrowLeft,
   Flag,
   Download,
   Pencil,
@@ -46,6 +45,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { Stars, StarInput } from '@/components/common/Stars';
 import { UserBadgeRow } from '@/components/common/VerificationBadges';
 import { WhatsAppButton } from '@/components/share/WhatsAppButton';
+import { PageClose } from '@/components/common/PageClose';
 import { formatPrice, formatBytes, timeAgo, priceSuffix } from '@/lib/format';
 import { typeLabel } from '@/lib/categories';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -65,10 +65,6 @@ export function ListingDetailPage() {
 
   // History-aware back: behaves like the browser back button, with a
   // sensible fallback when the page was opened directly (no history).
-  const goBack = () => {
-    if (window.history.state?.idx > 0) navigate(-1);
-    else navigate('/browse');
-  };
   const location = useLocation();
   const {
     user,
@@ -300,6 +296,7 @@ export function ListingDetailPage() {
 
   return (
     <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
+      <PageClose fallback="/browse" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {!listing.isActive && (
           <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 p-4 text-amber-800 dark:text-amber-200 text-sm">
@@ -591,14 +588,6 @@ export function ListingDetailPage() {
                     </Button>
                   </>
                 )}
-                <Button
-                  variant="ghost"
-                  onClick={goBack}
-                  className="w-full rounded-full text-gray-600 hover:text-gray-900 hover:bg-transparent dark:text-gray-300 dark:hover:text-white"
-                >
-                  <ArrowLeft className="size-6 mr-1" strokeWidth={2} />
-                  Go back
-                </Button>
               </div>
 
               <div className="mt-6 pt-6 border-t dark:border-violet-700 space-y-2">

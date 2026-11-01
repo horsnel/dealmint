@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, X, MapPin, FileUp, Eye, Star, Zap } from 'lucide-react';
+import { Upload, X, MapPin, FileUp, Eye, Star, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ListingCard } from '@/components/common/ListingCard';
+import { PageClose } from '@/components/common/PageClose';
 import { useApp } from '@/context/AppContext';
 import { compressImage } from '@/lib/image';
 import { formatBytes, formatPrice } from '@/lib/format';
@@ -307,6 +308,7 @@ export function ListingForm({ type, listing }: Props) {
 
   return (
     <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
+      <PageClose fallback="/" />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="font-display font-bold text-2xl lg:text-3xl text-gray-900 dark:text-white mb-6">
           {editing ? `Edit ${c.title.replace('Post a ', '').replace('Offer a ', '').replace('Sell a ', '')}` : c.title}
@@ -664,15 +666,6 @@ export function ListingForm({ type, listing }: Props) {
 
               {/* Actions */}
               <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => navigate(-1)}
-                  className="flex-1 text-gray-600 hover:text-gray-900 hover:bg-transparent dark:text-gray-300 dark:hover:text-white"
-                >
-                  <ArrowLeft className="size-6 mr-1" strokeWidth={2} />
-                  Back
-                </Button>
                 <Button
                   type="button"
                   variant="outline"

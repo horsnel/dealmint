@@ -7,7 +7,6 @@ import {
   Clock,
   MessageSquare,
   Briefcase,
-  ArrowLeft,
   Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,19 +18,13 @@ import { ListingCard } from '@/components/common/ListingCard';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Stars } from '@/components/common/Stars';
 import { UserBadgeRow } from '@/components/common/VerificationBadges';
+import { PageClose } from '@/components/common/PageClose';
 import { timeAgo } from '@/lib/format';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
 export function SellerProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
-  // History-aware back: behaves like the browser back button, with a
-  // sensible fallback when the page was opened directly (no history).
-  const goBack = () => {
-    if (window.history.state?.idx > 0) navigate(-1);
-    else navigate('/browse');
-  };
   const location = useLocation();
   const { user, listings, getSeller, getSellerStats, getSellerResponsiveness, reviewsForSeller, startConversation } = useApp();
 
@@ -77,6 +70,7 @@ export function SellerProfilePage() {
 
   return (
     <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
+      <PageClose fallback="/browse" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Profile Header */}
         <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-6 lg:p-8 mb-8">
@@ -168,14 +162,6 @@ export function SellerProfilePage() {
                     Contact
                   </Button>
                 )}
-                <Button
-                  variant="ghost"
-                  onClick={goBack}
-                  className="text-gray-600 hover:text-gray-900 hover:bg-transparent dark:text-gray-300 dark:hover:text-white"
-                >
-                  <ArrowLeft className="size-6 mr-1" strokeWidth={2} />
-                  Go back
-                </Button>
               </div>
             </div>
           </div>

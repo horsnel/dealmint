@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft,
   CheckCircle,
   Circle,
   Download,
@@ -13,6 +12,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PageClose } from '@/components/common/PageClose';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
@@ -67,10 +67,6 @@ export function OrderDetailPage() {
 
   // History-aware back: behaves like the browser back button, with a
   // sensible fallback when the page was opened directly (no history).
-  const goBack = () => {
-    if (window.history.state?.idx > 0) navigate(-1);
-    else navigate('/dashboard/orders');
-  };
   const {
     user,
     orders,
@@ -290,6 +286,7 @@ export function OrderDetailPage() {
 
   return (
     <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
+      <PageClose fallback="/dashboard/orders" />
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-wrap items-center gap-3 mb-6">
           <h1 className="font-display font-bold text-2xl lg:text-3xl text-gray-900 dark:text-white">
@@ -646,14 +643,6 @@ export function OrderDetailPage() {
                 </p>
               )}
 
-              <Button
-                variant="ghost"
-                onClick={goBack}
-                className="w-full justify-start text-gray-600 hover:text-gray-900 hover:bg-transparent dark:text-gray-300 dark:hover:text-white"
-              >
-                <ArrowLeft className="size-6 mr-1" strokeWidth={2} />
-                Go back
-              </Button>
             </div>
           </div>
         </div>
