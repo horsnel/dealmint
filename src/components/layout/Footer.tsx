@@ -13,6 +13,7 @@ import {
 export function Footer() {
   const footerLinks = {
     product: [
+      { name: 'Marketplace', href: '/marketplace' },
       { name: 'Browse', href: '/browse' },
       { name: 'Post a Gig', href: '/post/gig' },
       { name: 'Post a Task', href: '/post/task' },

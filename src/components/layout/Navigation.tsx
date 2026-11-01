@@ -58,6 +58,7 @@ export function Navigation({ user }: NavigationProps) {
   }, []);
 
   const navLinks = [
+    { name: 'Marketplace', href: '/marketplace' },
     { name: 'Browse', href: '/browse' },
     { name: 'Categories', href: '/categories' },
     { name: 'Safe Spots', href: '/safe-spots' },

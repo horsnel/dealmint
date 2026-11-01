@@ -19,6 +19,7 @@ function page<T extends Record<string, ComponentType>>(loader: () => Promise<T>,
 }
 
 const BrowsePage = page(() => import('@/pages/BrowsePage'), 'BrowsePage');
+const MarketplacePage = page(() => import('@/pages/MarketplacePage'), 'MarketplacePage');
 const CategoriesPage = page(() => import('@/pages/CategoriesPage'), 'CategoriesPage');
 const ListingDetailPage = page(() => import('@/pages/ListingDetailPage'), 'ListingDetailPage');
 const SellerProfilePage = page(() => import('@/pages/SellerProfilePage'), 'SellerProfilePage');
@@ -102,6 +103,7 @@ function AppContent() {
               {/* Public Routes */}
               <Route path="/" element={<HomePage />} />
               <Route path="/browse" element={<BrowsePage />} />
+              <Route path="/marketplace" element={<MarketplacePage />} />
               <Route path="/categories" element={<CategoriesPage />} />
               <Route path="/listing/:id" element={<ListingDetailPage />} />
               <Route path="/seller/:id" element={<SellerProfilePage />} />
