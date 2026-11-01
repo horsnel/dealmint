@@ -23,7 +23,7 @@ import { useApp } from '@/context/AppContext';
 import { ListingCard } from '@/components/common/ListingCard';
 import { EmptyState } from '@/components/common/EmptyState';
 import { toast } from 'sonner';
-import { matchesCategory, slugify, typeLabel } from '@/lib/categories';
+import { MARKET_GROUPS, matchesCategory, slugify, typeLabel } from '@/lib/categories';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import type { Listing, ListingType } from '@/types';
 
@@ -119,6 +119,7 @@ export function BrowsePage() {
   const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const categoryName =
+    MARKET_GROUPS.find((g) => g.key === category)?.name ||
     categories.find((c) => c.slug === category || slugify(c.name) === category)?.name ||
     (category !== 'all' ? category.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '');
 
