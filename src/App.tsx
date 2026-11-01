@@ -9,6 +9,7 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { PageSkeleton } from '@/components/common/PageSkeleton';
 import { AppProvider, useApp } from '@/context/AppContext';
 import { EmailVerifyBanner } from '@/components/auth/EmailVerifyBanner';
+import { VerifyGateModal } from '@/components/auth/VerifyGateModal';
 import { HomePage } from '@/pages/HomePage';
 import './App.css';
 
@@ -91,6 +92,9 @@ function AppContent() {
       {location.pathname !== '/dashboard/messages' && <Navigation user={user} />}
       {/* Nudge signed-in cloud users to verify their email (skipped on the immersive inbox too) */}
       {location.pathname !== '/dashboard/messages' && <EmailVerifyBanner />}
+      {/* Hard gate: cloud accounts with an unverified email are blocked from
+          ordering — this modal explains and offers a resend (invisible when closed) */}
+      <VerifyGateModal />
       <main>
         <ErrorBoundary>
           <Suspense fallback={<PageSkeleton />}>

@@ -133,13 +133,19 @@ interface AppContextValue {
   verifyStudent: (schoolEmail: string) => Result;
   // Social sign-in (Appwrite OAuth2): navigates to the provider and back;
   // /oauth/callback then calls completeOAuthSignIn to finish the session.
-  oauthSignIn: (provider: 'google' | 'apple') => void;
+  oauthSignIn: (provider: 'google') => void;
   completeOAuthSignIn: () => Promise<Result>;
   // Appwrite account.emailVerification — null = unknown or local mode;
-  // false drives the verify-your-email banner.
+  // false drives the verify-your-email banner AND locks ordering.
   emailVerified: boolean | null;
   sendEmailVerification: () => Promise<Result>;
   markEmailVerified: () => void;
+  // Ordering gate: cloud users with an unverified email cannot order until
+  // the emailed link is clicked. requireVerified opens the gate modal and
+  // returns false when blocked; verifyGate carries the blocked action label.
+  verifyGate: string | null;
+  requireVerified: (action: string) => boolean;
+  closeVerifyGate: () => void;
   // 'cloud' = Appwrite sessions + sync active; 'local' = device-only fallback
   authMode: 'cloud' | 'local';
 
@@ -246,6 +252,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [authMode, setAuthMode] = useState<'cloud' | 'local'>('local');
   const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
+  const [verifyGate, setVerifyGate] = useState<string | null>(null);
   const dbRef = useRef(db);
   const sessionIdRef = useRef(sessionId);
   const warnedStorage = useRef(false);
@@ -613,7 +620,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       let next = pushNotification(
         { ...d0, users: [...d0.users, newUser] },
         newUser.id,
-        { type: 'system', title: 'Welcome to Dealmint', message: 'Verify your phone number to unlock ordering and posting.', link: '/verify-phone' }
+        { type: 'system', title: 'Welcome to Dealmint', message: 'Verify your email and phone number to unlock ordering and posting.', link: '/verify-phone' }
       );
       // Referral program: record the signup against the referrer
       const code = (input.referralCode || '').trim().toUpperCase();
@@ -682,7 +689,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Redirects the browser to the provider and back. Appwrite sets the
     // session cookie on the API domain; /oauth/callback finishes the flow.
     void account.createOAuth2Session(
-      provider === 'apple' ? OAuthProvider.Apple : OAuthProvider.Google,
+      OAuthProvider.Google,
       `${window.location.origin}/oauth/callback`,
       `${window.location.origin}/login?oauth=failed&provider=${provider}`
     );
@@ -753,6 +760,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const markEmailVerified = () => setEmailVerified(true);
+
+  // ---------- ordering gate (cloud) ----------
+  // Cloud accounts with an unverified email are blocked from ordering until
+  // the emailed link is clicked. Local mode and verified/null states pass.
+  const requireVerified: AppContextValue['requireVerified'] = (action) => {
+    if (authMode === 'cloud' && emailVerified === false) {
+      setVerifyGate(action);
+      return false;
+    }
+    return true;
+  };
+  const closeVerifyGate = () => setVerifyGate(null);
 
   const updateProfile: AppContextValue['updateProfile'] = (patch) => {
     const id = uidNow();
@@ -1230,6 +1249,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const d0 = dbRef.current;
     const me = d0.users.find((u) => u.id === sessionId);
     if (!me) return { ok: false, error: 'Please sign in to continue.' };
+    // Hard email-verification gate (cloud mode): refuse ordering until the
+    // account's email address is confirmed via the emailed link.
+    if (authMode === 'cloud' && emailVerified === false) {
+      setVerifyGate('place an order');
+      return { ok: false, error: 'Verify your email address to place orders — we emailed you a confirmation link.' };
+    }
     if (listing.seller.id === me.id) return { ok: false, error: 'You cannot order your own listing.' };
     if (!listing.isActive) return { ok: false, error: 'This listing is not available right now.' };
     const price = Math.round(offer && offer > 0 ? offer : listing.price);
@@ -1843,6 +1868,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     emailVerified,
     sendEmailVerification,
     markEmailVerified,
+    verifyGate,
+    requireVerified,
+    closeVerifyGate,
     listings: visibleListings,
     myListings,
     getListing,

@@ -9,7 +9,8 @@ const DISMISS_KEY = 'dealmint_email_verify_dismissed';
 /**
  * Slim nudge for signed-in cloud users whose Appwrite account email is still
  * unverified. Verification itself is opt-in in Appwrite (unlike Supabase's
- * mandatory confirmation mail), so the app reminds instead of blocking.
+ * mandatory confirmation mail), so the app reminds here — and hard-gates
+ * ordering elsewhere (VerifyGateModal) until the address is confirmed.
  */
 export function EmailVerifyBanner() {
   const { user, authMode, emailVerified, sendEmailVerification } = useApp();
@@ -46,8 +47,8 @@ export function EmailVerifyBanner() {
       <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center gap-3 text-sm">
         <MailWarning className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
         <p className="flex-1 min-w-0 text-amber-900 dark:text-amber-200">
-          Please verify your email address (<span className="font-medium break-all">{user.email}</span>) to secure your
-          account.{' '}
+          Verify your email (<span className="font-medium break-all">{user.email}</span>) to secure your account —{' '}
+          <span className="font-semibold">ordering stays locked</span> until you click the link we sent.{' '}
           <Link to="/verify-email" className="underline font-medium whitespace-nowrap">
             What's this?
           </Link>

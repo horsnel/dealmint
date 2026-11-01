@@ -79,6 +79,7 @@ export function ListingDetailPage() {
     orders,
     addReview,
     createOrder,
+    requireVerified,
     startConversation,
     favourites,
     toggleFavourite,
@@ -162,6 +163,9 @@ export function ListingDetailPage() {
 
   const handleBook = () => {
     if (!user) return requireLogin();
+    // Hard gate: cloud accounts must confirm their email before ordering
+    // (opens the VerifyGateModal with a resend). Local mode passes through.
+    if (!requireVerified(isJob ? 'apply' : listing.type === 'task' ? 'make an offer' : 'place an order')) return;
     if (!user.phoneVerified) {
       toast.info('Verify your phone number first');
       navigate('/verify-phone', { state: { from: location.pathname } });
