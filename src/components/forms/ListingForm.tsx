@@ -308,8 +308,8 @@ export function ListingForm({ type, listing }: Props) {
 
   return (
     <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
-      <PageClose fallback="/" />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <PageClose fallback="/" />
         <h1 className="font-display font-bold text-2xl lg:text-3xl text-gray-900 dark:text-white mb-6">
           {editing ? `Edit ${c.title.replace('Post a ', '').replace('Offer a ', '').replace('Sell a ', '')}` : c.title}
         </h1>

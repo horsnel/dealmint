@@ -63,6 +63,8 @@ const VerifyIdPage = page(() => import('@/pages/dashboard/VerifyIdPage'), 'Verif
 const ResetPasswordPage = page(() => import('@/pages/auth/ResetPasswordPage'), 'ResetPasswordPage');
 const VerifyEmailPage = page(() => import('@/pages/auth/VerifyEmailPage'), 'VerifyEmailPage');
 const OAuthCallbackPage = page(() => import('@/pages/auth/OAuthCallbackPage'), 'OAuthCallbackPage');
+const MagicCallbackPage = page(() => import('@/pages/auth/MagicCallbackPage'), 'MagicCallbackPage');
+const LagosHubPage = page(() => import('@/pages/LagosHubPage'), 'LagosHubPage');
 
 const PostGigPage = page(() => import('@/pages/post/PostGigPage'), 'PostGigPage');
 const PostTaskPage = page(() => import('@/pages/post/PostTaskPage'), 'PostTaskPage');
@@ -104,6 +106,7 @@ function AppContent() {
               <Route path="/" element={<HomePage />} />
               <Route path="/browse" element={<BrowsePage />} />
               <Route path="/marketplace" element={<MarketplacePage />} />
+              <Route path="/marketplace/lagos" element={<LagosHubPage />} />
               <Route path="/categories" element={<CategoriesPage />} />
               <Route path="/listing/:id" element={<ListingDetailPage />} />
               <Route path="/seller/:id" element={<SellerProfilePage />} />
@@ -129,6 +132,7 @@ function AppContent() {
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/verify-email" element={<VerifyEmailPage />} />
               <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
+              <Route path="/auth/magic" element={<MagicCallbackPage />} />
               <Route path="/verify-phone" element={<VerifyPhonePage />} />
 
               {/* Protected Dashboard Routes */}

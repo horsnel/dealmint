@@ -50,12 +50,12 @@ const POST_OPTIONS = [
   },
 ];
 
-// Surfaces where posting is relevant. The FAB stays off the landing page,
-// auth screens, forms and the inbox so it never covers CTAs or the composer.
-const FAB_PATHS = ['/browse', '/categories', '/listing/', '/seller/', '/dashboard/favourites'];
+// Surfaces where posting is the primary action — strictly minimal. The FAB
+// stays off the dashboard, detail pages, inbox and everywhere else so it
+// never covers content or CTAs; the navbar "Post" menu covers the rest.
+const FAB_PATHS = ['/browse', '/marketplace'];
 
 function showOnPath(pathname: string) {
-  if (pathname === '/dashboard') return true;
   return FAB_PATHS.some((p) => pathname.startsWith(p));
 }
 

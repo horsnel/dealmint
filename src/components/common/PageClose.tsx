@@ -7,10 +7,13 @@ interface Props {
 }
 
 /**
- * Circular X button pinned to the top-right screen edge, just below the
- * fixed navbar. Replaces the old inline "Back / Go back" buttons: it behaves
- * exactly like the browser back button, with a sensible fallback route when
- * the page was opened directly (no history to go back to).
+ * Circular X button shown inline at the top-right of the page content.
+ * Replaces the old inline "Back / Go back" buttons: it behaves exactly like
+ * the browser back button, with a sensible fallback route when the page was
+ * opened directly (no history to go back to).
+ *
+ * It scrolls with the page on purpose — no fixed positioning, so it never
+ * floats over content further down.
  */
 export function PageClose({ fallback = '/' }: Props) {
   const navigate = useNavigate();
@@ -19,13 +22,15 @@ export function PageClose({ fallback = '/' }: Props) {
     else navigate(fallback);
   };
   return (
-    <button
-      type="button"
-      onClick={goBack}
-      aria-label="Close and go back"
-      className="fixed right-3 top-[4.5rem] lg:right-6 lg:top-[5.5rem] z-30 w-10 h-10 rounded-full bg-white/95 dark:bg-violet-800/95 border border-gray-200 dark:border-violet-600 shadow-md text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:shadow-lg active:scale-95 flex items-center justify-center transition-all"
-    >
-      <X className="w-5 h-5" strokeWidth={2.5} />
-    </button>
+    <div className="flex justify-end mb-3" aria-hidden="false">
+      <button
+        type="button"
+        onClick={goBack}
+        aria-label="Close and go back"
+        className="w-10 h-10 rounded-full bg-white dark:bg-violet-800 border border-gray-200 dark:border-violet-600 shadow-sm text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:shadow active:scale-95 flex items-center justify-center transition-all"
+      >
+        <X className="w-5 h-5" strokeWidth={2.5} />
+      </button>
+    </div>
   );
 }

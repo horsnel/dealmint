@@ -14,14 +14,17 @@ import {
   ClipboardList,
   Wallet,
   BadgeCheck,
+  Bookmark,
   Globe,
+  Star,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ListingCard } from '@/components/common/ListingCard';
 import { useApp } from '@/context/AppContext';
 import { MARKET_GROUPS, matchesCategory } from '@/lib/categories';
+import { savedSearchLabel, savedSearchUrl } from '@/lib/search';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import type { Listing } from '@/types';
+import type { Listing, User } from '@/types';
 
 const groupIcon: Record<string, React.ElementType> = {
   Home,
@@ -35,7 +38,7 @@ const groupIcon: Record<string, React.ElementType> = {
 export function MarketplacePage() {
   usePageTitle('Marketplace');
   const navigate = useNavigate();
-  const { listings, safeSpots } = useApp();
+  const { listings, safeSpots, user, savedSearches, matchesForSavedSearch, getSellerStats } = useApp();
   const [q, setQ] = useState('');
 
   const active = useMemo(() => listings.filter((l) => l.isActive && !l.isDraft), [listings]);
@@ -62,6 +65,39 @@ export function MarketplacePage() {
     return ['Remote', ...areas];
   }, [active]);
 
+  // Seller spotlight: the people behind the live listings, ranked by
+  // verification, rating and review count. Skips the signed-in user.
+  const spotlight = useMemo(() => {
+    const bySeller = new Map<string, { seller: User; listings: Listing[] }>();
+    for (const l of active) {
+      if (!l.seller?.id || l.seller.id === user?.id) continue;
+      const entry = bySeller.get(l.seller.id) || { seller: l.seller, listings: [] };
+      entry.listings.push(l);
+      bySeller.set(l.seller.id, entry);
+    }
+    return [...bySeller.values()]
+      .map((e) => ({ ...e, stats: getSellerStats(e.seller.id) }))
+      .sort(
+        (a, b) =>
+          Number(b.seller.isVerified) - Number(a.seller.isVerified) ||
+          b.stats.rating - a.stats.rating ||
+          b.stats.count - a.stats.count ||
+          b.listings.length - a.listings.length
+      )
+      .slice(0, 4);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, user?.id, listings.length]);
+
+  // Live Lagos inventory for the city hub banner
+  const lagosCount = useMemo(
+    () => active.filter((l) => (l.location || '').includes('Lagos')).length,
+    [active]
+  );
+  const lagosSpots = useMemo(
+    () => safeSpots.filter((s) => s.city === 'Lagos' && s.isApproved).length,
+    [safeSpots]
+  );
+
   const submitSearch = (e: React.FormEvent) => {
     e.preventDefault();
     navigate(q.trim() ? `/browse?q=${encodeURIComponent(q.trim())}` : '/browse');
@@ -75,28 +111,31 @@ export function MarketplacePage() {
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 bg-white/10 rounded-full px-4 py-1.5 text-sm mb-5">
               <ShieldCheck className="w-4 h-4 text-amber-300" />
-              Every order is protected — money moves only when the work is done
+              Every order is protected. Money moves only when the work is done
             </div>
             <h1 className="font-display font-bold text-3xl lg:text-5xl mb-4">
               Nigeria's protected marketplace
             </h1>
             <p className="text-white/85 text-lg mb-8 max-w-2xl">
-              Hire help, find work and buy digital goods. Funds sit in escrow until you say the job is done — no stories, no wash.
+              Hire help, find work and buy digital goods. Funds sit in escrow until you say the job is done. No stories, no wash.
             </p>
 
-            {/* One search bar over everything */}
+            {/* One search bar over everything — button and bar are the same pill height */}
             <form onSubmit={submitSearch} className="flex gap-2 mb-8 max-w-xl">
               <div className="relative flex-1">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                 <input
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   placeholder="What do you need done? e.g. cleaner, logo, JAMB lessons"
                   aria-label="Search the marketplace"
-                  className="w-full pl-11 pr-4 py-3.5 rounded-full bg-white text-gray-900 placeholder:text-gray-400 text-sm shadow-lg focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  className="w-full h-12 pl-11 pr-4 rounded-full bg-white text-gray-900 placeholder:text-gray-400 text-sm shadow-lg focus:outline-none focus:ring-2 focus:ring-amber-400"
                 />
               </div>
-              <Button type="submit" className="bg-amber-500 hover:bg-amber-600 text-white rounded-full px-6 shadow-lg">
+              <Button
+                type="submit"
+                className="bg-amber-500 hover:bg-amber-600 text-white rounded-full h-12 px-6 shadow-lg"
+              >
                 Search
               </Button>
             </form>
@@ -114,7 +153,7 @@ export function MarketplacePage() {
                   <h3 className="font-display font-bold text-lg">I need something done</h3>
                 </div>
                 <p className="text-sm text-gray-600 mb-3">
-                  Post a task with your budget — verified doers accept or send offers.
+                  Post a task with your budget. Verified doers accept or send offers.
                 </p>
                 <span className="inline-flex items-center gap-1 text-sm font-semibold text-violet-600 group-hover:gap-2 transition-all">
                   Post a task <ArrowRight className="w-4 h-4" />
@@ -131,7 +170,7 @@ export function MarketplacePage() {
                   <h3 className="font-display font-bold text-lg">I want to earn</h3>
                 </div>
                 <p className="text-sm text-white/80 mb-3">
-                  Sell your skills as gigs or services — get paid to your wallet, guaranteed.
+                  Sell your skills as gigs or services. Get paid to your wallet, guaranteed.
                 </p>
                 <span className="inline-flex items-center gap-1 text-sm font-semibold text-amber-300 group-hover:gap-2 transition-all">
                   Post a gig <ArrowRight className="w-4 h-4" />
@@ -143,6 +182,41 @@ export function MarketplacePage() {
       </section>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
+        {/* ---------- Saved searches, surfaced on the front door ---------- */}
+        {user && savedSearches.length > 0 && (
+          <section className="mb-12">
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <h2 className="font-display font-bold text-xl lg:text-2xl text-gray-900 dark:text-white flex items-center gap-2">
+                <Bookmark className="w-5 h-5 text-violet-600 dark:text-amber-400" />
+                Your saved searches
+              </h2>
+              <Link
+                to="/dashboard/saved-searches"
+                className="shrink-0 inline-flex items-center gap-1 text-sm font-semibold text-violet-600 dark:text-amber-400 hover:gap-2 transition-all"
+              >
+                Manage <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {savedSearches.slice(0, 6).map((s) => {
+                const matches = matchesForSavedSearch(s);
+                return (
+                  <Link
+                    key={s.id}
+                    to={savedSearchUrl(s)}
+                    className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white dark:bg-violet-800 border border-violet-200 dark:border-violet-700 text-gray-700 dark:text-gray-200 hover:border-violet-400 dark:hover:border-violet-500 transition-colors"
+                  >
+                    <span className="font-medium">{savedSearchLabel(s)}</span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-700 text-violet-700 dark:text-violet-200">
+                      {matches} match{matches === 1 ? '' : 'es'}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         {/* ---------- Nigerian-first directory ---------- */}
         <section className="mb-14">
           <div className="flex items-end justify-between gap-4 mb-6">
@@ -151,7 +225,7 @@ export function MarketplacePage() {
                 Browse what you actually need
               </h2>
               <p className="text-gray-600 dark:text-gray-300 mt-1">
-                From market runs to React fixes — grouped the way Lagos thinks.
+                From market runs to React fixes, grouped the way Lagos thinks.
               </p>
             </div>
             <Link to="/categories" className="hidden sm:inline-flex items-center gap-1 text-sm font-semibold text-violet-600 dark:text-amber-400 hover:gap-2 transition-all shrink-0">
@@ -186,6 +260,39 @@ export function MarketplacePage() {
           </div>
         </section>
 
+        {/* ---------- Lagos city hub ---------- */}
+        <section className="mb-14">
+          <Link
+            to="/marketplace/lagos"
+            className="group block rounded-3xl bg-gradient-to-r from-violet-700 to-violet-600 text-white p-6 lg:p-8 hover:shadow-xl transition-shadow"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+              <span className="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
+                <MapPin className="w-7 h-7 text-amber-300" />
+              </span>
+              <div className="flex-1">
+                <h2 className="font-display font-bold text-xl lg:text-2xl mb-1">
+                  Trading in Lagos? Start here
+                </h2>
+                <p className="text-white/80 text-sm">
+                  The Lagos hub: live listings, Safe Spots and how Lagos trade works on Dealmint.
+                </p>
+              </div>
+              <div className="flex items-center gap-5 shrink-0">
+                <div className="text-center">
+                  <p className="font-display font-bold text-2xl leading-none">{lagosCount}</p>
+                  <p className="text-xs text-white/70 mt-1">live listings</p>
+                </div>
+                <div className="text-center">
+                  <p className="font-display font-bold text-2xl leading-none">{lagosSpots}</p>
+                  <p className="text-xs text-white/70 mt-1">Safe Spots</p>
+                </div>
+                <ArrowRight className="w-6 h-6 text-amber-300 group-hover:translate-x-1 transition-transform hidden sm:block" />
+              </div>
+            </div>
+          </Link>
+        </section>
+
         {/* ---------- Tasks near you (hyperlocal, data-driven chips) ---------- */}
         {freshTasks.length > 0 && (
           <section className="mb-14">
@@ -195,7 +302,7 @@ export function MarketplacePage() {
                   Tasks near you
                 </h2>
                 <p className="text-gray-600 dark:text-gray-300 mt-1">
-                  Fresh requests, safe meetups — meet at verified Safe Spots or go remote.
+                  Fresh requests and safe meetups: verified Safe Spots, or go fully remote.
                 </p>
               </div>
               <Link to="/browse?type=task" className="inline-flex items-center gap-1 text-sm font-semibold text-violet-600 dark:text-amber-400 hover:gap-2 transition-all">
@@ -231,7 +338,7 @@ export function MarketplacePage() {
                   Skills ready to hire
                 </h2>
                 <p className="text-gray-600 dark:text-gray-300 mt-1">
-                  Fixed-price gigs from verified sellers — release payment only when you're happy.
+                  Fixed-price gigs from verified sellers. Release payment only when you're happy.
                 </p>
               </div>
               <Link to="/browse?type=gig" className="inline-flex items-center gap-1 text-sm font-semibold text-violet-600 dark:text-amber-400 hover:gap-2 transition-all">
@@ -246,6 +353,56 @@ export function MarketplacePage() {
           </section>
         )}
 
+        {/* ---------- Seller spotlight ---------- */}
+        {spotlight.length >= 2 && (
+          <section className="mb-14">
+            <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
+              <div>
+                <h2 className="font-display font-bold text-2xl lg:text-3xl text-gray-900 dark:text-white">
+                  Sellers worth your money
+                </h2>
+                <p className="text-gray-600 dark:text-gray-300 mt-1">
+                  Verified people with live listings and real reviews. Check their shop before you pay.
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {spotlight.map(({ seller, listings: theirs, stats }) => (
+                <Link
+                  key={seller.id}
+                  to={`/seller/${seller.id}`}
+                  className="card-white dark:bg-violet-800 dark:border-violet-700 p-5 flex flex-col items-center text-center hover:shadow-lg transition-shadow"
+                >
+                  <img
+                    src={seller.avatar || '/images/avatar_default.jpg'}
+                    alt={seller.name}
+                    className="w-16 h-16 rounded-full object-cover border-2 border-amber-400 mb-3"
+                  />
+                  <p className="font-semibold text-gray-900 dark:text-white truncate max-w-full">
+                    {seller.name}
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-1 text-sm" aria-label={`Rated ${stats.rating || 'unrated'}`}>
+                    <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                    <span className="text-gray-700 dark:text-gray-200">
+                      {stats.count > 0 ? stats.rating : 'New'}
+                    </span>
+                    {stats.count > 0 && (
+                      <span className="text-gray-400 dark:text-gray-400">({stats.count})</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    {seller.isVerified ? 'Verified seller · ' : ''}
+                    {theirs.length} live listing{theirs.length === 1 ? '' : 's'}
+                  </p>
+                  <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-violet-600 dark:text-amber-400 group-hover:gap-2 transition-all">
+                    View shop <ArrowRight className="w-4 h-4" />
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* ---------- Digital storefront ---------- */}
         {freshDigital.length > 0 && (
           <section className="mb-14">
@@ -255,7 +412,7 @@ export function MarketplacePage() {
                   Buy digital, instantly
                 </h2>
                 <p className="text-gray-600 dark:text-gray-300 mt-1">
-                  Templates, e-books and courses — pay, download, done. No meetup, no risk.
+                  Templates, e-books and courses. Pay, download, done. No meetup, no risk.
                 </p>
               </div>
               <Link to="/browse?type=digital" className="inline-flex items-center gap-1 text-sm font-semibold text-violet-600 dark:text-amber-400 hover:gap-2 transition-all">
@@ -276,14 +433,14 @@ export function MarketplacePage() {
             Why deals here don't go wrong
           </h2>
           <p className="text-gray-600 dark:text-gray-300 mb-8 max-w-2xl">
-            Classifieds leave you on your own. Dealmint doesn't — every naira and every meetup is engineered around trust.
+            Classifieds leave you on your own. Dealmint doesn't: every naira and every meetup is engineered around trust.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {[
               {
                 icon: Wallet,
                 title: '1. Buyer funds escrow',
-                body: 'You pay into your Dealmint wallet, not to the seller. The seller sees the order is funded — but cannot touch a kobo yet.',
+                body: 'You pay into your Dealmint wallet, not to the seller. The seller sees the order is funded, but cannot touch a kobo yet.',
               },
               {
                 icon: ClipboardList,
@@ -293,7 +450,7 @@ export function MarketplacePage() {
               {
                 icon: ShieldCheck,
                 title: '3. You release the money',
-                body: 'Payment releases when you confirm — or automatically 7 days after delivery if you go quiet. Disagree? Dispute it and our team reviews.',
+                body: "Payment releases when you confirm, or automatically 7 days after delivery if you go quiet. Disagree? Dispute it and our team reviews.",
               },
             ].map((s) => (
               <div key={s.title} className="rounded-2xl border border-violet-100 dark:border-violet-700 p-5">
@@ -333,7 +490,7 @@ export function MarketplacePage() {
               <BadgeCheck className="w-8 h-8 text-violet-600 dark:text-amber-400 shrink-0" />
               <span className="text-sm font-semibold text-gray-900 dark:text-white">
                 Verification tiers
-                <span className="block text-xs font-normal text-gray-500 dark:text-gray-300">Email, phone and ID — know who you deal with</span>
+                <span className="block text-xs font-normal text-gray-500 dark:text-gray-300">Email, phone and ID. Know who you deal with</span>
               </span>
             </Link>
           </div>
@@ -346,13 +503,13 @@ export function MarketplacePage() {
               Can't find it? Post it.
             </h2>
             <p className="text-white/85 mb-6 max-w-xl mx-auto">
-              Describe what you need and your budget — let verified doers come to you with offers.
+              Describe what you need and your budget. Let verified doers come to you with offers.
             </p>
             <Link
               to="/post/task"
               className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold px-6 py-3 rounded-full transition-colors"
             >
-              Post a task — it's free
+              Post a task, it's free
               <ArrowRight className="w-5 h-5" />
             </Link>
           </div>

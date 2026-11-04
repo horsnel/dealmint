@@ -20,7 +20,7 @@ export function LoginPage() {
   usePageTitle('Log in');
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, login, oauthSignIn } = useApp();
+  const { user, login, oauthSignIn, sendMagicLink } = useApp();
   const [params] = useSearchParams();
   const from = (location.state as { from?: string } | null)?.from || '/dashboard';
   const [showPassword, setShowPassword] = useState(false);
@@ -61,7 +61,9 @@ export function LoginPage() {
     setError('');
   };
 
-  // Magic link (Postall-style passwordless sign-in) — simulated in this demo
+  // Magic link (passwordless sign-in) — real Appwrite magic URL session.
+  // Appwrite emails the link; clicking it lands on /auth/magic which completes
+  // the session. New email addresses get an account created automatically.
   const [magicOpen, setMagicOpen] = useState(false);
   const [magicEmail, setMagicEmail] = useState('');
   const [magicStage, setMagicStage] = useState<'form' | 'sending' | 'sent'>('form');
@@ -79,16 +81,20 @@ export function LoginPage() {
     setMagicOpen(true);
   };
 
-  const sendMagic = () => {
+  const sendMagic = async () => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(magicEmail.trim())) {
       toast.error('Enter a valid email address');
       return;
     }
     setMagicStage('sending');
-    setTimeout(() => {
-      setMagicStage('sent');
-      setResendIn(60);
-    }, 1200);
+    const res = await sendMagicLink(magicEmail);
+    if (!res.ok) {
+      setMagicStage('form');
+      toast.error(res.error);
+      return;
+    }
+    setMagicStage('sent');
+    setResendIn(60);
   };
 
   return (
@@ -115,6 +121,12 @@ export function LoginPage() {
           {params.get('oauth') === 'failed' && (
             <div role="alert" className="mb-6 rounded-xl bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-700 dark:text-red-300">
               Google sign-in was cancelled or didn't complete. Try email sign-in instead.
+            </div>
+          )}
+
+          {params.get('magic') === 'failed' && (
+            <div role="alert" className="mb-6 rounded-xl bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-700 dark:text-red-300">
+              Your sign-in link is invalid or has expired. Request a fresh magic link or sign in with your password.
             </div>
           )}
 
@@ -294,7 +306,7 @@ export function LoginPage() {
           <DialogHeader>
             <DialogTitle className="dark:text-white">Sign in with a magic link</DialogTitle>
             <DialogDescription className="dark:text-gray-300">
-              No password needed — we email you a one-tap sign-in link.
+              No password needed. We email you a one-tap sign-in link.
             </DialogDescription>
           </DialogHeader>
           {magicStage === 'sent' ? (
@@ -304,7 +316,7 @@ export function LoginPage() {
               </div>
               <h3 className="mt-4 font-semibold text-gray-900 dark:text-white">Check your inbox</h3>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 break-words">
-                We sent a sign-in link to {magicEmail}. It expires in 15 minutes.
+                We sent a sign-in link to {magicEmail}. It expires in 1 hour.
               </p>
               <div className="mt-5 space-y-3">
                 <Button
@@ -371,7 +383,7 @@ export function LoginPage() {
                 )}
               </Button>
               <p className="text-[11px] text-center text-gray-400 dark:text-gray-500">
-                Demo mode — no real email is sent. Any address works.
+                Opens on this device. New here? The link creates your account.
               </p>
             </div>
           )}

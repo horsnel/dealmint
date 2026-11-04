@@ -36,6 +36,25 @@ export function matchesSearchFilters(
   return true;
 }
 
+// Browse URL for a saved search, using the same param names the Browse page
+// reads (q, type, category, where, price).
+export function savedSearchUrl(s: {
+  query: string;
+  type: string;
+  category: string;
+  where: string;
+  price: string;
+}) {
+  const p = new URLSearchParams();
+  if (s.query) p.set('q', s.query);
+  if (s.type !== 'all') p.set('type', s.type);
+  if (s.category !== 'all') p.set('category', s.category);
+  if (s.where !== 'all') p.set('where', s.where);
+  if (s.price !== 'all') p.set('price', s.price);
+  const qs = p.toString();
+  return qs ? `/browse?${qs}` : '/browse';
+}
+
 // Short human label for a saved search, e.g. `“logo” · Gigs · Lagos`
 export function savedSearchLabel(f: { query: string; type: string; category: string; where: string; price: string }) {
   const parts: string[] = [];

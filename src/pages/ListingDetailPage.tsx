@@ -296,8 +296,8 @@ export function ListingDetailPage() {
 
   return (
     <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
-      <PageClose fallback="/browse" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <PageClose fallback="/browse" />
         {!listing.isActive && (
           <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 p-4 text-amber-800 dark:text-amber-200 text-sm">
             {isOwner

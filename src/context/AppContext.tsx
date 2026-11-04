@@ -135,6 +135,10 @@ interface AppContextValue {
   // /oauth/callback then calls completeOAuthSignIn to finish the session.
   oauthSignIn: (provider: 'google') => void;
   completeOAuthSignIn: () => Promise<Result>;
+  // Passwordless magic link: email the sign-in link, then /auth/magic calls
+  // completeMagicSignIn with the userId + secret query params Appwrite appends.
+  sendMagicLink: (email: string) => Promise<Result>;
+  completeMagicSignIn: (userId: string, secret: string) => Promise<Result>;
   // Appwrite account.emailVerification — null = unknown or local mode;
   // false drives the verify-your-email banner AND locks ordering.
   emailVerified: boolean | null;
@@ -695,23 +699,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const completeOAuthSignIn: AppContextValue['completeOAuthSignIn'] = async () => {
-    if (!account) return { ok: false, error: 'Cloud backend unavailable.' };
-    // The provider redirect just landed and the session cookie already exists
-    // on the API domain — even if the boot probe has not flipped cloud mode
-    // yet, so read the account directly (with one patient retry).
-    let acc: Models.User<Models.Preferences> | null = null;
-    for (let attempt = 0; attempt < 2 && !acc; attempt++) {
-      acc = await account.get().catch(() => null);
-      if (!acc && attempt === 0) await new Promise((r) => setTimeout(r, 800));
-    }
-    if (!acc) return { ok: false, error: 'Sign-in did not complete. Please try again.' };
+  // Shared tail of every cloud sign-in (OAuth, magic link): adopt the Appwrite
+  // identity, publish a profile document for brand-new accounts, then sync.
+  const finishCloudSignIn = async (acc: Models.User<Models.Preferences>) => {
     setCloudActive(true);
     setAuthMode('cloud');
     adoptSession(acc.$id);
     setEmailVerified(acc.emailVerification);
-    // A brand-new social account has no profile document yet — publish one
-    // so the dashboard works and the profile is visible to other users.
+    // A brand-new social or magic-link account has no profile document yet —
+    // publish one so the dashboard works and the profile is visible to others.
     if (!dbRef.current.users.some((u) => u.id === acc.$id)) {
       const fresh: StoredUser = {
         id: acc.$id,
@@ -745,6 +741,56 @@ export function AppProvider({ children }: { children: ReactNode }) {
     void bootstrapCloudSeed(dbRef.current, acc.$id);
     await applyPull(acc.$id);
     void flushSync();
+  };
+
+  const completeOAuthSignIn: AppContextValue['completeOAuthSignIn'] = async () => {
+    if (!account) return { ok: false, error: 'Cloud backend unavailable.' };
+    // The provider redirect just landed and the session cookie already exists
+    // on the API domain — even if the boot probe has not flipped cloud mode
+    // yet, so read the account directly (with one patient retry).
+    let acc: Models.User<Models.Preferences> | null = null;
+    for (let attempt = 0; attempt < 2 && !acc; attempt++) {
+      acc = await account.get().catch(() => null);
+      if (!acc && attempt === 0) await new Promise((r) => setTimeout(r, 800));
+    }
+    if (!acc) return { ok: false, error: 'Sign-in did not complete. Please try again.' };
+    await finishCloudSignIn(acc);
+    return { ok: true };
+  };
+
+  // ---------- magic link (passwordless, cloud) ----------
+  const sendMagicLink: AppContextValue['sendMagicLink'] = async (email) => {
+    if (!isCloudActive() || !account) {
+      return { ok: false, error: 'Magic link sign-in needs the cloud backend. Use your email and password for now.' };
+    }
+    try {
+      // Works for existing accounts AND first-time visitors: Appwrite creates
+      // the account (no password) when the email is new. Clicking the emailed
+      // link completes the session and verifies the email in one step.
+      await account.createMagicURLToken(
+        ID.unique(),
+        email.trim().toLowerCase(),
+        `${window.location.origin}/auth/magic`
+      );
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: authErrorMessage(e) };
+    }
+  };
+
+  const completeMagicSignIn: AppContextValue['completeMagicSignIn'] = async (userId, secret) => {
+    if (!account) return { ok: false, error: 'Cloud backend unavailable.' };
+    if (!userId || !secret) {
+      return { ok: false, error: 'This sign-in link is incomplete. Request a fresh one.' };
+    }
+    try {
+      await account.updateMagicURLSession(userId, secret);
+    } catch (e) {
+      return { ok: false, error: authErrorMessage(e) };
+    }
+    const acc = await account.get().catch(() => null);
+    if (!acc) return { ok: false, error: 'Sign-in did not complete. Please try again.' };
+    await finishCloudSignIn(acc);
     return { ok: true };
   };
 
@@ -1865,6 +1911,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     verifyStudent,
     oauthSignIn,
     completeOAuthSignIn,
+    sendMagicLink,
+    completeMagicSignIn,
     emailVerified,
     sendEmailVerification,
     markEmailVerified,

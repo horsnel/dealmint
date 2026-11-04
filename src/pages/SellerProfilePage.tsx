@@ -70,8 +70,8 @@ export function SellerProfilePage() {
 
   return (
     <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
-      <PageClose fallback="/browse" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <PageClose fallback="/browse" />
         {/* Profile Header */}
         <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-6 lg:p-8 mb-8">
           <div className="flex flex-col lg:flex-row items-start gap-6">

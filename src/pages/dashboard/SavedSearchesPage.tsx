@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
 import { EmptyState } from '@/components/common/EmptyState';
 import { formatDate, formatPrice } from '@/lib/format';
-import { savedSearchLabel } from '@/lib/search';
+import { savedSearchLabel, savedSearchUrl } from '@/lib/search';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
 export function SavedSearchesPage() {
@@ -45,15 +45,7 @@ export function SavedSearchesPage() {
     [savedSearches, listings, user?.id]
   );
 
-  const searchUrl = (s: (typeof rows)[number]) => {
-    const p = new URLSearchParams();
-    if (s.query) p.set('q', s.query);
-    if (s.type !== 'all') p.set('type', s.type);
-    if (s.category !== 'all') p.set('category', s.category);
-    if (s.where !== 'all') p.set('where', s.where);
-    if (s.price !== 'all') p.set('price', s.price);
-    return `/browse?${p.toString()}`;
-  };
+  const searchUrl = savedSearchUrl;
 
   const handleRun = (s: (typeof rows)[number]) => {
     runSavedSearch(s.id);

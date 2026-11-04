@@ -429,3 +429,21 @@ Stage Summary:
 - Wiring: /marketplace route in App.tsx (lazy), Navigation navLinks Marketplace first, Footer product column Marketplace first; BrowsePage filter badge resolves MARKET_GROUPS names (was title-casing the raw key, dropping the ampersand)
 - Built clean; deployed ad69f17 + badge fix 5b1601e (Vercel green both) and CF Pages manual deploys (3bd66f8c, de4c9619)
 - Local preview smoke + production E2E (agent-browser): all sections render on both domains with live counts (5/3/8/3/5/5), nav+footer links present, chips exact-match the browse where-filter, /browse?category=home-errands filters with proper "Home & Errands" badge, /browse?q=logo returns 2 cards with "Search: logo"; zero console errors
+
+## Task 25 — Magic-link sign-in (real), marketplace depth (saved searches + spotlight + Lagos hub), UI corrections round
+- USER-REPORTED UI FIXES (all verified in prod screenshots before fixing):
+  - Dashboard stat cards unequal on mobile: grid stretches the Link but the Card inside has no h-full → Wallet Balance (2-line label) taller than Rating N/A. Fix: h-full on Link + Card
+  - FAB on dashboard: removed. Policy STRICTLY MINIMISED — PostFab now only on /browse + /marketplace (was /dashboard exact, /categories, /listing/, /seller/, /dashboard/favourites too)
+  - Floating back X: PageClose no longer fixed — renders in-flow at the top-right of each page's own container (aligns with content width, scrolls away, position verified static + scrolledAway=true at scrollY 1200). Mounts moved inside containers on ListingForm / SellerProfilePage / ListingDetailPage / OrderDetailPage
+  - Marketplace em dashes: ALL removed (hero badge, hero para, dual-entry cards, section intros, trust rail, closing CTA) + MARKET_GROUPS blurbs in categories.ts (5 rewritten) + login dialog description; copy now uses full stops/commas
+  - Search pill parity: input h-12 + Search button h-12 (both measured offsetHeight 48px)
+- B — MAGIC LINKS (real Appwrite, replaces the demo simulation on LoginPage):
+  - sendMagicLink(email) → account.createMagicURLToken(ID.unique(), email, origin + '/auth/magic') — SDK v29 renamed createMagicURLSession → createMagicURLToken (updateMagicURLSession unchanged)
+  - completeMagicSignIn(userId, secret) on /auth/magic (new MagicCallbackPage, route /auth/magic): updateMagicURLSession → account.get() → finishCloudSignIn (extracted shared adopt+profile-publish+pull tail used by OAuth callback too; new magic accounts get name from email prefix)
+  - LoginPage dialog now real: sends token, "expires in 1 hour" (Appwrite default), resend timer kept, error toasts; /login?magic=failed alert mirrors oauth=failed; magic session completion also verifies the email (Appwrite issue 3130 closed/implemented) so the ordering gate stays consistent
+  - Live-tested: real createMagicURLToken accepted by Appwrite Cloud from preview origin (Check-your-inbox state reached, Appwrite dispatched mail to the test address); bogus-secret /auth/magic → "Sign-in didn't complete" → auto-redirect to /login?magic=failed with alert
+- C — MARKETPLACE DEPTH:
+  - Saved searches surfaced on the front door: "Your saved searches" strip under the hero (signed-in users only, up to 6 chips with live match counts via matchesForSavedSearch); shared savedSearchUrl() added to lib/search.ts (SavedSearchesPage refactored onto it); chip click → /browse pre-filtered (verified type=task&where=Lagos)
+  - Seller spotlight rail "Sellers worth your money": aggregated from live listings by seller, ranked verified → rating → review count → listing count, skips self, renders at ≥2 candidates; cards show avatar/verified/rating/review count/live listing count → /seller/:id (E2E: Dr. Ibrahim 5★ 89 first)
+  - Lagos hub /marketplace/lagos (new LagosHubPage + lazy route): hero with live counts (Lagos listings, Lagos Safe Spots, remote listings), 6-group directory pre-filtered to Lagos (each card → /browse?category=X&where=Lagos), fresh Lagos tasks rail, Lagos Safe Spots grid (type-icon cards), remote band, Lagos trust strip, dual CTA; entry via violet banner on /marketplace with live Lagos counts
+- Built clean; pushed (Vercel auto-build); CF Pages NOT deployed this round — sandbox recycle lost the staged CF token, needs a fresh token for wrangler pages deploy dist --project-name dealmint --branch main

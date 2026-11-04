@@ -83,7 +83,7 @@ export const MARKET_GROUPS: MarketGroup[] = [
   {
     key: 'home-errands',
     name: 'Home & Errands',
-    blurb: 'Cleaning, deliveries, market runs, shopping and standing in the queue — done while you work.',
+    blurb: 'Cleaning, deliveries, market runs, shopping and standing in the queue, done while you work.',
     icon: 'Home',
     match: (l) =>
       (l.type === 'task' &&
@@ -102,7 +102,7 @@ export const MARKET_GROUPS: MarketGroup[] = [
   {
     key: 'digital-tech',
     name: 'Digital & Tech',
-    blurb: 'Design, writing, coding, social media and voiceovers — delivered online, paid through escrow.',
+    blurb: 'Design, writing, coding, social media and voiceovers. Delivered online, paid through escrow.',
     icon: 'Laptop',
     match: (l) =>
       (l.type === 'gig' &&
@@ -112,7 +112,7 @@ export const MARKET_GROUPS: MarketGroup[] = [
   {
     key: 'tutoring',
     name: 'Tutoring & Lessons',
-    blurb: 'JAMB, WAEC and skill lessons — online, or at home in your area.',
+    blurb: 'JAMB, WAEC and skill lessons. Online, or at home in your area.',
     icon: 'GraduationCap',
     match: (l) =>
       l.type === 'service' &&
@@ -122,14 +122,14 @@ export const MARKET_GROUPS: MarketGroup[] = [
   {
     key: 'jobs',
     name: 'Jobs & Careers',
-    blurb: 'Part-time roles, VA work, customer service, riders and internships — paid per hour or per month.',
+    blurb: 'Part-time roles, VA work, customer service, riders and internships. Paid per hour or per month.',
     icon: 'Briefcase',
     match: (l) => l.type === 'job',
   },
   {
     key: 'digital',
     name: 'Buy Digital Goods',
-    blurb: 'Templates, e-books, CVs, courses and past questions — instant download, zero meetups.',
+    blurb: 'Templates, e-books, CVs, courses and past questions. Instant download, zero meetups.',
     icon: 'Download',
     match: (l) => l.type === 'digital',
   },
