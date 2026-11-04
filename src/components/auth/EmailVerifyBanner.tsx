@@ -47,7 +47,7 @@ export function EmailVerifyBanner() {
       <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center gap-3 text-sm">
         <MailWarning className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
         <p className="flex-1 min-w-0 text-amber-900 dark:text-amber-200">
-          Verify your email (<span className="font-medium break-all">{user.email}</span>) to secure your account —{' '}
+          Verify your email (<span className="font-medium break-all">{user.email}</span>) to secure your account.{' '}
           <span className="font-semibold">ordering stays locked</span> until you click the link we sent.{' '}
           <Link to="/verify-email" className="underline font-medium whitespace-nowrap">
             What's this?
