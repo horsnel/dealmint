@@ -69,10 +69,10 @@ const rows: Row[] = [
   ['Phone & Laptop Repairs', 'Screen replacement, battery swaps and software fixes with a 30-day warranty.', 'service', 'Repairs', 8000, 'negotiable', 'Lagos', 's2', 'tools_flatlay', ['repairs', 'phone', 'tech support'], 96],
   ['Wedding & Event Planning', 'End-to-end planning, vendor coordination and day-of management.', 'service', 'Events', 150000, 'negotiable', 'Port Harcourt', 's6', 'closing_community', ['events', 'wedding', 'planning'], 17],
   ['Fitness Coaching Plan (8 weeks)', 'Personalised workout and meal plan with weekly check-ins on WhatsApp.', 'service', 'Coaching', 30000, 'fixed', null, 's4', 'category_services', ['fitness', 'coaching', 'health'], 48],
-  ['Notion Budget & Planner Template', 'A clean, ready-to-use budget tracker and weekly planner for Notion.', 'digital', 'Templates', 3500, 'fixed', null, 's5', 'category_digital', ['notion', 'template', 'productivity'], 410],
-  ['Afrobeat Drum Loop Pack', '120 royalty-free drum loops and one-shots for producers.', 'digital', 'Music', 7500, 'fixed', null, 's3', 'category_digital', ['music', 'afrobeat', 'producers'], 233],
-  ['Learn Excel for Business (E-book)', 'A practical 90-page e-book covering formulas, pivot tables and dashboards.', 'digital', 'E-books', 2500, 'fixed', null, 's1', 'category_digital', ['excel', 'ebook', 'business'], 560],
-  ['Social Media Template Bundle', '50 editable Canva templates for posts, stories and carousels.', 'digital', 'Templates', 4500, 'fixed', null, 's6', 'category_digital', ['canva', 'template', 'social'], 287],
+  ['Notion Budget & Planner Template', 'A clean, ready-to-use budget tracker and weekly planner for Notion.', 'digital', 'Templates', 3500, 'fixed', null, 's5', 'digital_notion_planner', ['notion', 'template', 'productivity'], 410],
+  ['Afrobeat Drum Loop Pack', '120 royalty-free drum loops and one-shots for producers.', 'digital', 'Music', 7500, 'fixed', null, 's3', 'digital_afrobeat_loops', ['music', 'afrobeat', 'producers'], 233],
+  ['Learn Excel for Business (E-book)', 'A practical 90-page e-book covering formulas, pivot tables and dashboards.', 'digital', 'E-books', 2500, 'fixed', null, 's1', 'digital_excel_ebook', ['excel', 'ebook', 'business'], 560],
+  ['Social Media Template Bundle', '50 editable Canva templates for posts, stories and carousels.', 'digital', 'Templates', 4500, 'fixed', null, 's6', 'digital_canva_bundle', ['canva', 'template', 'social'], 287],
 ];
 
 const extraListings: Listing[] = rows.map((r, i) => {
@@ -316,7 +316,7 @@ const demoConversations: Conversation[] = [
     userId: 'u1',
     otherId: 's5',
     otherName: 'Ngozi Templates',
-    otherAvatar: '/images/avatar_kemi.jpg',
+    otherAvatar: '/images/avatar_ngozi.jpg',
     listingId: '5',
     listingTitle: 'Notion Budget & Planner Template',
     demoReplies: true,

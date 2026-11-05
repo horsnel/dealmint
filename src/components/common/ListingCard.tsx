@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { useApp } from '@/context/AppContext';
 import { formatPrice, priceSuffix } from '@/lib/format';
 import { typeLabel } from '@/lib/categories';
+import { digitalCover } from '@/lib/digitalCovers';
 import type { Listing } from '@/types';
 
 export function ListingCard({ listing }: { listing: Listing }) {
@@ -31,7 +32,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
       <div className="relative aspect-video overflow-hidden">
         <Link to={`/listing/${listing.id}`}>
           <img
-            src={listing.images[0] || '/images/placeholder.jpg'}
+            src={digitalCover(listing)}
             alt={listing.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />

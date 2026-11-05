@@ -19,10 +19,13 @@ import {
   Star,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { ListingCard } from '@/components/common/ListingCard';
 import { useApp } from '@/context/AppContext';
 import { MARKET_GROUPS, matchesCategory } from '@/lib/categories';
 import { savedSearchLabel, savedSearchUrl } from '@/lib/search';
+import { digitalCover } from '@/lib/digitalCovers';
+import { formatPrice } from '@/lib/format';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import type { Listing, User } from '@/types';
 
@@ -232,7 +235,8 @@ export function MarketplacePage() {
               All categories <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Horizontal carousel with edge peek instead of a uniform grid */}
+          <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             {MARKET_GROUPS.map((g) => {
               const Icon = groupIcon[g.icon] || Briefcase;
               const count = active.filter((l) => matchesCategory(l, g.key)).length;
@@ -240,7 +244,7 @@ export function MarketplacePage() {
                 <Link
                   key={g.key}
                   to={`/browse?category=${g.key}`}
-                  className="group card-white dark:bg-violet-800 dark:border-violet-700 p-5 hover:shadow-lg transition-shadow"
+                  className="group snap-start shrink-0 w-[72vw] max-w-[280px] sm:w-[264px] card-white dark:bg-violet-800 dark:border-violet-700 p-5 hover:shadow-lg transition-shadow"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <span className="w-11 h-11 rounded-xl bg-violet-100 dark:bg-violet-700 flex items-center justify-center">
@@ -366,39 +370,56 @@ export function MarketplacePage() {
                 </p>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {spotlight.map(({ seller, listings: theirs, stats }) => (
-                <Link
-                  key={seller.id}
-                  to={`/seller/${seller.id}`}
-                  className="card-white dark:bg-violet-800 dark:border-violet-700 p-5 flex flex-col items-center text-center hover:shadow-lg transition-shadow"
-                >
-                  <img
-                    src={seller.avatar || '/images/avatar_default.jpg'}
-                    alt={seller.name}
-                    className="w-16 h-16 rounded-full object-cover border-2 border-amber-400 mb-3"
-                  />
-                  <p className="font-semibold text-gray-900 dark:text-white truncate max-w-full">
-                    {seller.name}
-                  </p>
-                  <div className="flex items-center gap-1.5 mt-1 text-sm" aria-label={`Rated ${stats.rating || 'unrated'}`}>
-                    <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                    <span className="text-gray-700 dark:text-gray-200">
-                      {stats.count > 0 ? stats.rating : 'New'}
-                    </span>
-                    {stats.count > 0 && (
-                      <span className="text-gray-400 dark:text-gray-400">({stats.count})</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {spotlight.map(({ seller, listings: theirs, stats }) => {
+                const latest = [...theirs].sort(
+                  (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)
+                )[0];
+                return (
+                  <Link
+                    key={seller.id}
+                    to={`/seller/${seller.id}`}
+                    className="card-white dark:bg-violet-800 dark:border-violet-700 p-4 flex items-center gap-3.5 hover:shadow-lg transition-shadow"
+                  >
+                    <img
+                      src={seller.avatar || '/images/avatar_default.jpg'}
+                      alt={seller.name}
+                      className="w-14 h-14 rounded-full object-cover border-2 border-amber-400 shrink-0"
+                    />
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className="font-semibold text-gray-900 dark:text-white truncate flex items-center gap-1.5">
+                        {seller.name}
+                        {seller.isVerified && (
+                          <BadgeCheck
+                            className="w-4 h-4 text-violet-600 dark:text-amber-400 shrink-0"
+                            aria-label="Verified seller"
+                          />
+                        )}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-0.5 text-sm" aria-label={`Rated ${stats.rating || 'unrated'}`}>
+                        <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                        <span className="text-gray-700 dark:text-gray-200">
+                          {stats.count > 0 ? stats.rating : 'New'}
+                        </span>
+                        {stats.count > 0 && (
+                          <span className="text-gray-400 dark:text-gray-400">({stats.count})</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                        {latest ? `${latest.category} · ` : ''}
+                        {theirs.length} live listing{theirs.length === 1 ? '' : 's'}
+                      </p>
+                    </div>
+                    {latest && (
+                      <img
+                        src={digitalCover(latest)}
+                        alt={`Recent work: ${latest.title}`}
+                        className="w-16 h-16 rounded-xl object-cover shrink-0"
+                      />
                     )}
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                    {seller.isVerified ? 'Verified seller · ' : ''}
-                    {theirs.length} live listing{theirs.length === 1 ? '' : 's'}
-                  </p>
-                  <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-violet-600 dark:text-amber-400 group-hover:gap-2 transition-all">
-                    View shop <ArrowRight className="w-4 h-4" />
-                  </span>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           </section>
         )}
@@ -419,11 +440,68 @@ export function MarketplacePage() {
                 All digital <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {freshDigital.map((l) => (
-                <ListingCard key={l.id} listing={l} />
-              ))}
-            </div>
+            {(() => {
+              // Hero product spans the full width; the rest sit in a smaller
+              // grid below, so the rail reads like a real storefront.
+              const [hero, ...rest] = freshDigital;
+              return (
+                <div className="grid gap-6">
+                  <Link
+                    to={`/listing/${hero.id}`}
+                    className="group card-white dark:bg-violet-800 dark:border-violet-700 overflow-hidden grid sm:grid-cols-2 hover:shadow-lg transition-shadow"
+                  >
+                    <div className="relative overflow-hidden aspect-[16/9] sm:aspect-auto">
+                      <img
+                        src={digitalCover(hero)}
+                        alt={hero.title}
+                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <Badge className="absolute top-3 left-3 bg-amber-500 text-white">Instant download</Badge>
+                    </div>
+                    <div className="p-6 lg:p-7 flex flex-col justify-center">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-violet-600 dark:text-amber-400 mb-2">
+                        {hero.category}
+                      </p>
+                      <h3 className="font-display font-bold text-xl lg:text-2xl text-gray-900 dark:text-white mb-2 group-hover:text-violet-600 dark:group-hover:text-amber-400 transition-colors">
+                        {hero.title}
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-4">
+                        {hero.description}
+                      </p>
+                      <div className="flex items-center gap-2 mb-4">
+                        <img
+                          src={hero.seller.avatar || '/images/avatar_default.jpg'}
+                          alt={hero.seller.name}
+                          className="w-6 h-6 rounded-full object-cover"
+                        />
+                        <span className="text-sm text-gray-600 dark:text-gray-300 truncate">
+                          {hero.seller.name}
+                        </span>
+                        {hero.seller.isVerified && (
+                          <BadgeCheck
+                            className="w-4 h-4 text-violet-600 dark:text-amber-400 shrink-0"
+                            aria-label="Verified seller"
+                          />
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-2xl font-bold text-violet-600 dark:text-amber-400">
+                          {formatPrice(hero.price)}
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-sm font-semibold text-violet-600 dark:text-amber-400 group-hover:gap-2 transition-all">
+                          Buy & download <Download className="w-4 h-4" />
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {rest.map((l) => (
+                      <ListingCard key={l.id} listing={l} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </section>
         )}
 
