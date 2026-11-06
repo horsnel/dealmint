@@ -45,6 +45,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { Stars, StarInput } from '@/components/common/Stars';
 import { UserBadgeRow } from '@/components/common/VerificationBadges';
 import { WhatsAppButton } from '@/components/share/WhatsAppButton';
+import { SharePopup } from '@/components/share/SharePopup';
 import { PageClose } from '@/components/common/PageClose';
 import { formatPrice, formatBytes, timeAgo, priceSuffix } from '@/lib/format';
 import { typeLabel } from '@/lib/categories';
@@ -96,6 +97,7 @@ export function ListingDetailPage() {
   const [activeImage, setActiveImage] = useState(0);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [note, setNote] = useState('');
   const [offer, setOffer] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -185,24 +187,6 @@ export function ListingDetailPage() {
     if (!user) return requireLogin();
     const added = toggleFavourite(listing.id);
     toast.success(added ? 'Saved to favourites' : 'Removed from favourites');
-  };
-
-  const handleShare = async () => {
-    const url = window.location.href;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: listing.title, url });
-        return;
-      }
-    } catch {
-      // user dismissed the share sheet, fall back to copying
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      toast.success('Link copied to clipboard!');
-    } catch {
-      toast.error('Could not copy the link. Copy it from the address bar instead.');
-    }
   };
 
   const offerAmount = isNegotiable ? Number(offer) : listing.price;
@@ -677,9 +661,9 @@ export function ListingDetailPage() {
                 </div>
               )}
 
-              {/* Save / Share / WhatsApp: three roomy pill buttons, report kept quiet below */}
+              {/* Save / Share / WhatsApp: two roomy pills + brand icon, report kept quiet below */}
               <div className="mt-7 pt-6 border-t dark:border-violet-700">
-                <div className="grid grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-[1fr_1fr_auto] gap-2.5">
                   <button
                     onClick={handleLike}
                     className="flex items-center justify-center gap-1.5 h-10 rounded-full border border-gray-200 dark:border-violet-600 text-sm text-gray-600 dark:text-gray-300 hover:text-violet-700 hover:border-violet-300 hover:bg-violet-50 dark:hover:text-amber-400 dark:hover:border-violet-500 dark:hover:bg-violet-700/40 transition-colors"
@@ -688,7 +672,7 @@ export function ListingDetailPage() {
                     <span>{isLiked ? 'Saved' : 'Save'}</span>
                   </button>
                   <button
-                    onClick={handleShare}
+                    onClick={() => setShareOpen(true)}
                     className="flex items-center justify-center gap-1.5 h-10 rounded-full border border-gray-200 dark:border-violet-600 text-sm text-gray-600 dark:text-gray-300 hover:text-violet-700 hover:border-violet-300 hover:bg-violet-50 dark:hover:text-amber-400 dark:hover:border-violet-500 dark:hover:bg-violet-700/40 transition-colors"
                   >
                     <Share2 className="w-4 h-4" />
@@ -915,6 +899,14 @@ export function ListingDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Share sheet: branded target picker (WhatsApp / Email / Messages / Facebook / Telegram) */}
+      <SharePopup
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        title={listing.title}
+        price={formatPrice(listing.price)}
+      />
     </div>
   );
 }

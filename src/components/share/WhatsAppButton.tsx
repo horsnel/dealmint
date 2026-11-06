@@ -1,10 +1,11 @@
-import { MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { WhatsAppIcon } from '@/components/share/BrandIcons';
 
-// WhatsApp deep-link share (borrowed from Postall) — WhatsApp is the
-// dominant sharing channel in Nigeria, so listing pages get a dedicated button.
-// Renders as an outlined pill so it can sit in a grid next to Save / Share.
-export function WhatsAppButton({ title, price, className = '' }: { title: string; price?: string; className?: string }) {
+// WhatsApp deep-link (borrowed from Postall) — WhatsApp is the dominant
+// sharing channel in Nigeria. Rendered as the brand's green circular glyph
+// (official simple-icons mark) instead of a labelled pill; the full target
+// picker lives in SharePopup, opened from the Share button.
+export function WhatsAppButton({ title, price }: { title: string; price?: string }) {
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
   const shareText = price
     ? `Check out "${title}" for ${price} on Dealmint! ${shareUrl}`
@@ -21,10 +22,9 @@ export function WhatsAppButton({ title, price, className = '' }: { title: string
       type="button"
       onClick={handleClick}
       aria-label={`Share ${title} on WhatsApp`}
-      className={`flex items-center justify-center gap-1.5 h-10 rounded-full border border-gray-200 dark:border-violet-600 text-sm text-gray-600 dark:text-gray-300 hover:text-green-700 hover:border-green-300 hover:bg-green-50 dark:hover:text-green-300 dark:hover:border-green-700 dark:hover:bg-green-900/20 transition-colors ${className}`}
+      className="w-10 h-10 rounded-full bg-[#25D366] text-white flex items-center justify-center hover:bg-[#1fbe5a] active:scale-95 transition-all shrink-0"
     >
-      <MessageCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-      <span>WhatsApp</span>
+      <WhatsAppIcon className="w-5 h-5" />
     </button>
   );
 }
