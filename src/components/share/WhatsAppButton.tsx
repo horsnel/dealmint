@@ -3,7 +3,8 @@ import { toast } from 'sonner';
 
 // WhatsApp deep-link share (borrowed from Postall) — WhatsApp is the
 // dominant sharing channel in Nigeria, so listing pages get a dedicated button.
-export function WhatsAppButton({ title, price }: { title: string; price?: string }) {
+// Renders as an outlined pill so it can sit in a grid next to Save / Share.
+export function WhatsAppButton({ title, price, className = '' }: { title: string; price?: string; className?: string }) {
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
   const shareText = price
     ? `Check out "${title}" for ${price} on Dealmint! ${shareUrl}`
@@ -20,10 +21,10 @@ export function WhatsAppButton({ title, price }: { title: string; price?: string
       type="button"
       onClick={handleClick}
       aria-label={`Share ${title} on WhatsApp`}
-      className="flex items-center gap-2 py-2.5 -my-2.5 px-2 -mx-2 text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors"
+      className={`flex items-center justify-center gap-1.5 h-10 rounded-full border border-gray-200 dark:border-violet-600 text-sm text-gray-600 dark:text-gray-300 hover:text-green-700 hover:border-green-300 hover:bg-green-50 dark:hover:text-green-300 dark:hover:border-green-700 dark:hover:bg-green-900/20 transition-colors ${className}`}
     >
-      <MessageCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
-      <span className="text-sm">WhatsApp</span>
+      <MessageCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+      <span>WhatsApp</span>
     </button>
   );
 }

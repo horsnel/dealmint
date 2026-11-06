@@ -7,6 +7,7 @@ import { PostFab } from '@/components/layout/PostFab';
 import { ScrollToTop } from '@/components/common/ScrollToTop';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { PageSkeleton } from '@/components/common/PageSkeleton';
+import { RouteSkeleton } from '@/components/common/RouteSkeleton';
 import { AppProvider, useApp } from '@/context/AppContext';
 import { EmailVerifyBanner } from '@/components/auth/EmailVerifyBanner';
 import { VerifyGateModal } from '@/components/auth/VerifyGateModal';
@@ -100,8 +101,12 @@ function AppContent() {
       <VerifyGateModal />
       <main>
         <ErrorBoundary>
-          <Suspense fallback={<PageSkeleton />}>
-            <Routes>
+          {/* Keyed by pathname so every page mounts with a soft rise-and-fade;
+              the Suspense fallback is a skeleton that mimics the destination
+              page, so chunk loading reads as a seamless fill-in. */}
+          <Suspense fallback={<RouteSkeleton path={location.pathname} />}>
+            <div key={location.pathname} className="route-in">
+              <Routes>
               {/* Public Routes */}
               <Route path="/" element={<HomePage />} />
               <Route path="/browse" element={<BrowsePage />} />
@@ -164,6 +169,7 @@ function AppContent() {
 
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
+            </div>
           </Suspense>
         </ErrorBoundary>
       </main>

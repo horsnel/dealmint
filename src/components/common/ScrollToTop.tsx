@@ -21,7 +21,16 @@ export function ScrollToTop() {
       attempt();
       return;
     }
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    // Force an instant jump: global CSS sets `scroll-behavior: smooth`, which
+    // would otherwise turn every route change into a slow glide back to the
+    // top (old page visibly flying past) instead of a clean, seamless swap.
+    // In-page anchor scrolling keeps its smooth behaviour via the hash branch.
+    const prev = document.documentElement.style.scrollBehavior;
+    document.documentElement.style.scrollBehavior = 'auto';
+    window.scrollTo(0, 0);
+    requestAnimationFrame(() => {
+      document.documentElement.style.scrollBehavior = prev;
+    });
   }, [pathname, hash]);
 
   return null;

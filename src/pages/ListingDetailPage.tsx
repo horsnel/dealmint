@@ -590,13 +590,14 @@ export function ListingDetailPage() {
                 )}
               </div>
 
-              <div className="mt-6 pt-6 border-t dark:border-violet-700 space-y-2">
+              <div className="mt-7 pt-6 border-t dark:border-violet-700 space-y-3">
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                  <Shield className="w-4 h-4 text-green-500" />
+                  <Shield className="w-4 h-4 shrink-0 text-green-500" />
                   <span>Protected payments</span>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-gray-600 dark:text-gray-300">
                   <UserBadgeRow
+                    showLabel
                     isVerified={seller.isVerified}
                     idVerified={seller.idVerified}
                     rating={seller.rating}
@@ -623,9 +624,8 @@ export function ListingDetailPage() {
                 )}
               </div>
 
-              {/* Price alert (not for owners) */}
               {!isOwner && (
-                <div className="mt-6 pt-6 border-t dark:border-violet-700">
+                <div className="mt-7 pt-6 border-t dark:border-violet-700">
                   <p className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
                     <Bell className="w-4 h-4 text-violet-600 dark:text-amber-400" />
                     Price alert
@@ -653,7 +653,7 @@ export function ListingDetailPage() {
                         e.preventDefault();
                         handlePriceAlert();
                       }}
-                      className="mt-2 flex gap-2"
+                      className="mt-3 flex gap-2"
                     >
                       <Input
                         type="number"
@@ -671,36 +671,41 @@ export function ListingDetailPage() {
                       </Button>
                     </form>
                   )}
-                  <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 leading-relaxed">
                     Get notified the moment the seller drops the price to your target.
                   </p>
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mt-6">
-                <button
-                  onClick={handleLike}
-                  className="flex items-center gap-2 py-2.5 -my-2.5 px-2 -mx-2 text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-amber-400"
-                >
-                  <Heart className={`w-5 h-5 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
-                  <span className="text-sm">{isLiked ? 'Saved' : 'Save'}</span>
-                </button>
-                <button
-                  onClick={handleShare}
-                  className="flex items-center gap-2 py-2.5 -my-2.5 px-2 -mx-2 text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-amber-400"
-                >
-                  <Share2 className="w-5 h-5" />
-                  <span className="text-sm">Share</span>
-                </button>
-                <WhatsAppButton title={listing.title} price={formatPrice(listing.price)} />
-                {!isOwner && (
+              {/* Save / Share / WhatsApp: three roomy pill buttons, report kept quiet below */}
+              <div className="mt-7 pt-6 border-t dark:border-violet-700">
+                <div className="grid grid-cols-3 gap-2.5">
                   <button
-                    onClick={() => (user ? setReportOpen(true) : requireLogin())}
-                    className="flex items-center gap-2 py-2.5 -my-2.5 px-2 -mx-2 text-gray-600 dark:text-gray-300 hover:text-red-600"
+                    onClick={handleLike}
+                    className="flex items-center justify-center gap-1.5 h-10 rounded-full border border-gray-200 dark:border-violet-600 text-sm text-gray-600 dark:text-gray-300 hover:text-violet-700 hover:border-violet-300 hover:bg-violet-50 dark:hover:text-amber-400 dark:hover:border-violet-500 dark:hover:bg-violet-700/40 transition-colors"
                   >
-                    <Flag className="w-5 h-5" />
-                    <span className="text-sm">Report</span>
+                    <Heart className={`w-4 h-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+                    <span>{isLiked ? 'Saved' : 'Save'}</span>
                   </button>
+                  <button
+                    onClick={handleShare}
+                    className="flex items-center justify-center gap-1.5 h-10 rounded-full border border-gray-200 dark:border-violet-600 text-sm text-gray-600 dark:text-gray-300 hover:text-violet-700 hover:border-violet-300 hover:bg-violet-50 dark:hover:text-amber-400 dark:hover:border-violet-500 dark:hover:bg-violet-700/40 transition-colors"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    <span>Share</span>
+                  </button>
+                  <WhatsAppButton title={listing.title} price={formatPrice(listing.price)} />
+                </div>
+                {!isOwner && (
+                  <div className="mt-4 flex justify-center">
+                    <button
+                      onClick={() => (user ? setReportOpen(true) : requireLogin())}
+                      className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                    >
+                      <Flag className="w-3.5 h-3.5" />
+                      Report this listing
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

@@ -73,6 +73,7 @@ export function UserBadgeRow({
   reviewCount,
   responsivenessLabel,
   className,
+  showLabel = false,
 }: {
   isVerified?: boolean;
   idVerified?: boolean;
@@ -80,6 +81,8 @@ export function UserBadgeRow({
   reviewCount?: number;
   responsivenessLabel?: string | null;
   className?: string;
+  /** Render full labelled pills instead of icon-only chips (detail sidebars). */
+  showLabel?: boolean;
 }) {
   const badges: DealmintBadgeType[] = [];
   if (isVerified) badges.push('verified');
@@ -90,9 +93,9 @@ export function UserBadgeRow({
   }
   if (badges.length === 0) return null;
   return (
-    <span className={cn('inline-flex items-center gap-1', className)}>
+    <span className={cn('inline-flex flex-wrap items-center gap-1.5', className)}>
       {badges.map((type) => (
-        <VerificationBadge key={type} type={type} />
+        <VerificationBadge key={type} type={type} showLabel={showLabel} className={showLabel ? 'py-1' : undefined} />
       ))}
     </span>
   );
