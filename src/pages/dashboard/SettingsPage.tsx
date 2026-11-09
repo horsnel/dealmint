@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Lock, Shield, Trash2, LogOut, Moon } from 'lucide-react';
+import { Bell, Lock, Shield, Trash2, LogOut, Moon, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,8 +20,9 @@ import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
 import { PasswordStrengthMeter } from '@/components/common/PasswordStrengthMeter';
 import { passwordStrength } from '@/lib/validation';
+import { MODES, modesOf } from '@/lib/modes';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import type { UserSettings } from '@/types';
+import type { ProviderMode, UserSettings } from '@/types';
 
 const defaults: UserSettings = {
   emailNotifications: true,
@@ -32,14 +33,18 @@ const defaults: UserSettings = {
   showLocation: true,
 };
 
-const notificationRows: { key: keyof UserSettings; label: string; description: string }[] = [
+// Boolean preference keys — UserSettings also carries non-boolean payload
+// (modes), so switch rows are typed narrowly instead of keyof UserSettings.
+type ToggleKey = 'emailNotifications' | 'orderUpdates' | 'messageAlerts' | 'marketing' | 'showPhone' | 'showLocation';
+
+const notificationRows: { key: ToggleKey; label: string; description: string }[] = [
   { key: 'orderUpdates', label: 'Order updates', description: 'New orders, deliveries and payments' },
   { key: 'messageAlerts', label: 'Message alerts', description: 'When someone sends you a message' },
   { key: 'emailNotifications', label: 'Email notifications', description: 'Get important updates by email' },
   { key: 'marketing', label: 'Tips and offers', description: 'Occasional product news and promotions' },
 ];
 
-const privacyRows: { key: keyof UserSettings; label: string; description: string }[] = [
+const privacyRows: { key: ToggleKey; label: string; description: string }[] = [
   { key: 'showLocation', label: 'Show my location', description: 'Display your city on your public profile' },
   { key: 'showPhone', label: 'Show my phone number', description: 'Let people you work with see your number' },
 ];
@@ -47,7 +52,7 @@ const privacyRows: { key: keyof UserSettings; label: string; description: string
 export function SettingsPage() {
   usePageTitle('Settings');
   const navigate = useNavigate();
-  const { user, updateSettings, changePassword, deleteAccount, logout, isDarkMode, toggleDarkMode } = useApp();
+  const { user, updateSettings, updateProfile, changePassword, deleteAccount, logout, isDarkMode, toggleDarkMode } = useApp();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -59,9 +64,17 @@ export function SettingsPage() {
   if (!user) return null;
   const settings = { ...defaults, ...(user.settings || {}) };
 
-  const toggle = (key: keyof UserSettings, value: boolean) => {
+  const toggle = (key: ToggleKey, value: boolean) => {
     updateSettings({ [key]: value });
     toast.success('Preference saved');
+  };
+
+  const myModes = modesOf(user);
+
+  const toggleMode = (id: ProviderMode, on: boolean) => {
+    const next = on ? [...myModes, id] : myModes.filter((m) => m !== id);
+    updateProfile({ settings: { ...defaults, ...(user.settings || {}), modes: next } });
+    toast.success(on ? `${MODES.find((m) => m.id === id)?.label} mode on` : `${MODES.find((m) => m.id === id)?.label} mode off`);
   };
 
   const handlePassword = async (e: React.FormEvent) => {
@@ -106,6 +119,48 @@ export function SettingsPage() {
     <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <h1 className="font-display font-bold text-2xl lg:text-3xl text-gray-900 dark:text-white">Settings</h1>
+
+        <Card className="dark:bg-violet-800 dark:border-violet-700">
+          <CardHeader>
+            <CardTitle className="text-gray-900 dark:text-white flex items-center gap-2">
+              <Sparkles className="w-5 h-5" />
+              My modes
+            </CardTitle>
+            <CardDescription className="dark:text-gray-300">
+              What you do on Dealmint — tunes your dashboard. You can always buy, sell and hire
+              either way.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="divide-y dark:divide-violet-700">
+            {MODES.map((mode) => {
+              const on = myModes.includes(mode.id);
+              return (
+                <div key={mode.id} className="flex items-center justify-between gap-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+                        on ? 'bg-violet-600 text-white' : `${mode.bubble} ${mode.bubbleDark}`
+                      }`}
+                    >
+                      <mode.icon className="w-[18px] h-[18px]" />
+                    </div>
+                    <div>
+                      <Label htmlFor={`mode-${mode.id}`} className="text-gray-900 dark:text-white font-medium">
+                        {mode.label}
+                      </Label>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{mode.description}</p>
+                    </div>
+                  </div>
+                  <Switch
+                    id={`mode-${mode.id}`}
+                    checked={on}
+                    onCheckedChange={(v) => toggleMode(mode.id, v)}
+                  />
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
 
         <Card className="dark:bg-violet-800 dark:border-violet-700">
           <CardHeader>

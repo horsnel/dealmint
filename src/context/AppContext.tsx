@@ -20,6 +20,7 @@ import type {
   OrderStatus,
   PayoutAccount,
   PriceAlert,
+  ProviderMode,
   Referral,
   Review,
   SafeSpot,
@@ -38,6 +39,7 @@ import { REFERRAL_REWARD, referralCodeFor } from '@/lib/referral';
 import type { Models } from 'appwrite';
 import { OAuthProvider } from 'appwrite';
 import { account, authErrorMessage, cloudConfigured, probeCloud, setStorageAuthed, ID } from '@/lib/appwrite';
+import { takeStagedIntents } from '@/lib/modes';
 import {
   bootstrapCloudSeed,
   buildMergedDB,
@@ -105,6 +107,8 @@ export interface RegisterInput {
   phone: string;
   password: string;
   role: 'student' | 'general';
+  /** Onboarding picks (see src/lib/modes.ts) — optional personalization. */
+  modes?: ProviderMode[];
   referralCode?: string;
 }
 
@@ -618,6 +622,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         marketing: false,
         showPhone: false,
         showLocation: true,
+        ...(input.modes?.length ? { modes: input.modes } : {}),
       },
     };
     commit((d0) => {
@@ -709,6 +714,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // A brand-new social or magic-link account has no profile document yet —
     // publish one so the dashboard works and the profile is visible to others.
     if (!dbRef.current.users.some((u) => u.id === acc.$id)) {
+      // Adopt onboarding picks staged by /role-selection before the redirect
+      // (Google / magic-link signups never pass through RegisterPage).
+      const staged = takeStagedIntents();
       const fresh: StoredUser = {
         id: acc.$id,
         name: acc.name || (acc.email ? acc.email.split('@')[0] : '') || 'New user',
@@ -734,6 +742,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           marketing: false,
           showPhone: false,
           showLocation: true,
+          ...(staged.length ? { modes: staged } : {}),
         },
       };
       commit((d) => ({ ...d, users: [...d.users, fresh] }));

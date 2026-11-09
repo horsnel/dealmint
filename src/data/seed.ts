@@ -129,6 +129,9 @@ const demoUserBase: StoredUser = {
     marketing: false,
     showPhone: false,
     showLocation: true,
+    // Demo persona works as a freelancer and sells digital products —
+    // exercises the mode-aware dashboard chips + quick actions.
+    modes: ['freelancer', 'seller'],
   },
 };
 

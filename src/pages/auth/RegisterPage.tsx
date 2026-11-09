@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
 import { PasswordStrengthMeter } from '@/components/common/PasswordStrengthMeter';
 import { isValidEmail, isValidNigerianPhone, normalizePhone, passwordStrength } from '@/lib/validation';
+import { MODES, peekStagedIntents, stageIntents } from '@/lib/modes';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
 export function RegisterPage() {
@@ -29,6 +30,9 @@ export function RegisterPage() {
   const [referralCode, setReferralCode] = useState(() => new URLSearchParams(window.location.search).get('ref') || '');
   const role: 'student' | 'general' =
     localStorage.getItem('dealmint_selected_role') === 'student' ? 'student' : 'general';
+  // Onboarding picks from /role-selection (multi-select, optional)
+  const [modes] = useState(() => peekStagedIntents());
+  const pickedModes = MODES.filter((m) => modes.includes(m.id));
 
   useEffect(() => {
     if (user && !isLoading) navigate('/dashboard', { replace: true });
@@ -60,6 +64,7 @@ export function RegisterPage() {
         phone: normalizePhone(formData.phone),
         password: formData.password,
         role,
+        modes: modes.length ? modes : undefined,
         referralCode: referralCode.trim() || undefined,
       });
       if (!result.ok) {
@@ -68,6 +73,7 @@ export function RegisterPage() {
         return;
       }
       localStorage.removeItem('dealmint_selected_role');
+      stageIntents([]);
       toast.success(
         authMode === 'cloud'
           ? 'Account created! Check your inbox for a verification link.'
@@ -109,6 +115,24 @@ export function RegisterPage() {
             <div className="mb-6 rounded-xl bg-violet-50 dark:bg-violet-700/50 p-3 text-sm text-violet-800 dark:text-violet-100">
               Signing up as a student. You get the lower 10% commission.{' '}
               <Link to="/role-selection" className="font-semibold underline">Change</Link>
+            </div>
+          )}
+
+          {pickedModes.length > 0 && (
+            <div className="mb-6 rounded-xl bg-violet-50 dark:bg-violet-700/50 p-3 text-sm text-violet-800 dark:text-violet-100">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-medium">You're here to:</span>
+                {pickedModes.map((m) => (
+                  <span
+                    key={m.id}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white dark:bg-violet-800 px-2.5 py-1 text-xs font-medium"
+                  >
+                    <m.icon className="w-3.5 h-3.5" />
+                    {m.label}
+                  </span>
+                ))}
+                <Link to="/role-selection" className="font-semibold underline ml-auto">Change</Link>
+              </div>
             </div>
           )}
 

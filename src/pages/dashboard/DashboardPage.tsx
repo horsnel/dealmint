@@ -1,22 +1,26 @@
 import { Link } from 'react-router-dom';
-import { 
-  Briefcase, 
-  MessageSquare, 
-  Wallet, 
-  Star, 
-  Package, 
+import {
+  Briefcase,
+  MessageSquare,
+  Wallet,
+  Star,
+  Package,
   Plus,
   ArrowRight,
   Bell,
   Bookmark,
+  Download,
+  FileText,
   Gift,
   Heart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useApp } from '@/context/AppContext';
+import { MODES, modesOf } from '@/lib/modes';
 import { timeAgo } from '@/lib/format';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { Settings2 } from 'lucide-react';
 
 const activityIcons = {
   message: MessageSquare,
@@ -42,6 +46,11 @@ export function DashboardPage() {
       (o.buyerId === user.id && o.status === 'delivered')
   ).length;
 
+  // Provider modes personalize the dashboard (preference, not permission —
+  // every action stays available to everyone).
+  const myModes = modesOf(user);
+  const earns = myModes.some((m) => m === 'tasker' || m === 'errand' || m === 'freelancer');
+
   const stats = [
     { label: 'Active Listings', value: String(activeListings), icon: Briefcase, href: '/dashboard/listings' },
     { label: 'Unread Messages', value: String(unreadMessages), icon: MessageSquare, href: '/dashboard/messages' },
@@ -50,13 +59,35 @@ export function DashboardPage() {
   ];
 
   const quickActions = [
-    { label: 'Post a Gig', href: '/post/gig', icon: Plus, color: 'bg-violet-600' },
-    { label: 'Post a Task', href: '/post/task', icon: Plus, color: 'bg-amber-500' },
+    // Selling modes first — posting is their core loop
+    ...(myModes.includes('seller')
+      ? [
+          { label: 'Post a Gig', href: '/post/gig', icon: Plus, color: 'bg-violet-600' },
+          { label: 'Sell Digital', href: '/post/digital', icon: Download, color: 'bg-cyan-500' },
+        ]
+      : []),
+    // Earning modes — find work to do
+    ...(earns ? [{ label: 'Find Work', href: '/browse', icon: Briefcase, color: 'bg-blue-500' }] : []),
+    // Hiring mode
+    ...(myModes.includes('hire')
+      ? [
+          { label: 'Post a Task', href: '/post/task', icon: Plus, color: 'bg-amber-500' },
+          { label: 'Post a Job', href: '/post/job', icon: FileText, color: 'bg-orange-500' },
+        ]
+      : []),
+    // No modes picked yet — keep the original default set
+    ...(!myModes.length
+      ? [
+          { label: 'Post a Gig', href: '/post/gig', icon: Plus, color: 'bg-violet-600' },
+          { label: 'Post a Task', href: '/post/task', icon: Plus, color: 'bg-amber-500' },
+        ]
+      : []),
+    // Always-on utility actions
     { label: 'My Orders', href: '/dashboard/orders', icon: Package, color: 'bg-green-500' },
     { label: 'Favourites', href: '/dashboard/favourites', icon: Heart, color: 'bg-rose-500' },
     { label: 'Saved Searches', href: '/dashboard/saved-searches', icon: Bookmark, color: 'bg-pink-500' },
     { label: 'Referrals', href: '/dashboard/referrals', icon: Gift, color: 'bg-violet-500' },
-  ];
+  ].slice(0, 8);
 
   return (
     <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
@@ -72,6 +103,27 @@ export function DashboardPage() {
                 ? `You have ${ordersNeedingAction} order${ordersNeedingAction === 1 ? '' : 's'} that need${ordersNeedingAction === 1 ? 's' : ''} your attention`
                 : "Here's what's happening with your account"}
             </p>
+            {myModes.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                {MODES.filter((m) => myModes.includes(m.id)).map((m) => (
+                  <span
+                    key={m.id}
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${m.bubble} ${m.bubbleDark}`}
+                  >
+                    <m.icon className="w-3 h-3" />
+                    {m.label}
+                  </span>
+                ))}
+                <Link
+                  to="/dashboard/settings"
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs text-gray-400 hover:text-violet-600 dark:hover:text-amber-400 transition-colors"
+                  aria-label="Edit modes in Settings"
+                >
+                  <Settings2 className="w-3 h-3" />
+                  Edit
+                </Link>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <Link to="/post/gig">

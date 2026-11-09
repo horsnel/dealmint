@@ -1,4 +1,12 @@
 // User Types
+
+/**
+ * What the user does on Dealmint — a personalization preference, NOT an
+ * identity. One account can hold several modes and can always buy, sell and
+ * hire regardless of selection (see src/lib/modes.ts).
+ */
+export type ProviderMode = 'tasker' | 'errand' | 'freelancer' | 'seller' | 'hire';
+
 export interface User {
   id: string;
   name: string;
@@ -31,6 +39,9 @@ export interface UserSettings {
   marketing: boolean;
   showPhone: boolean;
   showLocation: boolean;
+  /** Selected provider modes — lives inside the settings JSON blob on the
+   *  cloud doc, so it round-trips with zero Appwrite schema migration. */
+  modes?: ProviderMode[];
 }
 
 // Listing Types
