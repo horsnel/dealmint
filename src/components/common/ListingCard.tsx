@@ -1,17 +1,21 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Star, Heart, MapPin } from 'lucide-react';
+import { useState } from 'react';
+import { Star, Heart, MapPin, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { useApp } from '@/context/AppContext';
 import { formatPrice, priceSuffix } from '@/lib/format';
 import { typeLabel } from '@/lib/categories';
 import { digitalCover } from '@/lib/digitalCovers';
+import { DigitalPreviewOverlay } from '@/components/digital/DigitalPreviewOverlay';
 import type { Listing } from '@/types';
 
 export function ListingCard({ listing }: { listing: Listing }) {
   const { user, favourites, toggleFavourite, getListingStats } = useApp();
   const navigate = useNavigate();
+  const [previewOpen, setPreviewOpen] = useState(false);
   const isLiked = favourites.includes(listing.id);
+  const isDigital = listing.type === 'digital';
   const stats = getListingStats(listing);
 
   const handleLike = (e: React.MouseEvent) => {
@@ -27,14 +31,14 @@ export function ListingCard({ listing }: { listing: Listing }) {
   };
 
   return (
-    <div className="card-white dark:bg-violet-800 dark:border-violet-700 overflow-hidden group hover:shadow-lg transition-shadow">
+    <div className="card-white dark:bg-violet-800 dark:border-violet-700 card-tactile overflow-hidden group">
       {/* Image */}
       <div className="relative aspect-video overflow-hidden">
         <Link to={`/listing/${listing.id}`}>
           <img
             src={digitalCover(listing)}
             alt={listing.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover img-grade group-hover:scale-105 transition-transform duration-300"
           />
         </Link>
         <button
@@ -52,7 +56,25 @@ export function ListingCard({ listing }: { listing: Listing }) {
           {listing.isFeatured && <Badge className="bg-amber-500 text-white">Featured</Badge>}
           {listing.isUrgent && <Badge className="bg-red-500 text-white">Urgent</Badge>}
           {!listing.isActive && <Badge className="bg-gray-700 text-white">Paused</Badge>}
+          {isDigital && listing.isActive && (
+            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold tag-frosted">
+              Instant download
+            </span>
+          )}
         </div>
+        {isDigital && listing.isActive && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              setPreviewOpen(true);
+            }}
+            className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold tag-frosted hover:bg-white/30 transition-colors"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            Preview
+          </button>
+        )}
       </div>
 
       {/* Content */}
@@ -109,6 +131,12 @@ export function ListingCard({ listing }: { listing: Listing }) {
           )}
         </div>
       </div>
+
+      <DigitalPreviewOverlay
+        listing={listing}
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+      />
     </div>
   );
 }

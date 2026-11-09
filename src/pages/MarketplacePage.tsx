@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Search,
-  ArrowRight,
+  Plus,
   ShieldCheck,
   MapPin,
   Home,
@@ -17,10 +17,14 @@ import {
   Bookmark,
   Globe,
   Star,
+  Eye,
+  ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { ListingCard } from '@/components/common/ListingCard';
+import { TrustPassport } from '@/components/common/TrustPassport';
+import { LagosHeatMap } from '@/components/marketplace/LagosHeatMap';
+import { DigitalPreviewOverlay } from '@/components/digital/DigitalPreviewOverlay';
 import { useApp } from '@/context/AppContext';
 import { MARKET_GROUPS, matchesCategory } from '@/lib/categories';
 import { savedSearchLabel, savedSearchUrl } from '@/lib/search';
@@ -41,8 +45,9 @@ const groupIcon: Record<string, React.ElementType> = {
 export function MarketplacePage() {
   usePageTitle('Marketplace');
   const navigate = useNavigate();
-  const { listings, safeSpots, user, savedSearches, matchesForSavedSearch, getSellerStats } = useApp();
+  const { listings, orders, safeSpots, user, savedSearches, matchesForSavedSearch, getSellerStats } = useApp();
   const [q, setQ] = useState('');
+  const [previewHero, setPreviewHero] = useState(false);
 
   const active = useMemo(() => listings.filter((l) => l.isActive && !l.isDraft), [listings]);
 
@@ -158,8 +163,8 @@ export function MarketplacePage() {
                 <p className="text-sm text-gray-600 mb-3">
                   Post a task with your budget. Verified doers accept or send offers.
                 </p>
-                <span className="inline-flex items-center gap-1 text-sm font-semibold text-violet-600 group-hover:gap-2 transition-all">
-                  Post a task <ArrowRight className="w-4 h-4" />
+                <span className="inline-flex items-center rounded-full bg-violet-600 text-white px-4 py-2 text-sm font-semibold group-hover:bg-violet-700 transition-colors">
+                  Post a task
                 </span>
               </Link>
               <Link
@@ -175,8 +180,8 @@ export function MarketplacePage() {
                 <p className="text-sm text-white/80 mb-3">
                   Sell your skills as gigs or services. Get paid to your wallet, guaranteed.
                 </p>
-                <span className="inline-flex items-center gap-1 text-sm font-semibold text-amber-300 group-hover:gap-2 transition-all">
-                  Post a gig <ArrowRight className="w-4 h-4" />
+                <span className="inline-flex items-center rounded-full bg-amber-500 text-white px-4 py-2 text-sm font-semibold group-hover:bg-amber-600 transition-colors">
+                  Post a gig
                 </span>
               </Link>
             </div>
@@ -264,37 +269,37 @@ export function MarketplacePage() {
           </div>
         </section>
 
-        {/* ---------- Lagos city hub ---------- */}
+        {/* ---------- Lagos city hub: the living map ---------- */}
         <section className="mb-14">
-          <Link
-            to="/marketplace/lagos"
-            className="group block rounded-3xl bg-gradient-to-r from-violet-700 to-violet-600 text-white p-6 lg:p-8 hover:shadow-xl transition-shadow"
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-              <span className="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
-                <MapPin className="w-7 h-7 text-amber-300" />
+          <div className="overflow-hidden rounded-3xl bg-gradient-to-b from-violet-700 to-violet-600 text-white shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-6 pb-5">
+              <span className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
+                <MapPin className="w-6 h-6 text-amber-300" />
               </span>
-              <div className="flex-1">
-                <h2 className="font-display font-bold text-xl lg:text-2xl mb-1">
+              <div className="flex-1 min-w-0">
+                <h2 className="font-display font-bold text-xl lg:text-2xl mb-0.5">
                   Trading in Lagos? Start here
                 </h2>
                 <p className="text-white/80 text-sm">
                   The Lagos hub: live listings, Safe Spots and how Lagos trade works on Dealmint.
                 </p>
               </div>
-              <div className="flex items-center gap-5 shrink-0">
-                <div className="text-center">
-                  <p className="font-display font-bold text-2xl leading-none">{lagosCount}</p>
-                  <p className="text-xs text-white/70 mt-1">live listings</p>
-                </div>
-                <div className="text-center">
-                  <p className="font-display font-bold text-2xl leading-none">{lagosSpots}</p>
-                  <p className="text-xs text-white/70 mt-1">Safe Spots</p>
-                </div>
-                <ArrowRight className="w-6 h-6 text-amber-300 group-hover:translate-x-1 transition-transform hidden sm:block" />
-              </div>
+              <Link
+                to="/marketplace/lagos"
+                className="inline-flex items-center rounded-full bg-amber-500 hover:bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition-colors shrink-0"
+              >
+                Open the Lagos hub
+              </Link>
             </div>
-          </Link>
+            <LagosHeatMap
+              spots={safeSpots}
+              liveCount={lagosCount}
+              spotCount={lagosSpots}
+              orders={orders}
+              listings={listings}
+              meId={user?.id}
+            />
+          </div>
         </section>
 
         {/* ---------- Tasks near you (hyperlocal, data-driven chips) ---------- */}
@@ -309,8 +314,8 @@ export function MarketplacePage() {
                   Fresh requests and safe meetups: verified Safe Spots, or go fully remote.
                 </p>
               </div>
-              <Link to="/browse?type=task" className="inline-flex items-center gap-1 text-sm font-semibold text-violet-600 dark:text-amber-400 hover:gap-2 transition-all">
-                All tasks <ArrowRight className="w-4 h-4" />
+              <Link to="/browse?type=task" className="text-sm font-bold text-violet-600 dark:text-amber-400 underline-offset-4 decoration-2 decoration-violet-300 dark:decoration-amber-500/50 hover:underline hover:text-violet-700 dark:hover:text-amber-300 transition-colors">
+                All tasks
               </Link>
             </div>
             <div className="flex flex-wrap gap-2 mb-5">
@@ -345,8 +350,8 @@ export function MarketplacePage() {
                   Fixed-price gigs from verified sellers. Release payment only when you're happy.
                 </p>
               </div>
-              <Link to="/browse?type=gig" className="inline-flex items-center gap-1 text-sm font-semibold text-violet-600 dark:text-amber-400 hover:gap-2 transition-all">
-                All gigs <ArrowRight className="w-4 h-4" />
+              <Link to="/browse?type=gig" className="text-sm font-bold text-violet-600 dark:text-amber-400 underline-offset-4 decoration-2 decoration-violet-300 dark:decoration-amber-500/50 hover:underline hover:text-violet-700 dark:hover:text-amber-300 transition-colors">
+                All gigs
               </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -379,7 +384,7 @@ export function MarketplacePage() {
                   <Link
                     key={seller.id}
                     to={`/seller/${seller.id}`}
-                    className="card-white dark:bg-violet-800 dark:border-violet-700 p-4 flex items-center gap-3.5 hover:shadow-lg transition-shadow"
+                    className="card-white dark:bg-violet-800 dark:border-violet-700 card-tactile p-4 flex items-center gap-3.5"
                   >
                     <img
                       src={seller.avatar || '/images/avatar_default.jpg'}
@@ -389,12 +394,12 @@ export function MarketplacePage() {
                     <div className="min-w-0 flex-1 text-left">
                       <p className="font-semibold text-gray-900 dark:text-white truncate flex items-center gap-1.5">
                         {seller.name}
-                        {seller.isVerified && (
-                          <BadgeCheck
-                            className="w-4 h-4 text-violet-600 dark:text-amber-400 shrink-0"
-                            aria-label="Verified seller"
-                          />
-                        )}
+                        <TrustPassport
+                          emailVerified={seller.isVerified}
+                          phoneVerified={seller.phoneVerified}
+                          idVerified={seller.idVerified || seller.idStatus === 'verified'}
+                          size="sm"
+                        />
                       </p>
                       <div className="flex items-center gap-1.5 mt-0.5 text-sm" aria-label={`Rated ${stats.rating || 'unrated'}`}>
                         <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
@@ -436,8 +441,8 @@ export function MarketplacePage() {
                   Templates, e-books and courses. Pay, download, done. No meetup, no risk.
                 </p>
               </div>
-              <Link to="/browse?type=digital" className="inline-flex items-center gap-1 text-sm font-semibold text-violet-600 dark:text-amber-400 hover:gap-2 transition-all">
-                All digital <ArrowRight className="w-4 h-4" />
+              <Link to="/browse?type=digital" className="text-sm font-bold text-violet-600 dark:text-amber-400 underline-offset-4 decoration-2 decoration-violet-300 dark:decoration-amber-500/50 hover:underline hover:text-violet-700 dark:hover:text-amber-300 transition-colors">
+                All digital
               </Link>
             </div>
             {(() => {
@@ -448,15 +453,28 @@ export function MarketplacePage() {
                 <div className="grid gap-6">
                   <Link
                     to={`/listing/${hero.id}`}
-                    className="group card-white dark:bg-violet-800 dark:border-violet-700 overflow-hidden grid sm:grid-cols-2 hover:shadow-lg transition-shadow"
+                    className="group card-white dark:bg-violet-800 dark:border-violet-700 card-tactile overflow-hidden grid sm:grid-cols-2"
                   >
                     <div className="relative overflow-hidden aspect-[16/9] sm:aspect-auto">
                       <img
                         src={digitalCover(hero)}
                         alt={hero.title}
-                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="absolute inset-0 w-full h-full object-cover img-grade group-hover:scale-105 transition-transform duration-300"
                       />
-                      <Badge className="absolute top-3 left-3 bg-amber-500 text-white">Instant download</Badge>
+                      <span className="absolute top-3 left-3 rounded-full px-2.5 py-1 text-[11px] font-semibold tag-frosted">
+                        Instant download
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPreviewHero(true);
+                        }}
+                        className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold tag-frosted hover:bg-white/30 transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        Preview
+                      </button>
                     </div>
                     <div className="p-6 lg:p-7 flex flex-col justify-center">
                       <p className="text-xs font-semibold uppercase tracking-wide text-violet-600 dark:text-amber-400 mb-2">
@@ -504,6 +522,12 @@ export function MarketplacePage() {
             })()}
           </section>
         )}
+
+        <DigitalPreviewOverlay
+          listing={freshDigital[0]}
+          open={previewHero}
+          onClose={() => setPreviewHero(false)}
+        />
 
         {/* ---------- Trust rail: escrow, verification, safe spots ---------- */}
         <section className="bg-white dark:bg-violet-800 dark:border dark:border-violet-700 rounded-3xl p-6 lg:p-10">
@@ -588,7 +612,7 @@ export function MarketplacePage() {
               className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold px-6 py-3 rounded-full transition-colors"
             >
               Post a task, it's free
-              <ArrowRight className="w-5 h-5" />
+              <Plus className="w-5 h-5" strokeWidth={2.5} />
             </Link>
           </div>
         </section>

@@ -36,6 +36,7 @@ import {
 import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
 import { EmptyState } from '@/components/common/EmptyState';
+import { SlideToConfirm } from '@/components/common/SlideToConfirm';
 import { OrderStatusBadge, orderStatusLabel } from '@/components/common/OrderStatusBadge';
 import { StarInput } from '@/components/common/Stars';
 import { formatDate, formatPrice, formatTime } from '@/lib/format';
@@ -230,6 +231,11 @@ export function OrderDetailPage() {
     setComment('');
   };
 
+  const releasePayment = () => {
+    completeOrder(order.id);
+    toast.success('Payment released to the seller');
+  };
+
   const runConfirm = () => {
     if (confirm === 'cancel') {
       cancelOrder(order.id);
@@ -238,8 +244,7 @@ export function OrderDetailPage() {
       declineOrder(order.id);
       toast.success('Order declined. The buyer was refunded.');
     } else if (confirm === 'complete') {
-      completeOrder(order.id);
-      toast.success('Payment released to the seller');
+      releasePayment();
     }
     setConfirm(null);
   };
@@ -585,9 +590,12 @@ export function OrderDetailPage() {
                 </Button>
               )}
               {isBuyer && order.status === 'delivered' && (
-                <Button onClick={() => setConfirm('complete')} className="w-full bg-amber-500 hover:bg-amber-600 text-white">
-                  Confirm and release payment
-                </Button>
+                <div className="space-y-2">
+                  <SlideToConfirm label="Confirm and release payment" onConfirm={releasePayment} />
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 text-center">
+                    Slide to release {formatPrice(order.price)} from escrow. This cannot be undone.
+                  </p>
+                </div>
               )}
               {isBuyer && (order.status === 'in_progress' || order.status === 'delivered') && (
                 <Button variant="outline" onClick={() => setDisputeOpen(true)} className="w-full dark:border-violet-600 dark:text-white">

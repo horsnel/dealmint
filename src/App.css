@@ -118,6 +118,140 @@ html {
   animation: sheetUp 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* ---------- Lagos heat map (interactive hero) ---------- */
+
+/* OSM tiles inverted to a stylized dark basemap */
+.hm-tiles {
+  filter: invert(1) hue-rotate(200deg) brightness(0.82) contrast(0.92) saturate(0.7);
+}
+
+/* Pulsing activity zones (Leaflet SVG paths via className option) */
+@keyframes hmZonePulse {
+  0%, 100% { fill-opacity: 0.14; }
+  50% { fill-opacity: 0.34; }
+}
+
+.hm-zone {
+  animation: hmZonePulse 3.2s ease-in-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+
+/* Glowing orange Safe Spot dots */
+.hm-marker-wrap {
+  background: transparent;
+  border: none;
+}
+
+.hm-dot {
+  position: relative;
+  width: 26px;
+  height: 26px;
+}
+
+.hm-dot__core {
+  position: absolute;
+  inset: 7px;
+  border-radius: 9999px;
+  background: #f59e0b;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 10px 2px rgba(245, 158, 11, 0.75);
+}
+
+@keyframes hmRingPulse {
+  0% { transform: scale(0.5); opacity: 0.8; }
+  80%, 100% { transform: scale(1.9); opacity: 0; }
+}
+
+.hm-dot__ring {
+  position: absolute;
+  inset: 3px;
+  border-radius: 9999px;
+  background: rgba(245, 158, 11, 0.45);
+  animation: hmRingPulse 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+/* Visitor position dot (locate-me) */
+.hm-user {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #22c55e;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.25), 0 0 12px 2px rgba(34, 197, 94, 0.6);
+}
+
+/* Safe Spot popup text on the dark tiles */
+.hm-popup {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* Compact attribution on the hero card */
+.leaflet-container.attribution-root .leaflet-control-attribution,
+.hm-attribution .leaflet-control-attribution {
+  font-size: 9px;
+  background: rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.leaflet-control-attribution a {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Live ticker marquee: track is duplicated content, -50% = seamless loop */
+@keyframes hmTicker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.hm-ticker {
+  animation: hmTicker 36s linear infinite;
+}
+
+.hm-ticker:hover {
+  animation-play-state: paused;
+}
+
+/* ---------- Phase 2: tactility + Phase 3: curated imagery ---------- */
+
+/* Purple-tinted lift + physical "press" on tap (2% shrink, shadow gone) */
+.card-tactile {
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms ease;
+  box-shadow: 0 10px 30px -10px rgba(91, 58, 168, 0.22);
+}
+
+.card-tactile:hover {
+  box-shadow: 0 16px 40px -12px rgba(91, 58, 168, 0.32);
+}
+
+.card-tactile:active {
+  transform: scale(0.98);
+  box-shadow: 0 4px 14px -6px rgba(91, 58, 168, 0.18);
+}
+
+.dark .card-tactile {
+  box-shadow: 0 10px 30px -10px rgba(124, 58, 237, 0.35);
+}
+
+.dark .card-tactile:hover {
+  box-shadow: 0 16px 40px -12px rgba(124, 58, 237, 0.45);
+}
+
+/* Frosted glass tag used over imagery (Instant download / Preview) */
+.tag-frosted {
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+}
+
+/* Unified "one photographer" grade — deliberately whisper-subtle */
+.img-grade {
+  filter: saturate(1.05) contrast(1.02) sepia(0.05);
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *,

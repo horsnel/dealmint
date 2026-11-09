@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TrustPassport } from '@/components/common/TrustPassport';
 import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
 import { ListingCard } from '@/components/common/ListingCard';
@@ -95,6 +96,11 @@ export function SellerProfilePage() {
                 {seller.role === 'student' && (
                   <Badge className="bg-violet-600 text-white">Student</Badge>
                 )}
+                <TrustPassport
+                  emailVerified={seller.isVerified}
+                  phoneVerified={seller.phoneVerified}
+                  idVerified={seller.idVerified || seller.idStatus === 'verified'}
+                />
                 <UserBadgeRow
                   isVerified={seller.isVerified}
                   idVerified={seller.idVerified}
