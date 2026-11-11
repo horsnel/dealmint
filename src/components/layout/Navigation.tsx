@@ -47,6 +47,9 @@ export function Navigation({ user }: NavigationProps) {
   }, [location.pathname]);
 
   const isLandingPage = location.pathname === '/';
+  // The dashboard gets its own app-style chrome: sticky instead of fixed,
+  // tinted to blend with the page, and minimal (logo + messages + menu).
+  const isDashboardHome = location.pathname === '/dashboard';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -88,13 +91,48 @@ export function Navigation({ user }: NavigationProps) {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled || !isLandingPage
-          ? 'bg-white/95 dark:bg-violet-900/95 backdrop-blur-md shadow-sm'
-          : 'bg-transparent'
-      }`}
+      className={
+        isDashboardHome
+          ? 'sticky top-0 z-50 bg-[#F5F3FF]/90 dark:bg-violet-950/90 backdrop-blur-md'
+          : `fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+              isScrolled || !isLandingPage
+                ? 'bg-white/95 dark:bg-violet-900/95 backdrop-blur-md shadow-sm'
+                : 'bg-transparent'
+            }`
+      }
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className={isDashboardHome ? 'max-w-2xl mx-auto px-4 sm:px-6' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'}>
+        {isDashboardHome ? (
+          <div className="flex items-center justify-between h-16">
+            <Logo tone="auto" />
+            <div className="flex items-center gap-1">
+              <Link
+                to="/dashboard/messages"
+                aria-label={`Messages${unreadMessages ? `, ${unreadMessages} unread` : ''}`}
+                className="relative p-2 rounded-full text-gray-700 dark:text-gray-200 hover:bg-violet-100 dark:hover:bg-violet-800 transition-colors"
+              >
+                <MessageSquare className="w-5 h-5" />
+                {unreadMessages > 0 && (
+                  <span className="absolute -top-1 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-orange-500 text-white text-[10px] font-semibold flex items-center justify-center">
+                    {unreadMessages > 99 ? '99+' : unreadMessages}
+                  </span>
+                )}
+              </Link>
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+                aria-expanded={isMobileMenuOpen}
+                className="p-2 rounded-full text-gray-700 dark:text-gray-200 hover:bg-violet-100 dark:hover:bg-violet-800 transition-colors"
+              >
+                {isMobileMenuOpen ? (
+                  <X className="w-5 h-5" strokeWidth={2.5} />
+                ) : (
+                  <Menu className="w-5 h-5" />
+                )}
+              </button>
+            </div>
+          </div>
+        ) : (
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
           <Logo tone={isScrolled || !isLandingPage ? 'auto' : 'light'} />
@@ -294,6 +332,7 @@ export function Navigation({ user }: NavigationProps) {
             </button>
           </div>
         </div>
+        )}
       </div>
 
       {/* Mobile menu — a full-height drawer that runs all the way down the
@@ -302,8 +341,8 @@ export function Navigation({ user }: NavigationProps) {
           live as dashboard quick links; Messages lives in the header where
           the avatar used to be. */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden h-[calc(100dvh-4rem)] bg-white dark:bg-violet-900 border-t dark:border-violet-800 animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="h-full overflow-y-auto px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col">
+        <div className={`${isDashboardHome ? '' : 'lg:hidden '}h-[calc(100dvh-4rem)] bg-white dark:bg-violet-900 border-t dark:border-violet-800 animate-in fade-in slide-in-from-top-2 duration-200`}>
+          <div className="h-full overflow-y-auto px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col mx-auto w-full max-w-md">
             {user ? (
               <>
                 {/* Profile card — the avatar's new home */}
