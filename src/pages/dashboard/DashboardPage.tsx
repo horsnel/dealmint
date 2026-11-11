@@ -20,7 +20,7 @@ import { useApp } from '@/context/AppContext';
 import { MODES, modesOf } from '@/lib/modes';
 import { timeAgo } from '@/lib/format';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { BottomNav } from '@/components/dashboard/BottomNav';
+import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { PostNewSheet } from '@/components/dashboard/PostNewSheet';
 
 const activityIcons = {
@@ -127,8 +127,8 @@ export function DashboardPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F5F3FF] dark:bg-violet-950">
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 pt-6 pb-32 md:pb-12 space-y-6">
+    <DashboardShell>
+      <div className="space-y-6">
         {/* Welcome */}
         <section>
           <h1 className="font-display font-bold text-2xl text-gray-900 dark:text-white">
@@ -163,8 +163,9 @@ export function DashboardPage() {
           </div>
         </section>
 
-        {/* Hero wallet card */}
-        <section className="card-tactile rounded-3xl bg-white dark:bg-violet-900 dark:border dark:border-violet-800 p-6">
+        {/* Hero wallet + metrics — side by side from md up */}
+        <div className="grid gap-6 md:grid-cols-3">
+          <section className="card-tactile rounded-3xl bg-white dark:bg-violet-900 dark:border dark:border-violet-800 p-6">
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Wallet Balance</p>
           <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1 tracking-tight">
             ₦{user.walletBalance.toLocaleString()}
@@ -183,10 +184,9 @@ export function DashboardPage() {
               Add Funds
             </Link>
           </div>
-        </section>
+          </section>
 
-        {/* Metrics row */}
-        <section className="grid grid-cols-3 gap-3">
+          <section className="md:col-span-2 grid grid-cols-3 gap-3 content-center">
           {metrics.map((m) => (
             <Link
               key={m.label}
@@ -206,7 +206,8 @@ export function DashboardPage() {
               </span>
             </Link>
           ))}
-        </section>
+          </section>
+        </div>
 
         {/* Quick actions — floating on the background, never inside cards */}
         <section>
@@ -230,7 +231,7 @@ export function DashboardPage() {
         </section>
 
         {/* Action banners */}
-        <section className="space-y-3">
+        <section className="grid gap-3 md:grid-cols-2 md:items-stretch">
           <Link
             to="/dashboard/profile"
             className="card-tactile flex items-center gap-4 rounded-2xl bg-white dark:bg-violet-900 dark:border dark:border-violet-800 p-4"
@@ -270,8 +271,9 @@ export function DashboardPage() {
           </Link>
         </section>
 
-        {/* Recent activity */}
-        <section className="rounded-3xl bg-white dark:bg-violet-900 dark:border dark:border-violet-800 p-5">
+        {/* Activity + profile/verification — 3/2 split on desktop */}
+        <div className="grid gap-6 lg:grid-cols-5 lg:items-start">
+          <section className="rounded-3xl bg-white dark:bg-violet-900 dark:border dark:border-violet-800 p-5 lg:col-span-3">
           <div className="flex items-center justify-between mb-1">
             <h2 className="font-display font-semibold text-gray-900 dark:text-white">
               Recent Activity
@@ -319,10 +321,11 @@ export function DashboardPage() {
               })}
             </div>
           )}
-        </section>
+          </section>
 
-        {/* Profile card */}
-        <section className="rounded-3xl bg-white dark:bg-violet-900 dark:border dark:border-violet-800 p-6 text-center">
+          {/* Profile card */}
+          <div className="lg:col-span-2 space-y-6">
+            <section className="rounded-3xl bg-white dark:bg-violet-900 dark:border dark:border-violet-800 p-6 text-center">
           <img
             src={user.avatar || '/images/avatar_default.jpg'}
             alt={user.name}
@@ -345,10 +348,10 @@ export function DashboardPage() {
           >
             Edit Profile
           </Link>
-        </section>
+          </section>
 
-        {/* Verification status */}
-        <section className="rounded-3xl bg-white dark:bg-violet-900 dark:border dark:border-violet-800 p-5">
+          {/* Verification status */}
+          <section className="rounded-3xl bg-white dark:bg-violet-900 dark:border dark:border-violet-800 p-5">
           <h2 className="font-display font-semibold text-gray-900 dark:text-white mb-1">
             Verification Status
           </h2>
@@ -371,12 +374,12 @@ export function DashboardPage() {
               </div>
             ))}
           </div>
-        </section>
-      </main>
+          </section>
+          </div>
+        </div>
+      </div>
 
-      {/* Mobile bottom navigation + shared post-new sheet */}
-      <BottomNav onPost={() => setPostOpen(true)} />
       <PostNewSheet open={postOpen} onOpenChange={setPostOpen} user={user} />
-    </div>
+    </DashboardShell>
   );
 }

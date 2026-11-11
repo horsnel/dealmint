@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   CheckCircle,
@@ -98,8 +99,8 @@ export function OrderDetailPage() {
 
   if (!order || !user) {
     return (
-      <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <DashboardShell>
+        <div>
           <EmptyState
             icon={Search}
             title="Order not found"
@@ -111,7 +112,7 @@ export function OrderDetailPage() {
             }
           />
         </div>
-      </div>
+      </DashboardShell>
     );
   }
 
@@ -290,8 +291,8 @@ export function OrderDetailPage() {
   const feeRate = order.price > 0 ? Math.round((order.fee / order.price) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <DashboardShell>
+      <div>
         <PageClose fallback="/dashboard/orders" />
         <div className="flex flex-wrap items-center gap-3 mb-6">
           <h1 className="font-display font-bold text-2xl lg:text-3xl text-gray-900 dark:text-white">
@@ -737,6 +738,6 @@ export function OrderDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </DashboardShell>
   );
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { Copy, Gift, Mail, MessageCircle, PartyPopper, Users, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,8 +58,8 @@ export function ReferralsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <DashboardShell>
+      <div>
         <h1 className="font-display font-bold text-2xl lg:text-3xl text-gray-900 dark:text-white mb-2">
           Refer &amp; Earn
         </h1>
@@ -204,6 +205,6 @@ export function ReferralsPage() {
           )}
         </div>
       </div>
-    </div>
+    </DashboardShell>
   );
 }

@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { Bell, MessageSquare, Package, Wallet, Star, Info, CheckCheck, Trash2, Gift, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -29,8 +30,8 @@ export function NotificationsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <DashboardShell>
+      <div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
             <h1 className="font-display font-bold text-2xl lg:text-3xl text-gray-900 dark:text-white">Notifications</h1>
@@ -103,6 +104,6 @@ export function NotificationsPage() {
           </div>
         )}
       </div>
-    </div>
+    </DashboardShell>
   );
 }

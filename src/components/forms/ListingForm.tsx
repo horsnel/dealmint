@@ -34,6 +34,8 @@ import type { Listing, ListingType } from '@/types';
 interface Props {
   type: ListingType;
   listing?: Listing;
+  /** Render inside the dashboard shell (edit flow) instead of the public chrome (post flows). */
+  inDashboard?: boolean;
 }
 
 const defaultImage: Record<ListingType, string> = {
@@ -99,7 +101,7 @@ const MAX_IMAGES = 4;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
-export function ListingForm({ type, listing }: Props) {
+export function ListingForm({ type, listing, inDashboard }: Props) {
   const c = copy[type];
   const editing = !!listing;
   usePageTitle(editing ? 'Edit listing' : c.title);
@@ -307,7 +309,13 @@ export function ListingForm({ type, listing }: Props) {
   const preview = previewOpen ? previewListing() : null;
 
   return (
-    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
+    <div
+      className={
+        inDashboard
+          ? undefined
+          : 'min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24'
+      }
+    >
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <PageClose fallback="/" />
         <h1 className="font-display font-bold text-2xl lg:text-3xl text-gray-900 dark:text-white mb-6">

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Lock, Shield, Trash2, LogOut, Moon, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -116,8 +117,8 @@ export function SettingsPage() {
     ));
 
   return (
-    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <DashboardShell>
+      <div className="space-y-6">
         <h1 className="font-display font-bold text-2xl lg:text-3xl text-gray-900 dark:text-white">Settings</h1>
 
         <Card className="dark:bg-violet-800 dark:border-violet-700">
@@ -332,6 +333,6 @@ export function SettingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </DashboardShell>
   );
 }

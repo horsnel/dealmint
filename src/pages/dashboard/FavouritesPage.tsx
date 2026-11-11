@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/context/AppContext';
@@ -14,8 +15,8 @@ export function FavouritesPage() {
     .filter((l): l is NonNullable<typeof l> => !!l && l.isActive && !l.isDraft);
 
   return (
-    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <DashboardShell>
+      <div>
         <div className="mb-8">
           <h1 className="font-display font-bold text-2xl lg:text-3xl text-gray-900 dark:text-white">Favourites</h1>
           <p className="text-gray-600 dark:text-gray-300">Listings you saved for later</p>
@@ -42,6 +43,6 @@ export function FavouritesPage() {
           </div>
         )}
       </div>
-    </div>
+    </DashboardShell>
   );
 }

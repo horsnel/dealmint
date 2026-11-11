@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Edit, Eye, Pause, Play, Trash2, Search, Briefcase, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -162,8 +163,8 @@ export function ListingsPage() {
     );
 
   return (
-    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <DashboardShell>
+      <div>
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
           <div>
             <h1 className="font-display font-bold text-2xl lg:text-3xl text-gray-900 dark:text-white">
@@ -235,6 +236,6 @@ export function ListingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </DashboardShell>
   );
 }

@@ -47,9 +47,10 @@ export function Navigation({ user }: NavigationProps) {
   }, [location.pathname]);
 
   const isLandingPage = location.pathname === '/';
-  // The dashboard gets its own app-style chrome: sticky instead of fixed,
-  // tinted to blend with the page, and minimal (logo + messages + menu).
-  const isDashboardHome = location.pathname === '/dashboard';
+  // Every dashboard route gets the app-style chrome on mobile: sticky,
+  // tinted, minimal (logo + messages + menu). On desktop the DashboardShell
+  // sidebar takes over, so the header steps aside (lg:hidden).
+  const isDashboardHome = location.pathname.startsWith('/dashboard');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -93,7 +94,7 @@ export function Navigation({ user }: NavigationProps) {
     <header
       className={
         isDashboardHome
-          ? 'sticky top-0 z-50 bg-[#F5F3FF]/90 dark:bg-violet-950/90 backdrop-blur-md'
+          ? 'sticky top-0 z-50 bg-[#F5F3FF]/90 dark:bg-violet-950/90 backdrop-blur-md lg:hidden'
           : `fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
               isScrolled || !isLandingPage
                 ? 'bg-white/95 dark:bg-violet-900/95 backdrop-blur-md shadow-sm'
@@ -101,7 +102,7 @@ export function Navigation({ user }: NavigationProps) {
             }`
       }
     >
-      <div className={isDashboardHome ? 'max-w-2xl mx-auto px-4 sm:px-6' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'}>
+      <div className={isDashboardHome ? 'max-w-5xl mx-auto px-4 sm:px-6' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'}>
         {isDashboardHome ? (
           <div className="flex items-center justify-between h-16">
             <Logo tone="auto" />
