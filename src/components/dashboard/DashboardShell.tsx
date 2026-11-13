@@ -18,9 +18,10 @@ import { NotificationDrawer } from '@/components/notifications/NotificationDrawe
 import { useApp } from '@/context/AppContext';
 import { toast } from 'sonner';
 
-// The dashboard app-shell. Mobile keeps the tinted sticky header from
-// Navigation (hidden here — it owns <lg); desktop gets a permanent left
-// sidebar + a plain top bar, with the content widened to max-w-5xl.
+// The dashboard app-shell. Below md: the tinted sticky header from Navigation
+// owns the screen (its hamburger opens a full-screen overlay menu); from md:
+// up this shell draws a permanent fixed left sidebar + a plain top bar, and
+// the content takes the remaining width at max-w-7xl.
 const SITE_LINKS = [
   { label: 'Marketplace', href: '/marketplace', icon: Store },
   { label: 'Browse', href: '/browse', icon: Compass },
@@ -36,7 +37,7 @@ const ACCOUNT_LINKS = [
 ];
 
 const linkClass = (active: boolean) =>
-  `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+  `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
     active
       ? 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-amber-400'
       : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-violet-800'
@@ -57,7 +58,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // Protected routes guarantee a user; the guard just keeps TS honest.
   if (!user) {
     return (
-      <main className="min-h-screen bg-[#F5F3FF] dark:bg-violet-950 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="min-h-screen bg-[#F5F3FF] dark:bg-violet-950 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {children}
       </main>
     );
@@ -67,13 +68,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-[#F5F3FF] dark:bg-violet-950">
-      {/* Desktop sidebar — permanent, w-64, white, right border */}
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 z-40 flex-col bg-white dark:bg-violet-900 border-r border-violet-100 dark:border-violet-800">
-        <div className="h-16 flex items-center px-6 border-b border-violet-100 dark:border-violet-800 shrink-0">
+      {/* Desktop sidebar — a permanent fixed column from md: up, never an
+          overlay. z-50 keeps it above Leaflet map panes. */}
+      <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 z-50 flex-col bg-white dark:bg-violet-900 border-r border-gray-200 dark:border-violet-800">
+        <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-violet-800 shrink-0">
           <Logo href="/" tone="auto" />
         </div>
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-          <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-violet-700">
+          <p className="px-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-violet-700">
             Menu
           </p>
           {SITE_LINKS.map(({ label, href, icon: Icon }) => (
@@ -82,7 +84,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               {label}
             </Link>
           ))}
-          <p className="px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-violet-700">
+          <p className="px-4 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-violet-700">
             My account
           </p>
           {ACCOUNT_LINKS.map(({ label, href, icon: Icon }) => (
@@ -92,7 +94,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             </Link>
           ))}
         </nav>
-        <div className="px-3 py-3 border-t border-violet-100 dark:border-violet-800 space-y-1 shrink-0">
+        <div className="px-3 py-3 border-t border-gray-200 dark:border-violet-800 space-y-1 shrink-0">
           <Link to="/dashboard/settings" className={linkClass(pathname === '/dashboard/settings')}>
             <Settings className="w-5 h-5 shrink-0" />
             Settings
@@ -100,7 +102,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           <button
             type="button"
             onClick={handleLogout}
-            className="flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+            className="flex items-center gap-3 w-full rounded-xl px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
           >
             <LogOut className="w-5 h-5 shrink-0" />
             Log out
@@ -109,8 +111,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Desktop top bar — sits next to the sidebar, not sticky */}
-      <div className="hidden lg:flex lg:pl-64">
-        <div className="flex-1 h-16 flex items-center justify-end gap-1 px-4 sm:px-6 lg:px-8">
+      <div className="hidden md:block md:pl-64">
+        <div className="h-16 flex items-center justify-end gap-1 px-4 sm:px-6 lg:px-8">
           <button
             type="button"
             onClick={() => setNotifOpen(true)}
@@ -140,9 +142,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-      {/* Main content — everything right of the sidebar, wider column */}
-      <div className="lg:pl-64">
-        <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">{children}</main>
+      {/* Main content — right of the sidebar, full remaining width */}
+      <div className="md:ml-64">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">{children}</main>
       </div>
 
       <NotificationDrawer open={notifOpen} onOpenChange={setNotifOpen} />

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Logo } from '@/components/common/Logo';
 import {
@@ -15,7 +16,11 @@ import {
   Heart,
   Package,
   Settings,
-  Star
+  Star,
+  Store,
+  Compass,
+  LayoutGrid,
+  MapPin
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
@@ -46,10 +51,25 @@ export function Navigation({ user }: NavigationProps) {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
+  // While the menu overlay is up: Escape closes it and the page behind
+  // stops scrolling.
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsMobileMenuOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
+
   const isLandingPage = location.pathname === '/';
-  // Every dashboard route gets the app-style chrome on mobile: sticky,
-  // tinted, minimal (logo + messages + menu). On desktop the DashboardShell
-  // sidebar takes over, so the header steps aside (lg:hidden).
+  // Dashboard routes get the app-style chrome on mobile: sticky, tinted,
+  // minimal (logo + messages + menu). From md: up the DashboardShell sidebar
+  // takes over, so this header steps aside (md:hidden).
   const isDashboardHome = location.pathname.startsWith('/dashboard');
 
   useEffect(() => {
@@ -62,10 +82,10 @@ export function Navigation({ user }: NavigationProps) {
   }, []);
 
   const navLinks = [
-    { name: 'Marketplace', href: '/marketplace' },
-    { name: 'Browse', href: '/browse' },
-    { name: 'Categories', href: '/categories' },
-    { name: 'Safe Spots', href: '/safe-spots' },
+    { name: 'Marketplace', href: '/marketplace', icon: Store },
+    { name: 'Browse', href: '/browse', icon: Compass },
+    { name: 'Categories', href: '/categories', icon: LayoutGrid },
+    { name: 'Safe Spots', href: '/safe-spots', icon: MapPin },
   ];
 
   const postLinks = [
@@ -94,7 +114,7 @@ export function Navigation({ user }: NavigationProps) {
     <header
       className={
         isDashboardHome
-          ? 'sticky top-0 z-50 bg-[#F5F3FF]/90 dark:bg-violet-950/90 backdrop-blur-md lg:hidden'
+          ? 'sticky top-0 z-50 bg-[#F5F3FF]/90 dark:bg-violet-950/90 backdrop-blur-md md:hidden'
           : `fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
               isScrolled || !isLandingPage
                 ? 'bg-white/95 dark:bg-violet-900/95 backdrop-blur-md shadow-sm'
@@ -102,7 +122,7 @@ export function Navigation({ user }: NavigationProps) {
             }`
       }
     >
-      <div className={isDashboardHome ? 'max-w-5xl mx-auto px-4 sm:px-6' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'}>
+      <div className={isDashboardHome ? 'max-w-7xl mx-auto px-4 sm:px-6' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'}>
         {isDashboardHome ? (
           <div className="flex items-center justify-between h-16">
             <Logo tone="auto" />
@@ -134,12 +154,12 @@ export function Navigation({ user }: NavigationProps) {
             </div>
           </div>
         ) : (
-        <div className="flex items-center justify-between h-16 lg:h-20">
+        <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Logo tone={isScrolled || !isLandingPage ? 'auto' : 'light'} />
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center space-x-8">
+          <nav className="hidden md:flex items-center space-x-8">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
@@ -181,7 +201,7 @@ export function Navigation({ user }: NavigationProps) {
           </nav>
 
           {/* Right Side Actions */}
-          <div className="hidden lg:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-4">
             {user ? (
               <>
                 {/* Notifications — quiet drawer, not a page jump */}
@@ -295,7 +315,7 @@ export function Navigation({ user }: NavigationProps) {
 
           {/* Mobile: messages tab (the avatar's old spot) + menu button.
               The avatar itself moved into the menu drawer as a profile card. */}
-          <div className="lg:hidden flex items-center gap-1">
+          <div className="md:hidden flex items-center gap-1">
             {user && (
               <Link
                 to="/dashboard/messages"
@@ -336,105 +356,121 @@ export function Navigation({ user }: NavigationProps) {
         )}
       </div>
 
-      {/* Mobile menu — a full-height drawer that runs all the way down the
-          screen: profile card up top (the avatar's new home), lean nav in the
-          middle, account actions pinned to the bottom. Orders / Favourites
-          live as dashboard quick links; Messages lives in the header where
-          the avatar used to be. */}
-      {isMobileMenuOpen && (
-        <div className={`${isDashboardHome ? '' : 'lg:hidden '}h-[calc(100dvh-4rem)] bg-white dark:bg-violet-900 border-t dark:border-violet-800 animate-in fade-in slide-in-from-top-2 duration-200`}>
-          <div className="h-full overflow-y-auto px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col mx-auto w-full max-w-md">
-            {user ? (
-              <>
-                {/* Profile card — the avatar's new home */}
-                <Link
-                  to="/dashboard"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-2xl border border-violet-100 dark:border-violet-700 bg-violet-50/60 dark:bg-violet-800/60 p-3 mb-4 transition-colors active:bg-violet-100 dark:active:bg-violet-800/80"
-                >
-                  <img
-                    src={user.avatar || '/images/avatar_default.jpg'}
-                    alt={user.name}
-                    className="w-12 h-12 rounded-full object-cover border-2 border-amber-500 shrink-0"
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-display font-semibold text-gray-900 dark:text-white truncate">
-                      {user.name}
+      {/* Mobile menu — a full-screen SOLID overlay, portalled to body so no
+          transformed/filtered ancestor and no map panes can bleed through
+          it. Slides in from the left: logo + close on top, profile card,
+          icon nav, account actions, log out pinned at the bottom. */}
+      {isMobileMenuOpen &&
+        createPortal(
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu"
+            className="fixed inset-0 z-[60] bg-white dark:bg-violet-900 overflow-y-auto animate-in slide-in-from-left duration-200"
+          >
+            <div className="h-16 flex items-center justify-between px-4 sm:px-6 border-b border-gray-100 dark:border-violet-800">
+              <Logo tone="auto" />
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                aria-label="Close menu"
+                className="p-2 rounded-full text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-violet-800 transition-colors"
+              >
+                <X className="w-6 h-6" strokeWidth={2.5} />
+              </button>
+            </div>
+            <div className="px-4 sm:px-6 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] flex flex-col min-h-[calc(100dvh-4rem)] max-w-md mx-auto w-full">
+              {user ? (
+                <>
+                  {/* Profile card — the avatar's home on mobile */}
+                  <Link
+                    to="/dashboard"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-3 rounded-2xl border border-violet-100 dark:border-violet-700 bg-violet-50/60 dark:bg-violet-800/60 p-3 mb-4 transition-colors active:bg-violet-100 dark:active:bg-violet-800/80"
+                  >
+                    <img
+                      src={user.avatar || '/images/avatar_default.jpg'}
+                      alt={user.name}
+                      className="w-12 h-12 rounded-full object-cover border-2 border-amber-500 shrink-0"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-display font-semibold text-gray-900 dark:text-white truncate">
+                        {user.name}
+                      </span>
+                      <span className="block text-sm text-gray-500 dark:text-gray-400 truncate">
+                        {user.email}
+                      </span>
                     </span>
-                    <span className="block text-sm text-gray-500 dark:text-gray-400 truncate">
-                      {user.email}
-                    </span>
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
-                </Link>
+                    <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+                  </Link>
 
-                <nav className="space-y-1">
-                  {navLinks.map((link) => (
-                    <Link
-                      key={link.name}
-                      to={link.href}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="flex items-center px-3 py-3 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-violet-800 font-medium transition-colors"
+                  <nav className="space-y-1">
+                    {navLinks.map(({ name, href, icon: Icon }) => (
+                      <Link
+                        key={href}
+                        to={href}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-violet-800 font-medium transition-colors"
+                      >
+                        <Icon className="w-5 h-5 shrink-0" />
+                        {name}
+                      </Link>
+                    ))}
+                  </nav>
+
+                  <div className="border-t dark:border-violet-800 mt-3 pt-3 space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        setNotifOpen(true);
+                      }}
+                      className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-violet-800 font-medium transition-colors"
                     >
-                      {link.name}
+                      <Bell className="w-5 h-5" />
+                      <span>Notifications{unreadNotifications > 0 ? ` (${unreadNotifications})` : ''}</span>
+                    </button>
+                    <Link
+                      to="/dashboard/settings"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-violet-800 font-medium transition-colors"
+                    >
+                      <Settings className="w-5 h-5" />
+                      Settings
                     </Link>
-                  ))}
-                </nav>
+                  </div>
 
-                <div className="border-t dark:border-violet-800 mt-3 pt-3 space-y-1">
+                  {/* Log out — pinned to the bottom of the overlay */}
                   <button
                     type="button"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      setNotifOpen(true);
-                    }}
-                    className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-violet-800 font-medium transition-colors"
+                    onClick={handleLogout}
+                    className="mt-auto flex items-center gap-3 w-full px-4 py-3 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 font-medium transition-colors"
                   >
-                    <Bell className="w-5 h-5" />
-                    <span>Notifications{unreadNotifications > 0 ? ` (${unreadNotifications})` : ''}</span>
+                    <LogOut className="w-5 h-5" />
+                    Log out
                   </button>
+                </>
+              ) : (
+                <div className="mt-auto border-t dark:border-violet-800 pt-4 space-y-2 pb-2">
                   <Link
-                    to="/dashboard/settings"
+                    to="/login"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-violet-800 font-medium transition-colors"
+                    className="block w-full text-center py-2 text-gray-700 dark:text-gray-200 border rounded-lg"
                   >
-                    <Settings className="w-5 h-5" />
-                    Settings
+                    Log in
+                  </Link>
+                  <Link
+                    to="/register"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block w-full text-center py-2 bg-amber-500 text-white rounded-lg"
+                  >
+                    Get Started
                   </Link>
                 </div>
-
-                {/* Log out — pinned to the bottom of the drawer (mobile had no
-                    logout entry before; it lived only in the desktop dropdown) */}
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="mt-auto flex items-center gap-3 w-full px-3 py-3 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 font-medium transition-colors"
-                >
-                  <LogOut className="w-5 h-5" />
-                  Log out
-                </button>
-              </>
-            ) : (
-              <div className="mt-auto border-t dark:border-violet-800 pt-4 space-y-2 pb-2">
-                <Link
-                  to="/login"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block w-full text-center py-2 text-gray-700 dark:text-gray-200 border rounded-lg"
-                >
-                  Log in
-                </Link>
-                <Link
-                  to="/register"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block w-full text-center py-2 bg-amber-500 text-white rounded-lg"
-                >
-                  Get Started
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
 
       {/* Quiet notification drawer — bottom sheet on mobile, side panel on desktop */}
       <NotificationDrawer open={notifOpen} onOpenChange={setNotifOpen} />

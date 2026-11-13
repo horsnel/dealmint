@@ -195,6 +195,12 @@ html {
   color: rgba(255, 255, 255, 0.6);
 }
 
+/* Contain Leaflet's internal stacking (panes z-400, controls z-1000) inside
+   the map itself so tiles can never cover headers, sidebars or drawers. */
+.leaflet-container {
+  isolation: isolate;
+}
+
 .leaflet-control-attribution a {
   color: rgba(255, 255, 255, 0.7);
 }

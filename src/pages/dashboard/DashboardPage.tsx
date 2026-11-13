@@ -163,9 +163,9 @@ export function DashboardPage() {
           </div>
         </section>
 
-        {/* Hero wallet + metrics — side by side from md up */}
-        <div className="grid gap-6 md:grid-cols-3">
-          <section className="card-tactile rounded-3xl bg-white dark:bg-violet-900 dark:border dark:border-violet-800 p-6">
+        {/* Hero wallet + metrics — stacked rows at md, side-by-side from lg up */}
+        <div className="grid gap-6 lg:grid-cols-5">
+          <section className="card-tactile rounded-3xl bg-white dark:bg-violet-900 dark:border dark:border-violet-800 p-6 lg:col-span-2">
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Wallet Balance</p>
           <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1 tracking-tight">
             ₦{user.walletBalance.toLocaleString()}
@@ -186,7 +186,7 @@ export function DashboardPage() {
           </div>
           </section>
 
-          <section className="md:col-span-2 grid grid-cols-3 gap-3 content-center">
+          <section className="lg:col-span-3 grid grid-cols-3 gap-3 content-center">
           {metrics.map((m) => (
             <Link
               key={m.label}
@@ -231,7 +231,7 @@ export function DashboardPage() {
         </section>
 
         {/* Action banners */}
-        <section className="grid gap-3 md:grid-cols-2 md:items-stretch">
+        <section className="grid gap-3 lg:grid-cols-2 lg:items-stretch">
           <Link
             to="/dashboard/profile"
             className="card-tactile flex items-center gap-4 rounded-2xl bg-white dark:bg-violet-900 dark:border dark:border-violet-800 p-4"

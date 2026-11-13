@@ -25,6 +25,7 @@ import {
 import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
 import { EmptyState } from '@/components/common/EmptyState';
+import { StarRating } from '@/components/common/StarRating';
 import { formatPrice, priceSuffix } from '@/lib/format';
 import { typeLabel } from '@/lib/categories';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -37,6 +38,15 @@ const createLinks = [
   { name: 'Service', href: '/post/service' },
   { name: 'Digital product', href: '/post/digital' },
 ];
+
+// Same type colour language as the marketplace listing cards:
+// tasks orange, jobs/services blue, gigs/digital purple.
+const typeChipClass = (type: Listing['type']) =>
+  type === 'task'
+    ? 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300'
+    : type === 'job' || type === 'service'
+      ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'
+      : 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300';
 
 export function ListingsPage() {
   usePageTitle('My Listings');
@@ -79,9 +89,11 @@ export function ListingsPage() {
 
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <Badge className="bg-violet-100 text-violet-700 dark:bg-violet-700 dark:text-violet-200">
+                  <span
+                    className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-md ${typeChipClass(listing.type)}`}
+                  >
                     {typeLabel(listing.type)}
-                  </Badge>
+                  </span>
                   {listing.isDraft && (
                     <Badge className="bg-gray-100 text-gray-700 dark:bg-violet-600 dark:text-gray-100">Draft</Badge>
                   )}
@@ -99,6 +111,9 @@ export function ListingsPage() {
                     {priceSuffix(listing.priceType) || ' fixed'}
                   </span>
                 </p>
+                <div className="mt-1.5">
+                  <StarRating rating={listing.rating} reviewCount={listing.reviewCount} size="sm" />
+                </div>
                 {!listing.isDraft && (
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {listing.views || 0} views · {listing.completedOrders} orders

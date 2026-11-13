@@ -43,6 +43,7 @@ import { useApp } from '@/context/AppContext';
 import { ListingCard } from '@/components/common/ListingCard';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Stars, StarInput } from '@/components/common/Stars';
+import { RatingSummary } from '@/components/common/RatingSummary';
 import { UserBadgeRow } from '@/components/common/VerificationBadges';
 import { WhatsAppButton } from '@/components/share/WhatsAppButton';
 import { SharePopup } from '@/components/share/SharePopup';
@@ -425,15 +426,7 @@ export function ListingDetailPage() {
                 </TabsContent>
 
                 <TabsContent value="reviews" className="space-y-6">
-                  <div className="text-center py-4">
-                    <Star className="w-12 h-12 text-amber-400 mx-auto mb-4" />
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                      {stats.count > 0 ? `${stats.rating} out of 5` : 'No ratings yet'}
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-300">
-                      {stats.count > 0 ? `Based on ${stats.count} reviews` : 'Be the first to leave a review after your order.'}
-                    </p>
-                  </div>
+                  <RatingSummary rating={stats.rating} count={stats.count} reviews={reviews} />
 
                   {reviewableOrder && (
                     <div className="rounded-xl border border-violet-200 dark:border-violet-600 p-4 space-y-3">

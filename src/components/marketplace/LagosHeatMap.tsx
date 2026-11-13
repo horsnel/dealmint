@@ -186,7 +186,7 @@ export function LagosHeatMap({
   const loop = ticker.length ? [...ticker, ...ticker] : [];
 
   return (
-    <div className="relative overflow-hidden rounded-t-3xl bg-violet-950" aria-label="Lagos activity map">
+    <div className="relative isolate z-0 overflow-hidden rounded-t-3xl bg-violet-950" aria-label="Lagos activity map">
       <div ref={containerRef} className="h-[280px] lg:h-[320px] w-full cursor-grab active:cursor-grabbing" />
 
       {/* Massive semi-transparent counts floating over the map */}

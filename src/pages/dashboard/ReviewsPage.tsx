@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Stars } from '@/components/common/Stars';
+import { RatingSummary } from '@/components/common/RatingSummary';
 import { formatPrice, timeAgo } from '@/lib/format';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
@@ -30,17 +31,7 @@ export function ReviewsPage() {
           <p className="text-gray-600 dark:text-gray-300">What people say about your work, and orders waiting for your review</p>
         </div>
 
-        <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-6 mb-8 flex items-center gap-4">
-          <Star className="w-10 h-10 text-amber-400 fill-amber-400" />
-          <div>
-            <p className="font-display font-bold text-2xl text-gray-900 dark:text-white">
-              {stats.count > 0 ? stats.rating : 'No ratings yet'}
-            </p>
-            <p className="text-gray-600 dark:text-gray-300 text-sm">
-              {stats.count > 0 ? `Across ${stats.count} review${stats.count === 1 ? '' : 's'}` : 'Complete orders to start collecting reviews'}
-            </p>
-          </div>
-        </div>
+        <RatingSummary rating={stats.rating} count={stats.count} reviews={received} className="mb-8" />
 
         <Tabs defaultValue={toReview.length > 0 ? 'write' : 'received'}>
           <TabsList className="mb-6 dark:bg-violet-800">
