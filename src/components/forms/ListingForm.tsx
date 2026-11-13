@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Upload, X, MapPin, FileUp, Eye, Star, Zap } from 'lucide-react';
+import { Upload, X, MapPin, FileUp, Eye, Star, Zap, Wallet, TrendingUp, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -339,8 +339,16 @@ export function ListingForm({ type, listing, inDashboard }: Props) {
           noValidate
         >
           <Card className="dark:bg-violet-800 dark:border-violet-700">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-gray-900 dark:text-white">{c.section}</CardTitle>
+              {inDashboard && (
+                <Link
+                  to="/dashboard/listings"
+                  className="text-sm font-semibold text-violet-600 dark:text-amber-400 hover:underline"
+                >
+                  My drafts
+                </Link>
+              )}
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Title */}
@@ -418,16 +426,47 @@ export function ListingForm({ type, listing, inDashboard }: Props) {
                 ) : (
                   <div>
                     <Label className="dark:text-gray-200">Price type</Label>
-                    <Select value={form.priceType} onValueChange={(v) => set('priceType', v as Listing['priceType'])}>
-                      <SelectTrigger className={inputClass}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="fixed">{type === 'job' ? 'Fixed (per month)' : 'Fixed price'}</SelectItem>
-                        <SelectItem value="hourly">Per hour</SelectItem>
-                        <SelectItem value="negotiable">Negotiable</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="grid grid-cols-3 gap-3 mt-1">
+                      {(
+                        [
+                          { v: 'fixed', label: 'Fixed Price', icon: Wallet },
+                          { v: 'hourly', label: type === 'job' ? 'Per Month' : 'Per Hour', icon: TrendingUp },
+                          { v: 'negotiable', label: 'Negotiable', icon: Tag },
+                        ] as const
+                      ).map(({ v, label, icon: Icon }) => {
+                        const active = form.priceType === v;
+                        return (
+                          <button
+                            key={v}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() => set('priceType', v)}
+                            className={`rounded-xl py-3 flex flex-col items-center justify-center transition border-2 ${
+                              active
+                                ? 'border-purple-600 bg-purple-50 dark:bg-purple-500/15 dark:border-amber-400'
+                                : 'border-gray-200 bg-white hover:border-purple-300 dark:bg-violet-900 dark:border-violet-600 dark:hover:border-amber-400/60'
+                            }`}
+                          >
+                            <Icon
+                              className={`w-5 h-5 mb-1 ${
+                                active
+                                  ? 'text-purple-600 dark:text-amber-400'
+                                  : 'text-gray-400 dark:text-gray-500'
+                              }`}
+                            />
+                            <span
+                              className={`font-bold text-sm ${
+                                active
+                                  ? 'text-purple-700 dark:text-amber-400'
+                                  : 'text-gray-600 dark:text-gray-300'
+                              }`}
+                            >
+                              {label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>

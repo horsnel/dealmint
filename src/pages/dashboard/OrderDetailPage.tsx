@@ -5,6 +5,7 @@ import {
   CheckCircle,
   Circle,
   Download,
+  Lock,
   MapPin,
   MessageSquare,
   Search,
@@ -40,6 +41,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { SlideToConfirm } from '@/components/common/SlideToConfirm';
 import { OrderStatusBadge, orderStatusLabel } from '@/components/common/OrderStatusBadge';
 import { StarInput } from '@/components/common/Stars';
+import { ReviewTags, useReviewTags } from '@/components/common/ReviewTags';
 import { formatDate, formatPrice, formatTime } from '@/lib/format';
 import { typeLabel } from '@/lib/categories';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -96,6 +98,7 @@ export function OrderDetailPage() {
   const [confirm, setConfirm] = useState<null | 'cancel' | 'decline' | 'complete'>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
+  const reviewTags = useReviewTags();
 
   if (!order || !user) {
     return (
@@ -225,11 +228,13 @@ export function OrderDetailPage() {
   };
 
   const submitReview = () => {
-    if (comment.trim().length < 10) return toast.error('Please write at least 10 characters');
-    const res = addReview(order.id, rating, comment);
+    const text = reviewTags.fold(comment).trim();
+    if (text.length < 10) return toast.error('Please write at least 10 characters');
+    const res = addReview(order.id, rating, text);
     if (!res.ok) return toast.error(res.error);
     toast.success('Thanks for your review!');
     setComment('');
+    reviewTags.reset();
   };
 
   const releasePayment = () => {
@@ -299,7 +304,48 @@ export function OrderDetailPage() {
             Order details
           </h1>
           <OrderStatusBadge status={order.status} />
+          {escrowHeld && (
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-full px-2.5 py-1">
+              <Lock className="w-3 h-3" />
+              Funds in escrow
+            </span>
+          )}
         </div>
+
+        {/* Completion banner — the mock's green receipt header */}
+        {order.status === 'completed' && (
+          <div className="mb-6 rounded-2xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-5 flex items-center gap-4">
+            <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center shadow-lg shadow-green-500/40 shrink-0">
+              <CheckCircle className="w-7 h-7 text-white" strokeWidth={2.5} />
+            </div>
+            <div className="min-w-0">
+              <p className="font-bold text-lg text-green-800 dark:text-green-200">
+                {isSeller ? 'Order completed — you got paid!' : 'Payment released'}
+              </p>
+              <p className="text-sm text-green-700 dark:text-green-300">
+                {isSeller
+                  ? `${formatPrice(net)} was added to your wallet (${feeRate}% platform fee deducted).`
+                  : `${formatPrice(order.price)} was released to ${order.sellerName}. Thanks for confirming!`}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Escrow banner — "Payment Secured" from the workspace mock */}
+        {escrowHeld && (
+          <div className="mb-6 rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-3.5 flex gap-3 items-start">
+            <ShieldCheck className="w-5 h-5 text-green-600 dark:text-green-300 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-green-800 dark:text-green-200">Payment secured</p>
+              <p className="text-xs text-green-700 dark:text-green-300 mt-0.5">
+                {formatPrice(order.price)} is safely held by Dealmint
+                {isBuyer
+                  ? ` — it will only be released to ${order.sellerName} when you confirm the work.`
+                  : ' — it will be released to you upon approval.'}
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
@@ -512,6 +558,7 @@ export function OrderDetailPage() {
                 ) : (
                   <div className="space-y-3">
                     <StarInput value={rating} onChange={setRating} />
+                    <ReviewTags selected={reviewTags.tags} onToggle={reviewTags.toggle} />
                     <Textarea
                       value={comment}
                       onChange={(e) => setComment(e.target.value)}

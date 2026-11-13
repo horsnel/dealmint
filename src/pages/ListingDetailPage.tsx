@@ -16,6 +16,8 @@ import {
   Wallet,
   Search,
   Bell,
+  Banknote,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -44,11 +46,12 @@ import { ListingCard } from '@/components/common/ListingCard';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Stars, StarInput } from '@/components/common/Stars';
 import { RatingSummary } from '@/components/common/RatingSummary';
+import { ReviewTags, useReviewTags } from '@/components/common/ReviewTags';
 import { UserBadgeRow } from '@/components/common/VerificationBadges';
 import { WhatsAppButton } from '@/components/share/WhatsAppButton';
 import { SharePopup } from '@/components/share/SharePopup';
 import { PageClose } from '@/components/common/PageClose';
-import { formatPrice, formatBytes, timeAgo, priceSuffix } from '@/lib/format';
+import { formatPrice, formatBytes, timeAgo, priceSuffix, formatDate } from '@/lib/format';
 import { typeLabel } from '@/lib/categories';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
@@ -109,6 +112,7 @@ export function ListingDetailPage() {
   const [replyText, setReplyText] = useState<Record<string, string>>({});
   const [alertTarget, setAlertTarget] = useState('');
   const [meetupSpotId, setMeetupSpotId] = useState('none');
+  const reviewTags = useReviewTags();
 
   useEffect(() => {
     if (id) recordView(id);
@@ -142,9 +146,23 @@ export function ListingDetailPage() {
   const isOwner = !!user && listing.seller.id === user.id;
   const isLiked = favourites.includes(listing.id);
   const isNegotiable = listing.priceType === 'negotiable' || listing.type === 'task';
+  const isTask = listing.type === 'task';
   const isJob = listing.type === 'job';
   const isDigital = listing.type === 'digital';
-  const ctaLabel = isJob ? 'Apply Now' : listing.type === 'task' ? 'Make an Offer' : isDigital ? 'Buy Now' : 'Book Now';
+  const ctaLabel = isJob ? 'Apply Now' : isTask ? 'Apply for Task' : isDigital ? 'Buy Now' : 'Book Now';
+
+  // Live applicant count for tasks: offers currently open on this listing.
+  const applicants = isTask
+    ? orders.filter((o) => o.listingId === listing.id && ['pending', 'in_progress'].includes(o.status)).length
+    : 0;
+
+  // Hero chip tone per listing type (mock: purple Gig chip on the cover)
+  const heroChipTone =
+    isTask
+      ? 'bg-orange-500 text-white'
+      : isJob || listing.type === 'service'
+        ? 'bg-blue-600 text-white'
+        : 'bg-purple-600 text-white';
 
   const reviewableOrder = user
     ? orders.find((o) => o.listingId === listing.id && o.buyerId === user.id && o.status === 'completed' && !o.reviewed)
@@ -251,17 +269,19 @@ export function ListingDetailPage() {
 
   const handleReview = () => {
     if (!reviewableOrder) return;
-    if (reviewComment.trim().length < 10) {
+    const text = reviewTags.fold(reviewComment).trim();
+    if (text.length < 10) {
       toast.error('Please write at least 10 characters');
       return;
     }
-    const res = addReview(reviewableOrder.id, reviewRating, reviewComment);
+    const res = addReview(reviewableOrder.id, reviewRating, text);
     if (!res.ok) {
       toast.error(res.error);
       return;
     }
     setReviewComment('');
     setReviewRating(5);
+    reviewTags.reset();
     toast.success('Thanks for your review!');
   };
 
@@ -294,31 +314,110 @@ export function ListingDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Images & Details */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="card-white dark:bg-violet-800 dark:border-violet-700 overflow-hidden">
-              <div className="aspect-video relative">
-                <img
-                  src={listing.images[activeImage] || '/images/placeholder.jpg'}
-                  alt={listing.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              {listing.images.length > 1 && (
-                <div className="flex gap-2 p-4">
-                  {listing.images.map((img, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setActiveImage(idx)}
-                      aria-label={`Show image ${idx + 1}`}
-                      className={`w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                        activeImage === idx ? 'border-violet-600' : 'border-transparent'
-                      }`}
-                    >
-                      <img src={img} alt={`${listing.title} ${idx + 1}`} className="w-full h-full object-cover" />
-                    </button>
-                  ))}
+            {isTask ? (
+              <>
+                {/* Task header — badges, title, posted-ago (no cover image) */}
+                <div>
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <span className="bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300 text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wider">
+                      Task
+                    </span>
+                    {listing.isActive && (
+                      <span className="bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300 text-xs font-bold px-2.5 py-1 rounded-md flex items-center gap-1.5">
+                        <span aria-hidden="true" className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                        Open
+                      </span>
+                    )}
+                    {listing.isUrgent && <Badge className="bg-red-500 text-white">Urgent</Badge>}
+                    {listing.isFeatured && <Badge className="bg-amber-500 text-white">Featured</Badge>}
+                  </div>
+                  <h1 className="font-display text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white leading-tight mb-2">
+                    {listing.title}
+                  </h1>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                    <Clock className="w-4 h-4 shrink-0" />
+                    Posted {timeAgo(listing.createdAt)}
+                    {!listing.isRemote && listing.location && (
+                      <>
+                        ·<MapPin className="w-4 h-4 shrink-0" />
+                        {listing.location}
+                      </>
+                    )}
+                    {listing.isRemote && '· Remote ok'}
+                  </p>
                 </div>
-              )}
-            </div>
+
+                {/* Key details grid — budget / location / deadline / applicants */}
+                <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-5 grid grid-cols-2 gap-y-5 gap-x-3">
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1">
+                      <Banknote className="w-3.5 h-3.5" /> Budget
+                    </p>
+                    <p className="font-bold text-lg text-gray-900 dark:text-white">
+                      {formatPrice(listing.price)}
+                      <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                        {priceSuffix(listing.priceType) || ' fixed'}
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5" /> Location
+                    </p>
+                    <p className="font-semibold text-gray-900 dark:text-white">
+                      {listing.isRemote ? 'Remote' : listing.location || 'Lagos'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5" /> Needed by
+                    </p>
+                    <p className="font-semibold text-gray-900 dark:text-white">
+                      {listing.deadline ? formatDate(listing.deadline) : 'Flexible'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1">
+                      <Users className="w-3.5 h-3.5" /> Applicants
+                    </p>
+                    <p className="font-semibold text-gray-900 dark:text-white">
+                      {applicants === 0 ? 'Be the first' : `${applicants} applied`}
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="card-white dark:bg-violet-800 dark:border-violet-700 overflow-hidden">
+                <div className="aspect-video relative">
+                  <img
+                    src={listing.images[activeImage] || '/images/placeholder.jpg'}
+                    alt={listing.title}
+                    className="w-full h-full object-cover"
+                  />
+                  <span
+                    className={`absolute top-3 left-3 text-xs font-bold px-3 py-1 rounded-md shadow-sm ${heroChipTone}`}
+                  >
+                    {typeLabel(listing.type)}
+                  </span>
+                </div>
+                {listing.images.length > 1 && (
+                  <div className="flex gap-2 p-4">
+                    {listing.images.map((img, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setActiveImage(idx)}
+                        aria-label={`Show image ${idx + 1}`}
+                        className={`w-20 h-20 rounded-lg overflow-hidden border-2 ${
+                          activeImage === idx ? 'border-violet-600' : 'border-transparent'
+                        }`}
+                      >
+                        <img src={img} alt={`${listing.title} ${idx + 1}`} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-6">
               <Tabs defaultValue="description">
@@ -432,6 +531,7 @@ export function ListingDetailPage() {
                     <div className="rounded-xl border border-violet-200 dark:border-violet-600 p-4 space-y-3">
                       <h4 className="font-semibold text-gray-900 dark:text-white">Rate your order</h4>
                       <StarInput value={reviewRating} onChange={setReviewRating} />
+                      <ReviewTags selected={reviewTags.tags} onToggle={reviewTags.toggle} />
                       <Textarea
                         value={reviewComment}
                         onChange={(e) => setReviewComment(e.target.value)}
@@ -709,7 +809,7 @@ export function ListingDetailPage() {
         <DialogContent className="dark:bg-violet-900 dark:border-violet-700">
           <DialogHeader>
             <DialogTitle className="dark:text-white">
-              {isJob ? 'Apply for this job' : listing.type === 'task' ? 'Make an offer' : 'Confirm your order'}
+              {isJob ? 'Apply for this job' : isTask ? 'Apply for this task' : 'Confirm your order'}
             </DialogTitle>
             <DialogDescription className="dark:text-gray-300">
               Your payment is held in escrow and only released to the seller when you confirm the work.
