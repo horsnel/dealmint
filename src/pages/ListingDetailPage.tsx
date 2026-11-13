@@ -112,6 +112,7 @@ export function ListingDetailPage() {
   const [replyText, setReplyText] = useState<Record<string, string>>({});
   const [alertTarget, setAlertTarget] = useState('');
   const [meetupSpotId, setMeetupSpotId] = useState('none');
+  const [timeline, setTimeline] = useState('');
   const reviewTags = useReviewTags();
 
   useEffect(() => {
@@ -241,7 +242,12 @@ export function ListingDetailPage() {
             lng: selectedSpot.lng,
           }
         : undefined;
-      const result = createOrder(listing, note, isNegotiable ? offerAmount : undefined, meetup);
+      const result = createOrder(
+        listing,
+        [timeline ? `Needed: ${timeline}.` : '', note.trim()].filter(Boolean).join(' '),
+        isNegotiable ? offerAmount : undefined,
+        meetup
+      );
       setSubmitting(false);
       if (!result.ok) {
         toast.error(result.error);
@@ -249,6 +255,7 @@ export function ListingDetailPage() {
       }
       setCheckoutOpen(false);
       setNote('');
+      setTimeline('');
       setMeetupSpotId('none');
       toast.success(isDigital ? 'Purchase complete!' : isJob ? 'Application sent!' : 'Order placed! Your payment is held safely in escrow.');
       if (result.data) navigate(`/dashboard/orders/${result.data.id}`);
@@ -301,7 +308,7 @@ export function ListingDetailPage() {
 
   return (
     <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-32 lg:pb-8">
         <PageClose fallback="/browse" />
         {!listing.isActive && (
           <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 p-4 text-amber-800 dark:text-amber-200 text-sm">
@@ -418,6 +425,38 @@ export function ListingDetailPage() {
                 )}
               </div>
             )}
+
+            {/* Poster / seller strip (mock: "About the Poster" card / gig seller row) */}
+            <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-5">
+              {isTask && (
+                <h3 className="font-bold text-gray-900 dark:text-white mb-4 text-sm">About the Poster</h3>
+              )}
+              <div className="flex items-center justify-between gap-3">
+                <Link to={`/seller/${seller.id}`} className="flex items-center gap-3 min-w-0">
+                  <img
+                    src={seller.avatar || '/images/placeholder.jpg'}
+                    alt=""
+                    className="w-11 h-11 rounded-full object-cover border-2 border-white dark:border-violet-700 shadow-sm"
+                  />
+                  <div className="min-w-0">
+                    <p className="font-bold text-gray-900 dark:text-white truncate">{seller.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        {typeof seller.rating === 'number' ? seller.rating.toFixed(1) : 'New'}
+                      </span>
+                      {typeof seller.reviewCount === 'number' && ` (${seller.reviewCount} reviews)`}
+                    </p>
+                  </div>
+                </Link>
+                <Link
+                  to={`/seller/${seller.id}`}
+                  className="shrink-0 text-sm font-semibold text-violet-600 dark:text-amber-400 hover:underline"
+                >
+                  View Profile
+                </Link>
+              </div>
+            </div>
 
             <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-6">
               <Tabs defaultValue="description">
@@ -804,7 +843,47 @@ export function ListingDetailPage() {
         )}
       </div>
 
-      {/* Checkout dialog */}
+        {/* Sticky mobile action bar (mock: fixed bottom CTA) */}
+        <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-violet-900 border-t border-gray-200 dark:border-violet-700 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="flex items-center gap-3 max-w-md mx-auto">
+            {isOwner ? (
+              <Link to={`/dashboard/listings/${listing.id}/edit`} className="flex-grow">
+                <Button className="w-full rounded-xl bg-violet-600 hover:bg-violet-700 text-white">
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit Listing
+                </Button>
+              </Link>
+            ) : (
+              <>
+                {isTask ? (
+                  <div className="shrink-0">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 leading-none">Total Pay</p>
+                    <p className="font-bold text-xl text-gray-900 dark:text-white mt-1">
+                      {formatPrice(listing.price)}
+                    </p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleContact}
+                    aria-label="Contact seller"
+                    className="shrink-0 p-3.5 rounded-xl border border-violet-100 bg-violet-50 text-violet-600 dark:bg-violet-800 dark:border-violet-600 dark:text-amber-400 hover:bg-violet-100 transition-colors"
+                  >
+                    <MessageSquare className="w-5 h-5" />
+                  </button>
+                )}
+                <Button
+                  onClick={handleBook}
+                  disabled={!listing.isActive}
+                  className="flex-grow rounded-xl bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/30"
+                >
+                  {ctaLabel}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Checkout dialog */}
       <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
         <DialogContent className="dark:bg-violet-900 dark:border-violet-700">
           <DialogHeader>
@@ -843,6 +922,35 @@ export function ListingDetailPage() {
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   Listed at {formatPrice(listing.price)}{priceSuffix(listing.priceType)}
+                </p>
+              </div>
+            )}
+
+            {isTask && (
+              <div>
+                <Label className="dark:text-gray-200">When do you need it done?</Label>
+                <div className="grid grid-cols-3 gap-2 mt-1">
+                  {['ASAP', 'Today', 'This week'].map((t) => {
+                    const active = timeline === t;
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => setTimeline(active ? '' : t)}
+                        className={`rounded-xl py-2.5 text-sm font-medium border transition-colors ${
+                          active
+                            ? 'border-2 border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
+                            : 'border border-gray-200 bg-white text-gray-600 hover:border-amber-400 dark:bg-violet-700 dark:border-violet-600 dark:text-gray-300 dark:hover:border-amber-400/60'
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                  Added to your message so the doer can plan around it.
                 </p>
               </div>
             )}

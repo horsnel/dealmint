@@ -556,17 +556,29 @@ export function OrderDetailPage() {
                 {order.reviewed ? (
                   <p className="text-gray-600 dark:text-gray-300 text-sm">Your review is live on the listing.</p>
                 ) : (
-                  <div className="space-y-3">
-                    <StarInput value={rating} onChange={setRating} />
+                  <div className="space-y-4">
+                    {/* Centered counterparty header, per the Rate & Review mock */}
+                    <div className="flex flex-col items-center text-center">
+                      <img
+                        src={other.avatar || '/images/placeholder.jpg'}
+                        alt=""
+                        className="w-16 h-16 rounded-full object-cover border-4 border-white dark:border-violet-700 shadow-md"
+                      />
+                      <p className="font-bold text-gray-900 dark:text-white mt-2">{other.name}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">How was your experience?</p>
+                    </div>
+                    <div className="flex justify-center">
+                      <StarInput value={rating} onChange={setRating} />
+                    </div>
                     <ReviewTags selected={reviewTags.tags} onToggle={reviewTags.toggle} />
                     <Textarea
                       value={comment}
                       onChange={(e) => setComment(e.target.value)}
                       rows={3}
-                      placeholder="How was your experience?"
+                      placeholder={`Share details of your experience with ${other.name}. This helps others know what to expect.`}
                       className="dark:bg-violet-700 dark:border-violet-600"
                     />
-                    <Button onClick={submitReview} className="bg-violet-600 hover:bg-violet-700">
+                    <Button onClick={submitReview} className="w-full bg-violet-600 hover:bg-violet-700">
                       Submit review
                     </Button>
                   </div>
