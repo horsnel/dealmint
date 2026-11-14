@@ -1,5 +1,5 @@
-import { ListingForm } from '@/components/forms/ListingForm';
+import { MockPostForm } from '@/components/forms/MockPostForm';
 
 export function SellDigitalPage() {
-  return <ListingForm type="digital" />;
+  return <MockPostForm type="digital" />;
 }

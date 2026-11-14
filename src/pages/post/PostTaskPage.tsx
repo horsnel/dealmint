@@ -1,5 +1,5 @@
-import { ListingForm } from '@/components/forms/ListingForm';
+import { MockPostForm } from '@/components/forms/MockPostForm';
 
 export function PostTaskPage() {
-  return <ListingForm type="task" />;
+  return <MockPostForm type="task" />;
 }

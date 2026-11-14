@@ -1,11 +1,18 @@
 import { useState } from 'react';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Edit, Eye, Pause, Play, Trash2, Search, Briefcase, ChevronDown } from 'lucide-react';
+import { Plus, Edit, Eye, Pause, Play, Trash2, Search, Briefcase, ChevronDown, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +34,7 @@ import { useApp } from '@/context/AppContext';
 import { EmptyState } from '@/components/common/EmptyState';
 import { StarRating } from '@/components/common/StarRating';
 import { formatPrice, priceSuffix } from '@/lib/format';
-import { typeLabel } from '@/lib/categories';
+import { typeLabel, BOOST_PRICES } from '@/lib/categories';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import type { Listing } from '@/types';
 
@@ -51,9 +58,10 @@ const typeChipClass = (type: Listing['type']) =>
 export function ListingsPage() {
   usePageTitle('My Listings');
   const navigate = useNavigate();
-  const { myListings, updateListing, deleteListing } = useApp();
+  const { myListings, updateListing, deleteListing, boostListing, user } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [toDelete, setToDelete] = useState<Listing | null>(null);
+  const [toBoost, setToBoost] = useState<Listing | null>(null);
 
   const term = searchQuery.trim().toLowerCase();
   const matches = (l: Listing) =>
@@ -145,6 +153,17 @@ export function ListingsPage() {
                     {listing.isActive ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                   </Button>
                 )}
+                {!listing.isDraft && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    aria-label="Boost listing"
+                    className="dark:border-violet-600"
+                    onClick={() => setToBoost(listing)}
+                  >
+                    <Zap className={`w-4 h-4 ${listing.isFeatured || (listing.isUrgent) ? 'text-amber-500 fill-amber-500' : ''}`} />
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -234,6 +253,51 @@ export function ListingsPage() {
           <TabsContent value="drafts">{renderList(drafts, 'No draft listings')}</TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={!!toBoost} onOpenChange={(o) => !o && setToBoost(null)}>
+        <DialogContent className="dark:bg-violet-900 dark:border-violet-700 max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="dark:text-white">Boost "{toBoost?.title}"?</DialogTitle>
+            <DialogDescription className="dark:text-gray-300">
+              Boosts are paid from your wallet{user ? ` (${formatPrice(user.walletBalance)} available)` : ''} and make
+              this listing stand out in Browse.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3">
+            {(['featured', 'urgent'] as const).map((kind) => (
+              <button
+                key={kind}
+                type="button"
+                onClick={() => {
+                  if (!toBoost) return;
+                  const res = boostListing(toBoost.id, kind);
+                  if (res.ok) {
+                    toast.success(
+                      `${kind === 'featured' ? 'Featured' : 'Urgent'} boost applied. ${formatPrice(BOOST_PRICES[kind])} deducted from your wallet`,
+                    );
+                    setToBoost(null);
+                  } else {
+                    toast.info(res.error);
+                  }
+                }}
+                className="rounded-xl border border-gray-200 dark:border-violet-600 p-3 text-left transition hover:border-violet-400 dark:hover:border-amber-400"
+              >
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white">
+                  {kind === 'featured' ? (
+                    <Badge className="bg-amber-500 text-white">Featured</Badge>
+                  ) : (
+                    <Badge className="bg-red-500 text-white">Urgent</Badge>
+                  )}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+                  {formatPrice(BOOST_PRICES[kind])}
+                  {kind === 'featured' ? ', pinned to the top of Browse' : ', red badge, buyers see it first'}
+                </p>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
         <AlertDialogContent className="dark:bg-violet-900 dark:border-violet-700">
