@@ -334,7 +334,7 @@ export function LoginPage() {
                   onClick={() => {
                     setMagicOpen(false);
                     fillDemo();
-                    toast.info('Demo account filled in — sign in while you wait for the email');
+                    toast.info('Demo account filled in. Sign in while you wait for the email');
                   }}
                   className="w-full text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
                 >

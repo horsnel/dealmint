@@ -155,7 +155,7 @@ export function BrowsePage() {
       return;
     }
     setJustSaved(true);
-    toast.success('Search saved — we will track new matches for you', {
+    toast.success('Search saved. We will track new matches for you', {
       action: { label: 'View', onClick: () => navigate('/dashboard/saved-searches') },
     });
   };
@@ -203,8 +203,8 @@ export function BrowsePage() {
           <SelectContent>
             <SelectItem value="all">All Prices</SelectItem>
             <SelectItem value="under_5k">Under ₦5,000</SelectItem>
-            <SelectItem value="5k_20k">₦5,000 - ₦20,000</SelectItem>
-            <SelectItem value="20k_50k">₦20,000 - ₦50,000</SelectItem>
+            <SelectItem value="5k_20k">₦5,000 to ₦20,000</SelectItem>
+            <SelectItem value="20k_50k">₦20,000 to ₦50,000</SelectItem>
             <SelectItem value="over_50k">Over ₦50,000</SelectItem>
           </SelectContent>
         </Select>

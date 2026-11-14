@@ -1031,7 +1031,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             next = pushNotification(next, alert.userId, {
               type: 'system',
               title: 'Price alert triggered',
-              message: `"${old.title}" is now ${formatPrice(patch.price)} — at or below your ${formatPrice(alert.targetPrice)} target.`,
+              message: `"${old.title}" is now ${formatPrice(patch.price)}, at or below your ${formatPrice(alert.targetPrice)} target.`,
               link: `/listing/${id}`,
             });
           }
@@ -1290,7 +1290,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       referrals: d.referrals.map((r) => (r.id === pending.id ? { ...r, status: 'rewarded' as const } : r)),
     };
     next = adjustBalance(next, userId, pending.reward);
-    next = addTx(next, { userId, type: 'referral_bonus', amount: pending.reward, description: 'Referral reward — your invite completed an order' });
+    next = addTx(next, { userId, type: 'referral_bonus', amount: pending.reward, description: 'Referral reward: your invite completed an order' });
     next = pushNotification(next, userId, {
       type: 'referral',
       title: 'Referral reward earned',
@@ -1308,7 +1308,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // account's email address is confirmed via the emailed link.
     if (authMode === 'cloud' && emailVerified === false) {
       setVerifyGate('place an order');
-      return { ok: false, error: 'Verify your email address to place orders — we emailed you a confirmation link.' };
+      return { ok: false, error: 'Verify your email address to place orders. We emailed you a confirmation link.' };
     }
     if (listing.seller.id === me.id) return { ok: false, error: 'You cannot order your own listing.' };
     if (!listing.isActive) return { ok: false, error: 'This listing is not available right now.' };

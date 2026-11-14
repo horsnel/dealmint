@@ -62,7 +62,7 @@ export function HowItWorksPage() {
                   'Post a request with your budget',
                   'Receive offers from qualified doers',
                   'Compare profiles and reviews',
-                  'Book with confidence - payments are protected',
+                  'Book with confidence: payments are protected',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />

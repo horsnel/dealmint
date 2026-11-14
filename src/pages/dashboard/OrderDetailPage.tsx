@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
+  Check,
   CheckCircle,
   Circle,
   Download,
@@ -162,7 +163,7 @@ export function OrderDetailPage() {
     stages = [
       {
         title: 'Payment in escrow',
-        desc: `${formatPrice(order.price)} is held safely by Dealmint — not sent to the seller yet.`,
+        desc: `${formatPrice(order.price)} is held safely by Dealmint, not sent to the seller yet.`,
         state: 'done',
         when: fmtWhen(eventAt('pending')),
       },
@@ -197,7 +198,7 @@ export function OrderDetailPage() {
           : order.status === 'disputed'
             ? 'Funds stay locked in escrow until the dispute is resolved.'
             : isBuyer
-              ? 'Confirm delivery to release the payment, or open a dispute — the money stays locked either way.'
+              ? 'Confirm delivery to release the payment, or open a dispute. The money stays locked either way.'
               : 'You get paid the moment the buyer confirms.',
         state: releasedDone ? 'done' : deliveredDone ? 'current' : 'pending',
         when: releasedDone ? fmtWhen(order.completedAt) : undefined,
@@ -288,7 +289,7 @@ export function OrderDetailPage() {
         'In production this button downloads the file uploaded by the seller.',
       ].filter(Boolean).join('\n')
     );
-    toast.success('Download started — link secured with your token');
+    toast.success('Download started. Link secured with your token');
   };
 
   // Auto-release date (7 days after funding, Postall-style)
@@ -312,21 +313,37 @@ export function OrderDetailPage() {
           )}
         </div>
 
-        {/* Completion banner — the mock's green receipt header */}
+        {/* Completion receipt — the mock's centered green check + amount rows */}
         {order.status === 'completed' && (
-          <div className="mb-6 rounded-2xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-5 flex items-center gap-4">
-            <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center shadow-lg shadow-green-500/40 shrink-0">
-              <CheckCircle className="w-7 h-7 text-white" strokeWidth={2.5} />
+          <div className="mb-6 rounded-2xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-6 text-center">
+            <div className="mx-auto w-14 h-14 bg-green-500 rounded-full flex items-center justify-center shadow-lg shadow-green-500/40 ring-8 ring-green-500/15">
+              <Check className="w-8 h-8 text-white" strokeWidth={3} />
             </div>
-            <div className="min-w-0">
-              <p className="font-bold text-lg text-green-800 dark:text-green-200">
-                {isSeller ? 'Order completed — you got paid!' : 'Payment released'}
-              </p>
-              <p className="text-sm text-green-700 dark:text-green-300">
-                {isSeller
-                  ? `${formatPrice(net)} was added to your wallet (${feeRate}% platform fee deducted).`
-                  : `${formatPrice(order.price)} was released to ${order.sellerName}. Thanks for confirming!`}
-              </p>
+            <p className="font-bold text-lg text-green-800 dark:text-green-200 mt-3">
+              {isSeller ? 'Payment released!' : 'Order completed'}
+            </p>
+            <p className="text-sm text-green-700 dark:text-green-300 mt-0.5">
+              {isSeller
+                ? `${formatPrice(net)} was added to your wallet.`
+                : `${formatPrice(order.price)} was released to ${order.sellerName}. Thanks for confirming!`}
+            </p>
+            <div className="mt-4 max-w-xs mx-auto divide-y divide-green-200 dark:divide-green-800 text-sm text-left">
+              <div className="flex justify-between py-2 text-green-800 dark:text-green-200">
+                <span>{isSeller ? 'Task amount' : 'Amount paid'}</span>
+                <span className="font-semibold">{formatPrice(order.price)}</span>
+              </div>
+              {isSeller && (
+                <>
+                  <div className="flex justify-between py-2 text-green-800 dark:text-green-200">
+                    <span>Service fee ({feeRate}%)</span>
+                    <span className="font-semibold">{formatPrice(order.fee)}</span>
+                  </div>
+                  <div className="flex justify-between py-2 font-bold text-green-900 dark:text-green-100">
+                    <span>Total earned</span>
+                    <span className="text-green-600 dark:text-green-300">{formatPrice(net)}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -340,8 +357,8 @@ export function OrderDetailPage() {
               <p className="text-xs text-green-700 dark:text-green-300 mt-0.5">
                 {formatPrice(order.price)} is safely held by Dealmint
                 {isBuyer
-                  ? ` — it will only be released to ${order.sellerName} when you confirm the work.`
-                  : ' — it will be released to you upon approval.'}
+                  ? `. It will only be released to ${order.sellerName} when you confirm the work.`
+                  : ', and it will be released to you upon approval.'}
               </p>
             </div>
           </div>
@@ -459,7 +476,7 @@ export function OrderDetailPage() {
               {order.status === 'disputed' && (
                 <div className="mt-4 flex items-start gap-2 text-sm text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3">
                   <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0" />
-                  Dispute under review — {formatPrice(order.price)} stays locked in escrow until this is resolved.
+                  Dispute under review. {formatPrice(order.price)} stays locked in escrow until this is resolved.
                 </div>
               )}
               {escrowHeld && (

@@ -19,7 +19,7 @@ export interface PreviewSlide {
 /** Generated inside-look slides for the seed storefront. */
 const SLIDES: Record<string, PreviewSlide[]> = {
   'Notion Budget & Planner Template': [
-    { src: '/images/digital_preview_notion_1.jpg', caption: 'Budget dashboard — every naira at a glance' },
+    { src: '/images/digital_preview_notion_1.jpg', caption: 'Budget dashboard: every naira at a glance' },
     { src: '/images/digital_preview_notion_2.jpg', caption: 'Categorized expense log with tags' },
     { src: '/images/digital_preview_notion_3.jpg', caption: 'Weekly planner with to-do blocks' },
   ],

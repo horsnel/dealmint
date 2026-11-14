@@ -17,7 +17,7 @@ const docTypes = [
 
 const benefits = [
   'The blue ID Checked badge on your profile and listings',
-  'Higher trust from buyers — verified sellers get more orders',
+  'Higher trust from buyers: verified sellers get more orders',
   'Required before requesting payouts above \u20A6500,000',
 ];
 
@@ -57,7 +57,7 @@ export function VerifyIdPage() {
     submitIdVerification(docType);
     setTimeout(() => {
       setSubmitting(false);
-      toast.success('ID submitted for review — this usually takes a moment');
+      toast.success('ID submitted for review. This usually takes a moment.');
     }, 400);
   };
 
@@ -70,7 +70,7 @@ export function VerifyIdPage() {
         </h1>
         <p className="text-gray-600 dark:text-gray-300 mb-8">
           Confirm your identity with a Nigerian government-issued document. Your details stay
-          private — other users only ever see the badge.
+          private. Other users only ever see the badge.
         </p>
 
         {/* Status */}

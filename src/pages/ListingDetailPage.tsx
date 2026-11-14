@@ -7,7 +7,6 @@ import {
   Heart,
   Share2,
   MessageSquare,
-  CheckCircle,
   Shield,
   Calendar,
   Flag,
@@ -308,7 +307,7 @@ export function ListingDetailPage() {
 
   return (
     <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-32 lg:pb-8">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-8 pb-32">
         <PageClose fallback="/browse" />
         {!listing.isActive && (
           <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 p-4 text-amber-800 dark:text-amber-200 text-sm">
@@ -318,9 +317,7 @@ export function ListingDetailPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Images & Details */}
-          <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6">
             {isTask ? (
               <>
                 {/* Task header — badges, title, posted-ago (no cover image) */}
@@ -455,6 +452,31 @@ export function ListingDetailPage() {
                 >
                   View Profile
                 </Link>
+              </div>
+              <div className="mt-3 pt-3 border-t border-gray-100 dark:border-violet-700 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-gray-500 dark:text-gray-400">
+                <UserBadgeRow
+                  showLabel
+                  isVerified={seller.isVerified}
+                  idVerified={seller.idVerified}
+                  rating={seller.rating}
+                  reviewCount={seller.reviewCount}
+                  responsivenessLabel={responsiveness?.label}
+                />
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5" /> {listing.completedOrders} orders completed
+                </span>
+                {listing.deliveryTime && (
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5" /> Delivery: {listing.deliveryTime}
+                  </span>
+                )}
+                {responsiveness && (
+                  <span>
+                    Usually {responsiveness.label.toLowerCase()}
+                    {responsiveness.lastActive && ` · Active ${timeAgo(responsiveness.lastActive)}`}
+                  </span>
+                )}
+                {isOwner && <span>{listing.views || 0} views · This is your listing</span>}
               </div>
             </div>
 
@@ -635,113 +657,35 @@ export function ListingDetailPage() {
                 </TabsContent>
               </Tabs>
             </div>
-          </div>
 
-          {/* Right Column - Booking Card */}
-          <div className="lg:col-span-1">
-            <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-6 sticky top-24">
-              <h1 className="font-display font-bold text-xl text-gray-900 dark:text-white mb-4">
-                {listing.title}
-              </h1>
+          {/* Save / share / report + price alert (relocated from the old booking card) */}
+          <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-5 space-y-4">
+            <div className="grid grid-cols-[1fr_1fr_auto] gap-2.5">
+              <button
+                onClick={handleLike}
+                className="flex items-center justify-center gap-1.5 h-10 rounded-full border border-gray-200 dark:border-violet-600 text-sm text-gray-600 dark:text-gray-300 hover:text-violet-700 hover:border-violet-300 hover:bg-violet-50 dark:hover:text-amber-400 dark:hover:border-violet-500 dark:hover:bg-violet-700/40 transition-colors"
+              >
+                <Heart className={`w-4 h-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+                <span>{isLiked ? 'Saved' : 'Save'}</span>
+              </button>
+              <button
+                onClick={() => setShareOpen(true)}
+                className="flex items-center justify-center gap-1.5 h-10 rounded-full border border-gray-200 dark:border-violet-600 text-sm text-gray-600 dark:text-gray-300 hover:text-violet-700 hover:border-violet-300 hover:bg-violet-50 dark:hover:text-amber-400 dark:hover:border-violet-500 dark:hover:bg-violet-700/40 transition-colors"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Share</span>
+              </button>
+              <WhatsAppButton title={listing.title} price={formatPrice(listing.price)} />
+            </div>
 
-              <div className="mb-6">
-                <span className="text-3xl font-bold text-violet-600 dark:text-amber-400">
-                  {formatPrice(listing.price)}
-                </span>
-                <span className="text-gray-500 dark:text-gray-400">
-                  {listing.priceType === 'hourly' ? '/hour' : listing.priceType === 'negotiable' ? ' (negotiable)' : '/fixed'}
-                </span>
-              </div>
-
-              <div className="space-y-3 mb-6">
-                <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
-                  <Clock className="w-5 h-5" />
-                  <span>{listing.completedOrders} orders completed</span>
-                </div>
-                {(listing.location || listing.isRemote) && (
-                  <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
-                    <MapPin className="w-5 h-5" />
-                    <span>{listing.location || 'Remote'}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
-                  <Calendar className="w-5 h-5" />
-                  <span>
-                    {listing.deliveryTime ? `Delivery: ${listing.deliveryTime}` : listing.deadline ? `Needed by ${listing.deadline}` : responsiveness ? `Usually ${responsiveness.label.toLowerCase()}` : 'Flexible schedule'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {isOwner ? (
-                  <>
-                    <Link to={`/dashboard/listings/${listing.id}/edit`} className="block">
-                      <Button className="w-full rounded-full bg-violet-600 hover:bg-violet-700 text-white">
-                        <Pencil className="w-4 h-4 mr-2" />
-                        Edit Listing
-                      </Button>
-                    </Link>
-                    <p className="text-sm text-center text-gray-500 dark:text-gray-400">
-                      {listing.views || 0} views · This is your listing
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      onClick={handleBook}
-                      disabled={!listing.isActive}
-                      className="w-full rounded-full bg-amber-500 hover:bg-amber-600 text-white"
-                    >
-                      {ctaLabel}
-                    </Button>
-                    <Button
-                      onClick={handleContact}
-                      variant="outline"
-                      className="w-full rounded-full dark:border-violet-600 dark:text-white"
-                    >
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      Contact Seller
-                    </Button>
-                  </>
-                )}
-              </div>
-
-              <div className="mt-7 pt-6 border-t dark:border-violet-700 space-y-3">
+            {!isOwner && (
+              <>
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                   <Shield className="w-4 h-4 shrink-0 text-green-500" />
-                  <span>Protected payments</span>
+                  <span>Protected payments, held safely in escrow</span>
                 </div>
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-gray-600 dark:text-gray-300">
-                  <UserBadgeRow
-                    showLabel
-                    isVerified={seller.isVerified}
-                    idVerified={seller.idVerified}
-                    rating={seller.rating}
-                    reviewCount={seller.reviewCount}
-                    responsivenessLabel={responsiveness?.label}
-                  />
-                  {!seller.isVerified && !seller.idVerified && (
-                    <span className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>Verified seller</span>
-                    </span>
-                  )}
-                </div>
-                {responsiveness && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                    <Clock className="w-4 h-4 text-violet-500 dark:text-amber-400" />
-                    <span>
-                      Usually {responsiveness.label.toLowerCase()}
-                      {responsiveness.lastActive && (
-                        <span className="text-gray-400 dark:text-gray-500"> · Active {timeAgo(responsiveness.lastActive)}</span>
-                      )}
-                    </span>
-                  </div>
-                )}
-              </div>
 
-              {!isOwner && (
-                <div className="mt-7 pt-6 border-t dark:border-violet-700">
+                <div>
                   <p className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
                     <Bell className="w-4 h-4 text-violet-600 dark:text-amber-400" />
                     Price alert
@@ -791,40 +735,18 @@ export function ListingDetailPage() {
                     Get notified the moment the seller drops the price to your target.
                   </p>
                 </div>
-              )}
 
-              {/* Save / Share / WhatsApp: two roomy pills + brand icon, report kept quiet below */}
-              <div className="mt-7 pt-6 border-t dark:border-violet-700">
-                <div className="grid grid-cols-[1fr_1fr_auto] gap-2.5">
+                <div className="flex justify-center pt-1">
                   <button
-                    onClick={handleLike}
-                    className="flex items-center justify-center gap-1.5 h-10 rounded-full border border-gray-200 dark:border-violet-600 text-sm text-gray-600 dark:text-gray-300 hover:text-violet-700 hover:border-violet-300 hover:bg-violet-50 dark:hover:text-amber-400 dark:hover:border-violet-500 dark:hover:bg-violet-700/40 transition-colors"
+                    onClick={() => (user ? setReportOpen(true) : requireLogin())}
+                    className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                   >
-                    <Heart className={`w-4 h-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
-                    <span>{isLiked ? 'Saved' : 'Save'}</span>
+                    <Flag className="w-3.5 h-3.5" />
+                    Report this listing
                   </button>
-                  <button
-                    onClick={() => setShareOpen(true)}
-                    className="flex items-center justify-center gap-1.5 h-10 rounded-full border border-gray-200 dark:border-violet-600 text-sm text-gray-600 dark:text-gray-300 hover:text-violet-700 hover:border-violet-300 hover:bg-violet-50 dark:hover:text-amber-400 dark:hover:border-violet-500 dark:hover:bg-violet-700/40 transition-colors"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    <span>Share</span>
-                  </button>
-                  <WhatsAppButton title={listing.title} price={formatPrice(listing.price)} />
                 </div>
-                {!isOwner && (
-                  <div className="mt-4 flex justify-center">
-                    <button
-                      onClick={() => (user ? setReportOpen(true) : requireLogin())}
-                      className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                    >
-                      <Flag className="w-3.5 h-3.5" />
-                      Report this listing
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -834,7 +756,7 @@ export function ListingDetailPage() {
             <h2 className="font-display font-bold text-2xl text-gray-900 dark:text-white mb-6">
               You might also like
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {related.map((l) => (
                 <ListingCard key={l.id} listing={l} />
               ))}
@@ -843,9 +765,9 @@ export function ListingDetailPage() {
         )}
       </div>
 
-        {/* Sticky mobile action bar (mock: fixed bottom CTA) */}
-        <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-violet-900 border-t border-gray-200 dark:border-violet-700 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <div className="flex items-center gap-3 max-w-md mx-auto">
+        {/* Sticky action bar (mock: fixed bottom CTA, all widths) */}
+        <div className="fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-violet-900 border-t border-gray-200 dark:border-violet-700 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="flex items-center gap-3 max-w-2xl mx-auto">
             {isOwner ? (
               <Link to={`/dashboard/listings/${listing.id}/edit`} className="flex-grow">
                 <Button className="w-full rounded-xl bg-violet-600 hover:bg-violet-700 text-white">
@@ -973,7 +895,7 @@ export function ListingDetailPage() {
               <div>
                 <Label className="dark:text-gray-200">Meetup point (optional)</Label>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">
-                  Suggest a community Safe Spot to meet in person — busy, public and well-lit.
+                  Suggest a community Safe Spot to meet in person: busy, public and well-lit.
                 </p>
                 <Select value={meetupSpotId} onValueChange={setMeetupSpotId}>
                   <SelectTrigger className="dark:bg-violet-700 dark:border-violet-600">
@@ -983,14 +905,14 @@ export function ListingDetailPage() {
                     <SelectItem value="none">No in-person meetup needed</SelectItem>
                     {citySpots.map((s) => (
                       <SelectItem key={s.id} value={s.id}>
-                        {s.name} — {s.address}
+                        {s.name}, {s.address}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 {citySpots.length === 0 && (
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
-                    No Safe Spots pinned here yet —{' '}
+                    No Safe Spots pinned here yet. 
                     <Link to="/safe-spots" className="text-violet-600 dark:text-amber-400 underline underline-offset-2">
                       suggest one
                     </Link>
@@ -1003,7 +925,7 @@ export function ListingDetailPage() {
             <div className="rounded-xl border dark:border-violet-700 p-4 space-y-2 text-sm">
               <div className="flex justify-between text-gray-600 dark:text-gray-300">
                 <span>Amount</span>
-                <span className="font-medium text-gray-900 dark:text-white">{offerValid ? formatPrice(offerAmount) : '—'}</span>
+                <span className="font-medium text-gray-900 dark:text-white">{formatPrice(offerValid ? offerAmount : listing.price)}</span>
               </div>
               <div className="flex justify-between text-gray-600 dark:text-gray-300">
                 <span className="flex items-center gap-2">

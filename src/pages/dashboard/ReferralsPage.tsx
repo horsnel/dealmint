@@ -25,7 +25,7 @@ export function ReferralsPage() {
     earned: referrals.filter((r) => r.status === 'rewarded').reduce((s, r) => s + r.reward, 0),
   };
 
-  const shareText = `Join me on Dealmint — Nigeria's marketplace for gigs, tasks and services. Use my code ${myReferralCode} when you sign up: ${window.location.origin}/register`;
+  const shareText = `Join me on Dealmint, Nigeria's marketplace for gigs, tasks and services. Use my code ${myReferralCode} when you sign up: ${window.location.origin}/register`;
 
   const copyCode = async () => {
     try {
@@ -45,7 +45,7 @@ export function ReferralsPage() {
     if (!res.ok) return setInviteError(res.error);
     setInviteError('');
     setEmail('');
-    toast.success(`Invite recorded — ${email} gets your code when they sign up`);
+    toast.success(`Invite recorded. ${email} gets your code when they sign up`);
   };
 
   const statusChip = (status: 'invited' | 'joined' | 'rewarded') => {
@@ -123,7 +123,7 @@ export function ReferralsPage() {
           <ol className="space-y-3">
             {[
               'Share your code with friends on WhatsApp, X or in person.',
-              `They enter the code when signing up — you get a notification instantly.`,
+              `They enter the code when signing up, and you get a notification instantly.`,
               `When they complete their first order, ${formatPrice(REFERRAL_REWARD)} lands in your wallet automatically.`,
             ].map((step, i) => (
               <li key={i} className="flex items-start gap-3">

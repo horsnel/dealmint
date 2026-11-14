@@ -85,7 +85,7 @@ export function VerifyGateModal() {
           </Button>
         </div>
         <p className="text-[11px] text-center text-gray-400 dark:text-gray-500">
-          Click the link in the email — ordering unlocks instantly.
+          Click the link in the email. Ordering unlocks instantly.
         </p>
       </DialogContent>
     </Dialog>

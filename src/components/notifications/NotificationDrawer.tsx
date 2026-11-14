@@ -78,7 +78,7 @@ export function NotificationDrawer({ open, onOpenChange }: NotificationDrawerPro
         key={n.id}
         type="button"
         onClick={() => openNotification(n)}
-        aria-label={`${n.title}${n.isRead ? '' : ' — unread'}`}
+        aria-label={`${n.title}${n.isRead ? '' : ' (unread)'}`}
         className={`w-full text-left flex items-start gap-3 px-5 py-3.5 transition-colors hover:bg-gray-50 dark:hover:bg-violet-700/40 focus-visible:outline-none focus-visible:bg-violet-50 dark:focus-visible:bg-violet-700/40 ${
           n.isRead ? '' : 'bg-violet-50/70 dark:bg-violet-500/10'
         }`}
@@ -143,7 +143,7 @@ export function NotificationDrawer({ open, onOpenChange }: NotificationDrawerPro
             )}
           </div>
           <SheetDescription className="sr-only">
-            Your Dealmint notifications — orders, messages, payments and safety updates
+            Your Dealmint notifications: orders, messages, payments and safety updates
           </SheetDescription>
           {notifications.length > 0 && (
             <div className="flex items-center gap-1 mt-1.5">

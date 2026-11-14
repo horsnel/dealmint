@@ -530,7 +530,7 @@ export function MessagesPage() {
                 <div className="mx-4 mb-2 flex items-start gap-2 text-xs text-violet-800 dark:text-amber-200 bg-violet-50 dark:bg-violet-900/50 border border-violet-200 dark:border-violet-700 rounded-lg p-2.5 shrink-0">
                   <Info className="w-4 h-4 shrink-0 mt-0.5" />
                   <span>
-                    <span className="font-semibold">Message request.</span> {selected.otherName} is not in your contacts yet. Reply to accept — the conversation then moves to Messages. You can also block them from the menu above.
+                    <span className="font-semibold">Message request.</span> {selected.otherName} is not in your contacts yet. Reply to accept, and the conversation moves to Messages. You can also block them from the menu above.
                   </span>
                 </div>
               )}
@@ -540,7 +540,7 @@ export function MessagesPage() {
                 <div className="mx-4 mb-2 flex items-start gap-2 text-xs text-gray-700 dark:text-gray-200 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-2.5 shrink-0">
                   <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
                   <span className="min-w-0">
-                    <span className="font-semibold">Faster replies with escrow.</span> {selected.otherName} sees this as a request. Place an order and the chat unlocks instantly — your {formatPrice(convListing.price)} sits safely in escrow until the work is done.
+                    <span className="font-semibold">Faster replies with escrow.</span> {selected.otherName} sees this as a request. Place an order and the chat unlocks instantly. Your {formatPrice(convListing.price)} sits safely in escrow until the work is done.
                   </span>
                 </div>
               )}
@@ -555,7 +555,7 @@ export function MessagesPage() {
                   price={convListing.price}
                   onWaive={() => {
                     toggleChatUnlock(selected.id);
-                    toast.success(`Chat unlocked — you can now reply to ${selected.otherName}`);
+                    toast.success(`Chat unlocked. You can now reply to ${selected.otherName}`);
                   }}
                 />
               ) : (

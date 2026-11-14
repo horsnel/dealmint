@@ -80,7 +80,7 @@ export function PostGigSection() {
             </h2>
             
             <p className="animate-item text-white/90 text-base sm:text-lg max-w-md mx-auto lg:mx-0 mb-8">
-              Set your price, define your schedule, and get paid safely. No monthly fees—just a simple commission.
+              Set your price, define your schedule, and get paid safely. No monthly fees, just a simple commission.
             </p>
 
             <div className="animate-item flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start mb-6">

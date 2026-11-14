@@ -123,7 +123,7 @@ export function ForgotPasswordPage() {
           ) : step === 'sent' ? (
             <div className="space-y-6">
               <div className="rounded-xl bg-violet-50 dark:bg-violet-700/50 p-4 text-sm text-violet-800 dark:text-violet-100">
-                Open the email and tap <span className="font-semibold">Reset Password</span> — it brings you
+                Open the email and tap <span className="font-semibold">Reset Password</span>. It brings you
                 straight back here to set a new one. The link expires shortly, so use it while it is fresh.
               </div>
               <Button

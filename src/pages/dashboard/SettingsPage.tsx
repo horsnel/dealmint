@@ -128,7 +128,7 @@ export function SettingsPage() {
               My modes
             </CardTitle>
             <CardDescription className="dark:text-gray-300">
-              What you do on Dealmint — tunes your dashboard. You can always buy, sell and hire
+              What you do on Dealmint tunes your dashboard. You can always buy, sell and hire
               either way.
             </CardDescription>
           </CardHeader>

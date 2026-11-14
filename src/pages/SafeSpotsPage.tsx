@@ -198,7 +198,7 @@ export function SafeSpotsPage() {
             Safe Spots
           </h1>
           <p className="text-gray-600 dark:text-gray-300 max-w-2xl">
-            Community-vetted places to meet buyers and sellers — busy, public and well-lit. Meet
+            Community-vetted places to meet buyers and sellers: busy, public and well-lit. Meet
             somewhere safe and swap with confidence.
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
@@ -261,7 +261,7 @@ export function SafeSpotsPage() {
           </div>
           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
             <MapPin className="w-3.5 h-3.5 shrink-0" />
-            Tap a pin for directions — or pick a spot below to see it on the map.
+            Tap a pin for directions, or pick a spot below to see it on the map.
           </p>
         </div>
 
@@ -395,7 +395,7 @@ export function SafeSpotsPage() {
           <DialogHeader>
             <DialogTitle className="dark:text-white">Suggest a safe spot</DialogTitle>
             <DialogDescription className="dark:text-gray-300">
-              Public, busy places only — police stations, malls, banks, restaurants and libraries.
+              Public, busy places only: police stations, malls, banks, restaurants and libraries.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -481,7 +481,7 @@ export function SafeSpotsPage() {
               {picked && (
                 <p className="mt-2 text-xs font-medium text-green-700 dark:text-green-300 flex items-center gap-1">
                   <Check className="w-3.5 h-3.5 shrink-0" />
-                  Pin dropped — {picked.lat.toFixed(4)}, {picked.lng.toFixed(4)}
+                  Pin dropped at {picked.lat.toFixed(4)}, {picked.lng.toFixed(4)}
                 </p>
               )}
             </div>

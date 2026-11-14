@@ -173,7 +173,7 @@ export function HeroSection() {
           ref={subheadlineRef}
           className="text-center text-white/90 text-base sm:text-lg md:text-xl max-w-xl mb-8 px-4"
         >
-          Dealmint connects doers and requesters—fast, safe, and local.
+          Dealmint connects doers and requesters. Fast, safe, and local.
         </p>
 
         {/* CTA Buttons */}

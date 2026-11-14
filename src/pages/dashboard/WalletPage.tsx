@@ -509,7 +509,7 @@ export function WalletPage() {
               <CardContent>
                 {escrowLedger.length === 0 ? (
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Every order's escrow trail will show up here — funded, released or refunded.
+                    Every order's escrow trail will show up here: funded, released or refunded.
                   </p>
                 ) : (
                   <div className="space-y-3">

@@ -49,7 +49,7 @@ export function RoleSelectionPage() {
             What brings you to Dealmint?
           </h1>
           <p className="text-gray-600 dark:text-gray-300 text-lg max-w-xl mx-auto">
-            Select all that apply — it personalizes your dashboard. You can change this anytime in
+            Select all that apply. It personalizes your dashboard. You can change this anytime in
             Settings, and you can always buy, sell and hire either way.
           </p>
         </div>

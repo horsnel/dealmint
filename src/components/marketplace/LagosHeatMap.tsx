@@ -141,7 +141,7 @@ export function LagosHeatMap({
       L.marker([s.lat!, s.lng!], {
         icon: glowDot(),
         title: s.name,
-        alt: `${s.name} — Safe Spot`,
+        alt: `${s.name}, Safe Spot`,
         keyboard: false,
       })
         .bindPopup(`<span class="hm-popup">${s.name}</span>`, {

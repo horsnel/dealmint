@@ -96,7 +96,7 @@ export function BrowseSection() {
             </h2>
             
             <p className="animate-item text-white/90 text-base sm:text-lg max-w-md mx-auto lg:mx-0 mb-8">
-              Filter by location, skill, and price. Book in minutes—chat, pay, and confirm in one place.
+              Filter by location, skill, and price. Book in minutes. Chat, pay, and confirm in one place.
             </p>
 
             <div className="animate-item flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start mb-6">

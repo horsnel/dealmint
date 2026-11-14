@@ -30,7 +30,7 @@ export function SafetyCenterPage() {
               New: Safe Spots map
             </h2>
             <p className="text-gray-600 dark:text-gray-300 text-sm max-w-xl">
-              Community-vetted meeting points — police stations, malls, banks and cafes across Nigeria.
+              Community-vetted meeting points: police stations, malls, banks and cafes across Nigeria.
             </p>
           </div>
           <Link to="/safe-spots" className="shrink-0">

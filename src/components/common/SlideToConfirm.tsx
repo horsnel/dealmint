@@ -88,7 +88,7 @@ export function SlideToConfirm({
       role="button"
       tabIndex={disabled ? -1 : 0}
       aria-disabled={disabled}
-      aria-label={`${label} — slide or press Enter to confirm`}
+      aria-label={`${label}. Slide or press Enter to confirm`}
       onKeyDown={(e) => {
         if ((e.key === 'Enter' || e.key === ' ') && !disabled) {
           e.preventDefault();

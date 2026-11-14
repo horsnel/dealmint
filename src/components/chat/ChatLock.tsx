@@ -46,9 +46,9 @@ export function ChatLock({
           </>
         ) : (
           <>
-            <h4 className="mt-3 font-semibold text-gray-900 dark:text-white text-sm">Chat locked — escrow first</h4>
+            <h4 className="mt-3 font-semibold text-gray-900 dark:text-white text-sm">Chat locked: escrow first</h4>
             <p className="mt-1 text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-              {otherName} can unlock this chat by placing an order — their payment sits safely in escrow. You can also waive this and reply directly.
+              {otherName} can unlock this chat by placing an order. Their payment sits safely in escrow. You can also waive this and reply directly.
             </p>
           </>
         )}

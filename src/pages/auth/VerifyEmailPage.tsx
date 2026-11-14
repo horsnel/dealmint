@@ -130,7 +130,7 @@ export function VerifyEmailPage() {
             <p className="mt-2 text-gray-600 dark:text-gray-300">
               We emailed a verification link to{' '}
               <span className="font-medium text-gray-900 dark:text-white">{user?.email || 'your address'}</span>. It
-              expires in 7 days — click it to finish verification.
+              expires in 7 days. Click it to finish verification.
             </p>
           )}
 
@@ -164,7 +164,7 @@ export function VerifyEmailPage() {
                 emailVerified === true ? (
                   <>
                     <p className="mt-2 text-gray-600 dark:text-gray-300">
-                      Good news — your email is already verified.
+                      Good news: your email is already verified.
                     </p>
                     <Button
                       type="button"
@@ -193,7 +193,7 @@ export function VerifyEmailPage() {
               ) : (
                 <>
                   <p className="mt-2 text-gray-600 dark:text-gray-300">
-                    Sign in first — then we can email you a verification link for your account.
+                    Sign in first, then we can email you a verification link for your account.
                   </p>
                   <Button
                     type="button"

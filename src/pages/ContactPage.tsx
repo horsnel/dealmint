@@ -113,9 +113,9 @@ export function ContactPage() {
                 </h3>
               </div>
               <div className="space-y-2 text-gray-600 dark:text-gray-300">
-                <p>Monday - Friday: 8am - 8pm</p>
-                <p>Saturday: 9am - 5pm</p>
-                <p>Sunday: 10am - 4pm</p>
+                <p>Monday to Friday: 8am to 8pm</p>
+                <p>Saturday: 9am to 5pm</p>
+                <p>Sunday: 10am to 4pm</p>
                 <p className="text-sm text-violet-600 dark:text-amber-400 mt-4">
                   24/7 emergency support available
                 </p>

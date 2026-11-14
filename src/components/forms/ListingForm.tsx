@@ -269,7 +269,7 @@ export function ListingForm({ type, listing, inDashboard }: Props) {
         if (boost !== 'none') {
           const boosted = boostListing(created.id, boost);
           if (boosted.ok) {
-            toast.success(`${boost === 'featured' ? 'Featured' : 'Urgent'} boost applied — ${formatPrice(BOOST_PRICES[boost])} deducted from your wallet`);
+            toast.success(`${boost === 'featured' ? 'Featured' : 'Urgent'} boost applied. ${formatPrice(BOOST_PRICES[boost])} deducted from your wallet`);
           } else {
             toast.info(boosted.error);
           }
@@ -670,7 +670,7 @@ export function ListingForm({ type, listing, inDashboard }: Props) {
                           : 'border-gray-200 dark:border-violet-600 hover:border-violet-300'
                       }`}>
                       <p className="text-sm font-medium text-gray-900 dark:text-white">None</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Free — standard reach</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Free: standard reach</p>
                     </button>
                     <button
                       type="button"
@@ -685,7 +685,7 @@ export function ListingForm({ type, listing, inDashboard }: Props) {
                         <Star className="w-4 h-4 text-amber-500" />
                         Featured
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{formatPrice(BOOST_PRICES.featured)} — pinned to the top of Browse</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{formatPrice(BOOST_PRICES.featured)}: pinned to the top of Browse</p>
                     </button>
                     <button
                       type="button"
@@ -700,7 +700,7 @@ export function ListingForm({ type, listing, inDashboard }: Props) {
                         <Zap className="w-4 h-4 text-red-500" />
                         Urgent
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{formatPrice(BOOST_PRICES.urgent)} — red Urgent badge, buyers see it first</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{formatPrice(BOOST_PRICES.urgent)}: red Urgent badge, buyers see it first</p>
                     </button>
                   </div>
                   {boost !== 'none' && user && user.walletBalance < BOOST_PRICES[boost] && (

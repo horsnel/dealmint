@@ -157,7 +157,7 @@ export function SavedSearchesPage() {
               <EmptyState
                 icon={Tag}
                 title="No price alerts yet"
-                description="Open any listing and set a target price — we will ping you the moment the seller drops to it."
+                description="Open any listing and set a target price. We will ping you the moment the seller drops to it."
                 action={
                   <Link to="/browse">
                     <Button className="bg-violet-600 hover:bg-violet-700">Find something to watch</Button>

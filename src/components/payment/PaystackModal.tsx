@@ -163,7 +163,7 @@ export function PaystackModal({ open, onClose, onSuccess, amount, email, descrip
                 )}
               </Button>
               <p className="mt-3 text-[11px] text-center text-gray-400 dark:text-gray-500">
-                Demo checkout — no real charge. Test card is pre-filled.
+                Demo checkout: no real charge. Test card is pre-filled.
               </p>
             </>
           )}

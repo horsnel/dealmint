@@ -39,9 +39,9 @@ export function TrustPassport({
   const iconSize = size === 'sm' ? 'w-3 h-3' : 'w-4 h-4';
 
   const parts = [
-    `Email ${emailVerified ? '✓' : '—'}`,
-    `Phone ${phoneVerified ? '✓' : '—'}`,
-    `ID ${idVerified ? 'checked ✓' : '—'}`,
+    `Email ${emailVerified ? '✓' : 'pending'}`,
+    `Phone ${phoneVerified ? '✓' : 'pending'}`,
+    `ID ${idVerified ? 'checked ✓' : 'pending'}`,
   ].join(' · ');
 
   return (
