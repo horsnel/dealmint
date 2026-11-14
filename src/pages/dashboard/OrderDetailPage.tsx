@@ -1,18 +1,23 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Check,
   CheckCircle,
+  CheckCircle2,
   Circle,
+  Camera,
   Download,
   Lock,
   MapPin,
   MessageSquare,
   Search,
+  Send,
   ShieldAlert,
   ShieldCheck,
   Sparkles,
+  Star,
+  Upload,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageClose } from '@/components/common/PageClose';
@@ -44,6 +49,7 @@ import { OrderStatusBadge, orderStatusLabel } from '@/components/common/OrderSta
 import { StarInput } from '@/components/common/Stars';
 import { ReviewTags, useReviewTags } from '@/components/common/ReviewTags';
 import { formatDate, formatPrice, formatTime } from '@/lib/format';
+import { compressImage } from '@/lib/image';
 import { typeLabel } from '@/lib/categories';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import type { Order, OrderStatus } from '@/types';
@@ -86,6 +92,8 @@ export function OrderDetailPage() {
     recordDownload,
     addReview,
     startConversation,
+    sendMessage,
+    conversations,
     getListing,
   } = useApp();
 
@@ -100,6 +108,10 @@ export function OrderDetailPage() {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const reviewTags = useReviewTags();
+  // Quick chat (workspace mock a1a748) + task proof-of-delivery photo (mock 350073 screen 2)
+  const [quickMsg, setQuickMsg] = useState('');
+  const [proof, setProof] = useState<string | null>(null);
+  const proofInput = useRef<HTMLInputElement>(null);
 
   if (!order || !user) {
     return (
@@ -212,11 +224,52 @@ export function OrderDetailPage() {
     if (cid) navigate(`/dashboard/messages?c=${cid}`);
   };
 
+  // Workspace chat preview: the existing conversation about this listing
+  const convo = conversations.find(
+    (c) =>
+      c.listingId === order.listingId &&
+      ((c.userId === user.id && c.otherId === other.id) || (c.otherId === user.id && c.userId === other.id))
+  );
+
+  const quickSend = (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = quickMsg.trim();
+    if (!text) return;
+    const cid = convo?.id || startConversation(other, listing);
+    if (!cid) {
+      toast.error('Could not open the conversation');
+      return;
+    }
+    sendMessage(cid, text);
+    setQuickMsg('');
+  };
+
+  const pickProof = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    if (f.size > 8 * 1024 * 1024) {
+      toast.error('Photos must be 8 MB or smaller');
+      return;
+    }
+    try {
+      setProof(await compressImage(f));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not use that photo');
+    }
+  };
+
+  const scrollToReview = () => {
+    document.getElementById('order-review')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   const submitDelivery = () => {
     if (deliverNote.trim().length < 10) return toast.error('Add a short note (at least 10 characters) about what you are delivering');
-    deliverOrder(order.id, deliverNote.trim());
+    const fullNote = proof ? `${deliverNote.trim()} (photo proof attached)` : deliverNote.trim();
+    deliverOrder(order.id, fullNote);
     setDeliverOpen(false);
     setDeliverNote('');
+    setProof(null);
     toast.success('Delivered. The buyer has been notified.');
   };
 
@@ -313,37 +366,68 @@ export function OrderDetailPage() {
           )}
         </div>
 
-        {/* Completion receipt — the mock's centered green check + amount rows */}
+        {/* Completion receipt — mock 5ce84e screen 3: ring check, receipt card, actions */}
         {order.status === 'completed' && (
-          <div className="mb-6 rounded-2xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-6 text-center">
-            <div className="mx-auto w-14 h-14 bg-green-500 rounded-full flex items-center justify-center shadow-lg shadow-green-500/40 ring-8 ring-green-500/15">
-              <Check className="w-8 h-8 text-white" strokeWidth={3} />
-            </div>
-            <p className="font-bold text-lg text-green-800 dark:text-green-200 mt-3">
-              {isSeller ? 'Payment released!' : 'Order completed'}
-            </p>
-            <p className="text-sm text-green-700 dark:text-green-300 mt-0.5">
-              {isSeller
-                ? `${formatPrice(net)} was added to your wallet.`
-                : `${formatPrice(order.price)} was released to ${order.sellerName}. Thanks for confirming!`}
-            </p>
-            <div className="mt-4 max-w-xs mx-auto divide-y divide-green-200 dark:divide-green-800 text-sm text-left">
-              <div className="flex justify-between py-2 text-green-800 dark:text-green-200">
-                <span>{isSeller ? 'Task amount' : 'Amount paid'}</span>
-                <span className="font-semibold">{formatPrice(order.price)}</span>
+          <div className="mb-6 rounded-3xl border border-gray-100 bg-white p-6 text-center shadow-sm dark:border-violet-700 dark:bg-violet-800">
+            <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-green-100 shadow-inner dark:bg-green-500/15">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500 shadow-lg shadow-green-500/40">
+                <Check className="h-8 w-8 text-white" strokeWidth={3} />
               </div>
-              {isSeller && (
-                <>
-                  <div className="flex justify-between py-2 text-green-800 dark:text-green-200">
-                    <span>Service fee ({feeRate}%)</span>
-                    <span className="font-semibold">{formatPrice(order.fee)}</span>
+            </div>
+            <h2 className="mb-2 text-2xl font-bold text-gray-900 dark:text-white">
+              {order.listingType === 'task' ? 'Task Completed!' : 'Order Completed!'}
+            </h2>
+            <p className="mb-8 px-4 text-sm text-gray-500 dark:text-gray-400">
+              {isSeller
+                ? `${other.name} has confirmed delivery. Your earnings have been added to your wallet.`
+                : `You confirmed delivery. ${formatPrice(order.price)} was released to ${order.sellerName}.`}
+            </p>
+
+            {/* Receipt card */}
+            <div className="mx-auto mb-6 w-full max-w-sm rounded-2xl border border-gray-100 bg-white p-5 text-left shadow-sm dark:border-violet-700 dark:bg-violet-800">
+              <h3 className="mb-4 border-b border-gray-100 pb-2 text-xs font-bold uppercase tracking-wider text-gray-400 dark:border-violet-700 dark:text-gray-500">
+                Payment Receipt
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    {isSeller ? (order.listingType === 'task' ? 'Task Amount' : 'Order Amount') : 'Amount Paid'}
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-white">{formatPrice(order.price)}</span>
+                </div>
+                {isSeller && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">Service Fee ({feeRate}%)</span>
+                    <span className="font-medium text-red-500">-{formatPrice(order.fee)}</span>
                   </div>
-                  <div className="flex justify-between py-2 font-bold text-green-900 dark:text-green-100">
-                    <span>Total earned</span>
-                    <span className="text-green-600 dark:text-green-300">{formatPrice(net)}</span>
-                  </div>
-                </>
+                )}
+                <div className="mt-3 flex justify-between border-t border-gray-100 pt-3 dark:border-violet-700">
+                  <span className="text-base font-bold text-gray-900 dark:text-white">
+                    {isSeller ? 'Total Earned' : 'Total'}
+                  </span>
+                  <span className="text-base font-bold text-green-600 dark:text-green-300">
+                    {formatPrice(isSeller ? net : order.price)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Next actions (mock: Rate + Back to Dashboard) */}
+            <div className="mx-auto w-full max-w-sm space-y-3">
+              {isBuyer && (
+                <Button
+                  onClick={scrollToReview}
+                  className="w-full bg-purple-600 text-white shadow-lg shadow-purple-600/30 hover:bg-purple-700"
+                >
+                  <Star className="mr-2 h-5 w-5" />
+                  {order.reviewed ? 'View Your Review' : 'Rate Seller'}
+                </Button>
               )}
+              <Link to="/dashboard/orders" className="block">
+                <Button variant="outline" className="w-full dark:border-violet-600 dark:text-white">
+                  Back to Dashboard
+                </Button>
+              </Link>
             </div>
           </div>
         )}
@@ -392,6 +476,7 @@ export function OrderDetailPage() {
             </div>
 
             {/* Escrow & progress */}
+            {order.listingType !== 'job' && (
             <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-5">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                 <h3 className="font-semibold text-gray-900 dark:text-white">Escrow &amp; progress</h3>
@@ -485,6 +570,161 @@ export function OrderDetailPage() {
                 </p>
               )}
             </div>
+            )}
+
+            {/* Project milestones (workspace mock a1a748) — job orders use the milestone tracker */}
+            {order.listingType === 'job' && order.status !== 'cancelled' && (
+              <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-5">
+                <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                  Project Milestones
+                </h3>
+                <ol className="relative ml-1 space-y-6 border-l-2 border-gray-100 pb-2 dark:border-violet-700">
+                  {stages.map((s) => (
+                    <li key={s.title} className="relative pl-8">
+                      <span
+                        aria-hidden="true"
+                        className={`absolute -left-[17px] top-0 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white shadow ${
+                          s.state === 'done'
+                            ? s.tone === 'green'
+                              ? 'bg-green-500 text-white'
+                              : 'bg-violet-600 text-white dark:bg-amber-400 dark:text-violet-950'
+                            : s.state === 'current'
+                              ? 'bg-blue-500 text-white ring-4 ring-blue-100 dark:ring-blue-500/20'
+                              : 'bg-gray-200 text-gray-400 dark:bg-violet-700 dark:text-violet-400'
+                        }`}
+                      >
+                        {s.state === 'done' ? (
+                          <Check className="h-4 w-4" />
+                        ) : s.state === 'current' ? (
+                          order.status === 'in_progress' && isSeller ? (
+                            <Upload className="h-4 w-4" />
+                          ) : (
+                            <span className="h-2 w-2 rounded-full bg-current" />
+                          )
+                        ) : (
+                          <span className="h-2 w-2 rounded-full bg-current" />
+                        )}
+                      </span>
+                      <div className="flex items-center justify-between gap-2">
+                        <p
+                          className={`text-sm font-bold ${
+                            s.state === 'pending'
+                              ? 'text-gray-400 dark:text-violet-500'
+                              : s.state === 'current' && order.status === 'in_progress'
+                                ? 'text-blue-600 dark:text-blue-300'
+                                : 'text-gray-900 dark:text-white'
+                          }`}
+                        >
+                          {s.title}
+                        </p>
+                        {(s.title === 'Payment in escrow' || s.title === 'Payment released') && (
+                          <span
+                            className={`text-xs font-bold ${
+                              s.title === 'Payment released' ? 'text-green-600 dark:text-green-300' : 'text-violet-600 dark:text-amber-400'
+                            }`}
+                          >
+                            {formatPrice(s.title === 'Payment released' ? net : order.price)}
+                          </span>
+                        )}
+                      </div>
+                      <p className={`mt-0.5 text-xs ${s.state === 'pending' ? 'text-gray-400 dark:text-violet-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                        {s.desc}
+                      </p>
+                      {s.when && <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">{s.when}</p>}
+                    </li>
+                  ))}
+                </ol>
+                {isSeller && order.status === 'in_progress' && (
+                  <Button
+                    onClick={() => setDeliverOpen(true)}
+                    className="mt-3 w-full bg-blue-600 text-xs font-bold text-white hover:bg-blue-700"
+                  >
+                    <Upload className="mr-1 h-3 w-3" /> Submit Work
+                  </Button>
+                )}
+                {escrowHeld && (
+                  <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                    Auto-releases to the seller on {formatDate(autoReleaseAt.toISOString())} unless you confirm earlier.
+                  </p>
+                )}
+                {order.status === 'disputed' && (
+                  <p className="mt-3 flex items-start gap-2 text-sm text-amber-800 dark:text-amber-300">
+                    <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                    Dispute under review. {formatPrice(order.price)} stays locked in escrow until resolved.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Proof of delivery (mock 350073 screen 2) — task orders, seller side */}
+            {isSeller && order.listingType === 'task' && order.status === 'in_progress' && (
+              <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-5">
+                <h3 className="mb-1 font-bold text-gray-900 dark:text-white">Mark as Delivered</h3>
+                <p className="mb-4 text-xs text-gray-600 dark:text-gray-300">
+                  Please upload a photo of the package at the destination or a receipt as proof.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => proofInput.current?.click()}
+                  className="flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-orange-300 bg-orange-50/70 py-6 text-orange-600 transition hover:bg-orange-100 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-300 dark:hover:bg-orange-500/20"
+                >
+                  {proof ? (
+                    <>
+                      <img src={proof} alt="Proof preview" className="mb-2 h-24 rounded-lg object-cover" />
+                      <span className="flex items-center gap-1.5 text-sm font-semibold">
+                        <CheckCircle2 className="h-4 w-4" /> Proof added. Tap to change
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="mb-2 h-6 w-6" />
+                      <span className="text-sm font-semibold">Upload Photo Proof</span>
+                    </>
+                  )}
+                </button>
+                <input ref={proofInput} type="file" accept="image/*" onChange={pickProof} className="hidden" />
+                <Button
+                  onClick={() => setDeliverOpen(true)}
+                  className="mt-4 w-full bg-orange-500 text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600"
+                >
+                  Mark as Delivered
+                </Button>
+                <div className="pt-4 text-center">
+                  <button
+                    type="button"
+                    onClick={() => setConfirm('cancel')}
+                    className="text-sm font-medium text-red-500 hover:underline"
+                  >
+                    Cancel Task
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Client contact card (mock 350073 screen 2) */}
+            {isSeller && ['in_progress', 'delivered'].includes(order.status) && (
+              <div className="card-white dark:bg-violet-800 dark:border-violet-700 flex items-center justify-between p-4">
+                <Link to={`/seller/${other.id}`} className="flex min-w-0 items-center gap-3">
+                  <img
+                    src={other.avatar || '/images/placeholder.jpg'}
+                    alt=""
+                    className="h-11 w-11 shrink-0 rounded-full object-cover"
+                  />
+                  <div className="min-w-0">
+                    <h4 className="truncate text-sm font-bold text-gray-900 dark:text-white">{other.name}</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Client</p>
+                  </div>
+                </Link>
+                <button
+                  type="button"
+                  onClick={message}
+                  aria-label={`Message ${other.name}`}
+                  className="rounded-xl bg-gray-50 p-2.5 text-gray-700 transition hover:bg-gray-100 dark:bg-violet-700 dark:text-gray-200 dark:hover:bg-violet-600"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                </button>
+              </div>
+            )}
 
             {/* Meetup point */}
             {order.meetup && (
@@ -538,6 +778,73 @@ export function OrderDetailPage() {
               </div>
             )}
 
+            {/* Project chat preview (workspace mock a1a748) */}
+            <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="font-bold text-gray-900 dark:text-white">Project Chat</h3>
+                {convo && (
+                  <button type="button" onClick={message} className="text-xs font-semibold text-blue-600 hover:underline dark:text-amber-400">
+                    Open Full Chat
+                  </button>
+                )}
+              </div>
+              {convo && convo.messages.length > 0 ? (
+                <div className="mb-4 space-y-3">
+                  {convo.messages.slice(-2).map((m) => {
+                    const mine = m.senderId === user.id;
+                    return (
+                      <div key={m.id} className={`flex gap-3 ${mine ? 'flex-row-reverse' : ''}`}>
+                        {mine ? (
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-600 dark:bg-violet-700 dark:text-amber-400">
+                            Me
+                          </div>
+                        ) : (
+                          <img
+                            src={other.avatar || '/images/placeholder.jpg'}
+                            alt=""
+                            className="h-8 w-8 shrink-0 rounded-full object-cover"
+                          />
+                        )}
+                        <div
+                          className={`max-w-[80%] rounded-2xl p-3 text-sm ${
+                            mine
+                              ? 'rounded-tr-none bg-purple-600 text-white dark:bg-violet-600'
+                              : 'rounded-tl-none bg-gray-100 text-gray-700 dark:bg-violet-700 dark:text-gray-200'
+                          }`}
+                        >
+                          <p className="whitespace-pre-line break-words">{m.content}</p>
+                          <span className={`mt-1 block text-[10px] ${mine ? 'text-right text-purple-200' : 'text-gray-400 dark:text-gray-500'}`}>
+                            {mine ? 'Me · ' : `${other.name.split(' ')[0]} · `}
+                            {formatTime(m.createdAt)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+                  No messages yet. Confirm details before the work starts.
+                </p>
+              )}
+              <form onSubmit={quickSend} className="flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2 dark:bg-violet-700">
+                <input
+                  value={quickMsg}
+                  onChange={(e) => setQuickMsg(e.target.value)}
+                  placeholder="Type a message..."
+                  aria-label="Quick message"
+                  className="flex-grow bg-transparent text-sm text-gray-800 placeholder-gray-500 outline-none dark:text-gray-100"
+                />
+                <button
+                  type="submit"
+                  aria-label="Send message"
+                  className="rounded-full bg-purple-600 p-2 text-white transition hover:bg-purple-700 dark:bg-amber-400 dark:text-violet-950 dark:hover:bg-amber-300"
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              </form>
+            </div>
+
             {/* Timeline */}
             <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-5">
               <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Timeline</h3>
@@ -566,7 +873,7 @@ export function OrderDetailPage() {
 
             {/* Review */}
             {isBuyer && order.status === 'completed' && (
-              <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-5">
+              <div id="order-review" className="card-white dark:bg-violet-800 dark:border-violet-700 p-5">
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
                   {order.reviewed ? 'Thanks for your review' : 'Rate this order'}
                 </h3>

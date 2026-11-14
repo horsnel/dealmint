@@ -1,5 +1,5 @@
-import { MockPostForm } from '@/components/forms/MockPostForm';
+import { PostTaskWizard } from '@/components/forms/PostTaskWizard';
 
 export function PostTaskPage() {
-  return <MockPostForm type="task" />;
+  return <PostTaskWizard />;
 }

@@ -17,6 +17,13 @@ import {
   Bell,
   Banknote,
   Users,
+  ArrowLeft,
+  ArrowRight,
+  Bookmark,
+  Map,
+  Navigation,
+  RefreshCw,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -49,7 +56,6 @@ import { ReviewTags, useReviewTags } from '@/components/common/ReviewTags';
 import { UserBadgeRow } from '@/components/common/VerificationBadges';
 import { WhatsAppButton } from '@/components/share/WhatsAppButton';
 import { SharePopup } from '@/components/share/SharePopup';
-import { PageClose } from '@/components/common/PageClose';
 import { formatPrice, formatBytes, timeAgo, priceSuffix, formatDate } from '@/lib/format';
 import { typeLabel } from '@/lib/categories';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -113,6 +119,8 @@ export function ListingDetailPage() {
   const [meetupSpotId, setMeetupSpotId] = useState('none');
   const [timeline, setTimeline] = useState('');
   const reviewTags = useReviewTags();
+  // Selected pricing package on gig pages (mock 8bb219: Basic/Standard/Premium)
+  const [pkg, setPkg] = useState<'basic' | 'standard' | 'premium'>('basic');
 
   useEffect(() => {
     if (id) recordView(id);
@@ -164,6 +172,51 @@ export function ListingDetailPage() {
         ? 'bg-blue-600 text-white'
         : 'bg-purple-600 text-white';
 
+  // Gig pricing packages (mock 8bb219): tiers derived from the gig's real
+  // price, delivery time and category so every tab is orderable.
+  const gigPkgs = [
+    {
+      key: 'basic' as const,
+      label: 'Basic',
+      name: 'Basic Package',
+      price: listing.price,
+      desc: 'The core offer exactly as described in this gig.',
+      delivery: listing.deliveryTime || '3 Days',
+      features: [
+        { icon: Clock, text: `${listing.deliveryTime || '3 Days'} Delivery` },
+        { icon: RefreshCw, text: '1 Revision' },
+        { icon: FileSpreadsheet, text: listing.category },
+      ],
+    },
+    {
+      key: 'standard' as const,
+      label: 'Standard',
+      name: 'Standard Package',
+      price: listing.price * 2,
+      desc: 'Everything in Basic, plus source files and more revisions.',
+      delivery: '2 Days',
+      features: [
+        { icon: Clock, text: '2 Days Delivery' },
+        { icon: RefreshCw, text: '3 Revisions' },
+        { icon: FileSpreadsheet, text: 'Includes source files' },
+      ],
+    },
+    {
+      key: 'premium' as const,
+      label: 'Premium',
+      name: 'Premium Package',
+      price: listing.price * 3,
+      desc: 'The fastest delivery, with priority support throughout.',
+      delivery: '24 Hours',
+      features: [
+        { icon: Clock, text: '24 Hours Delivery' },
+        { icon: RefreshCw, text: '5 Revisions' },
+        { icon: FileSpreadsheet, text: 'Priority support' },
+      ],
+    },
+  ];
+  const selectedPkg = gigPkgs.find((p) => p.key === pkg) || gigPkgs[0];
+
   const reviewableOrder = user
     ? orders.find((o) => o.listingId === listing.id && o.buyerId === user.id && o.status === 'completed' && !o.reviewed)
     : undefined;
@@ -180,9 +233,14 @@ export function ListingDetailPage() {
 
   const handleBook = () => {
     if (!user) return requireLogin();
+    // Tasks apply through the dedicated application page (mock 350073 screen 1)
+    if (isTask) {
+      navigate(`/listing/${listing.id}/apply`);
+      return;
+    }
     // Hard gate: cloud accounts must confirm their email before ordering
     // (opens the VerifyGateModal with a resend). Local mode passes through.
-    if (!requireVerified(isJob ? 'apply' : listing.type === 'task' ? 'make an offer' : 'place an order')) return;
+    if (!requireVerified(isJob ? 'apply' : 'place an order')) return;
     if (!user.phoneVerified) {
       toast.info('Verify your phone number first');
       navigate('/verify-phone', { state: { from: location.pathname } });
@@ -208,7 +266,7 @@ export function ListingDetailPage() {
     toast.success(added ? 'Saved to favourites' : 'Removed from favourites');
   };
 
-  const offerAmount = isNegotiable ? Number(offer) : listing.price;
+  const offerAmount = isNegotiable ? Number(offer) : selectedPkg.price;
   const offerValid = Number.isFinite(offerAmount) && offerAmount >= 100;
   const balance = user?.walletBalance ?? 0;
   const shortfall = offerValid ? Math.max(0, offerAmount - balance) : 0;
@@ -244,7 +302,7 @@ export function ListingDetailPage() {
       const result = createOrder(
         listing,
         [timeline ? `Needed: ${timeline}.` : '', note.trim()].filter(Boolean).join(' '),
-        isNegotiable ? offerAmount : undefined,
+        isNegotiable || listing.type === 'gig' ? offerAmount : undefined,
         meetup
       );
       setSubmitting(false);
@@ -308,7 +366,47 @@ export function ListingDetailPage() {
   return (
     <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-8 pb-32">
-        <PageClose fallback="/browse" />
+        {/* Sticky glass header (mock a57a53 / 8bb219): back, share, save */}
+        <div className="sticky top-20 z-30 -mx-4 mb-6 flex items-center justify-between border-b border-gray-200/50 bg-lavender/90 px-4 py-2.5 backdrop-blur-md sm:-mx-6 sm:px-6 lg:top-24 dark:border-violet-800/60 dark:bg-violet-950/90">
+          <button
+            onClick={() => navigate(-1)}
+            aria-label="Go back"
+            className="rounded-full bg-white p-2 text-gray-600 shadow-sm transition hover:bg-gray-50 dark:bg-violet-800 dark:text-gray-300 dark:hover:bg-violet-700"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          {isTask ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShareOpen(true)}
+                aria-label="Share listing"
+                className="rounded-full bg-white p-2 text-gray-600 shadow-sm transition hover:bg-gray-50 dark:bg-violet-800 dark:text-gray-300 dark:hover:bg-violet-700"
+              >
+                <Share2 className="h-5 w-5" />
+              </button>
+              <button
+                onClick={handleLike}
+                aria-label={isLiked ? 'Remove from saved' : 'Save listing'}
+                className="rounded-full bg-white p-2 text-gray-600 shadow-sm transition hover:bg-gray-50 dark:bg-violet-800 dark:text-gray-300 dark:hover:bg-violet-700"
+              >
+                <Bookmark className={`h-5 w-5 ${isLiked ? 'fill-violet-600 text-violet-600 dark:fill-amber-400 dark:text-amber-400' : ''}`} />
+              </button>
+            </div>
+          ) : (
+            <>
+              <h1 className="font-bold text-sm text-gray-900 dark:text-white">
+                {typeLabel(listing.type)} Details
+              </h1>
+              <button
+                onClick={handleLike}
+                aria-label={isLiked ? 'Remove from saved' : 'Save listing'}
+                className="rounded-full bg-white p-2 text-gray-600 shadow-sm transition hover:bg-gray-50 dark:bg-violet-800 dark:text-gray-300 dark:hover:bg-violet-700"
+              >
+                <Heart className={`h-5 w-5 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+              </button>
+            </>
+          )}
+        </div>
         {!listing.isActive && (
           <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 p-4 text-amber-800 dark:text-amber-200 text-sm">
             {isOwner
@@ -389,6 +487,31 @@ export function ListingDetailPage() {
                     </p>
                   </div>
                 </div>
+
+                {/* Map preview (mock a57a53 #4): pickup card over the map photo */}
+                {!listing.isRemote && listing.location && (
+                  <a
+                    href={`https://www.google.com/maps/search/${encodeURIComponent(`${listing.location}, Lagos, Nigeria`)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group relative block h-40 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-violet-700"
+                  >
+                    <img
+                      src="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80&w=800"
+                      alt={`Map preview of ${listing.location}`}
+                      loading="lazy"
+                      className="h-full w-full object-cover opacity-80 transition group-hover:opacity-100"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                      <div className="flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-medium text-gray-800 shadow-lg backdrop-blur">
+                        <Map className="h-4 w-4 text-orange-500" /> View on Map
+                      </div>
+                    </div>
+                    <div className="absolute left-3 top-3 flex items-center gap-1 rounded-md bg-white/90 px-3 py-1 text-xs font-medium text-gray-800 shadow-sm backdrop-blur">
+                      <Navigation className="h-3 w-3 text-orange-500" /> Pickup: {listing.location}
+                    </div>
+                  </a>
+                )}
               </>
             ) : (
               <div className="card-white dark:bg-violet-800 dark:border-violet-700 overflow-hidden">
@@ -479,6 +602,48 @@ export function ListingDetailPage() {
                 {isOwner && <span>{listing.views || 0} views · This is your listing</span>}
               </div>
             </div>
+
+            {/* Pricing packages (mock 8bb219): Basic / Standard / Premium tabs */}
+            {listing.type === 'gig' && (
+              <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-6">
+                <h3 className="font-display font-bold text-xl text-gray-900 dark:text-white mb-4">
+                  Pricing Packages
+                </h3>
+                <div className="mb-4 flex space-x-1 rounded-xl bg-gray-100 p-1 dark:bg-violet-700">
+                  {gigPkgs.map((p) => (
+                    <button
+                      key={p.key}
+                      type="button"
+                      aria-pressed={pkg === p.key}
+                      onClick={() => setPkg(p.key)}
+                      className={`flex-1 rounded-lg py-2 text-xs font-bold transition ${
+                        pkg === p.key
+                          ? 'bg-white text-gray-900 shadow-sm dark:bg-violet-600 dark:text-white'
+                          : 'text-gray-500 hover:bg-white/50 dark:text-gray-400 dark:hover:bg-violet-600/40'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm dark:border-violet-700 dark:bg-violet-800">
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="font-bold text-gray-900 dark:text-white">{selectedPkg.name}</span>
+                    <span className="text-lg font-bold text-violet-600 dark:text-amber-400">
+                      {formatPrice(selectedPkg.price)}
+                    </span>
+                  </div>
+                  <p className="mb-4 text-sm text-gray-600 dark:text-gray-300">{selectedPkg.desc}</p>
+                  <ul className="space-y-2">
+                    {selectedPkg.features.map((f) => (
+                      <li key={f.text} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                        <f.icon className="h-4 w-4 shrink-0 text-gray-400" /> {f.text}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
 
             <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-6">
               <Tabs defaultValue="description">
@@ -658,24 +823,11 @@ export function ListingDetailPage() {
               </Tabs>
             </div>
 
-          {/* Save / share / report + price alert (relocated from the old booking card) */}
+          {/* Save / share / report + price alert (save + share live in the sticky header, per the mock) */}
           <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-5 space-y-4">
-            <div className="grid grid-cols-[1fr_1fr_auto] gap-2.5">
-              <button
-                onClick={handleLike}
-                className="flex items-center justify-center gap-1.5 h-10 rounded-full border border-gray-200 dark:border-violet-600 text-sm text-gray-600 dark:text-gray-300 hover:text-violet-700 hover:border-violet-300 hover:bg-violet-50 dark:hover:text-amber-400 dark:hover:border-violet-500 dark:hover:bg-violet-700/40 transition-colors"
-              >
-                <Heart className={`w-4 h-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
-                <span>{isLiked ? 'Saved' : 'Save'}</span>
-              </button>
-              <button
-                onClick={() => setShareOpen(true)}
-                className="flex items-center justify-center gap-1.5 h-10 rounded-full border border-gray-200 dark:border-violet-600 text-sm text-gray-600 dark:text-gray-300 hover:text-violet-700 hover:border-violet-300 hover:bg-violet-50 dark:hover:text-amber-400 dark:hover:border-violet-500 dark:hover:bg-violet-700/40 transition-colors"
-              >
-                <Share2 className="w-4 h-4" />
-                <span>Share</span>
-              </button>
+            <div className="flex items-center justify-between gap-2.5">
               <WhatsAppButton title={listing.title} price={formatPrice(listing.price)} />
+              <span className="text-xs text-gray-400 dark:text-gray-500">Sharing is also available from the header</span>
             </div>
 
             {!isOwner && (
@@ -796,9 +948,23 @@ export function ListingDetailPage() {
                 <Button
                   onClick={handleBook}
                   disabled={!listing.isActive}
-                  className="flex-grow rounded-xl bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/30"
+                  className={`flex-grow rounded-xl text-white shadow-lg ${
+                    isTask
+                      ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/30'
+                      : listing.type === 'gig'
+                        ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-600/30'
+                        : 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/30'
+                  }`}
                 >
-                  {ctaLabel}
+                  {isTask ? (
+                    <>
+                      Apply for Task <ArrowRight className="ml-1 inline h-5 w-5" />
+                    </>
+                  ) : listing.type === 'gig' ? (
+                    `Continue (${formatPrice(selectedPkg.price)})`
+                  ) : (
+                    ctaLabel
+                  )}
                 </Button>
               </>
             )}

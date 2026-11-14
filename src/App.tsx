@@ -23,6 +23,7 @@ const BrowsePage = page(() => import('@/pages/BrowsePage'), 'BrowsePage');
 const MarketplacePage = page(() => import('@/pages/MarketplacePage'), 'MarketplacePage');
 const CategoriesPage = page(() => import('@/pages/CategoriesPage'), 'CategoriesPage');
 const ListingDetailPage = page(() => import('@/pages/ListingDetailPage'), 'ListingDetailPage');
+const ApplyTaskPage = page(() => import('@/pages/listing/ApplyTaskPage'), 'ApplyTaskPage');
 const SellerProfilePage = page(() => import('@/pages/SellerProfilePage'), 'SellerProfilePage');
 const HowItWorksPage = page(() => import('@/pages/HowItWorksPage'), 'HowItWorksPage');
 const SafetyCenterPage = page(() => import('@/pages/SafetyCenterPage'), 'SafetyCenterPage');
@@ -114,6 +115,7 @@ function AppContent() {
               <Route path="/marketplace/lagos" element={<LagosHubPage />} />
               <Route path="/categories" element={<CategoriesPage />} />
               <Route path="/listing/:id" element={<ListingDetailPage />} />
+              <Route path="/listing/:id/apply" element={protect(<ApplyTaskPage />)} />
               <Route path="/seller/:id" element={<SellerProfilePage />} />
               <Route path="/how-it-works" element={<HowItWorksPage />} />
               <Route path="/safety" element={<SafetyCenterPage />} />

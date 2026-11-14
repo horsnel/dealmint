@@ -558,3 +558,15 @@ Stage Summary:
 - ALL WIDTHS + GUESTS: dropped lg:hidden (desktop keeps the navbar Post menu too); sheet is a centered max-w-md column on desktop. FAB now shows on /browse and /marketplace for logged-out users; picking an option routes guests to /login (protect() still guards the forms). Kept scroll-hide FAB, swipe-down/Escape/backdrop close, focus-to-close a11y.
 - The 5 post form pages (/post/gig|service|task|job|digital) already exist with mock-matching titles, so no route work was needed.
 - VERIFIED locally (sheet screenshot at 1440 = mock frame 1; logged-in pick → /post/gig; guest pick → /login with cleared localStorage) and on PROD index-DFh9EBgI.js (guest FAB visible on /browse, all 5 options present).
+
+## Task 40 — Post pages redesigned per mock b9119e frames 2 to 6
+- User: the FAB content was only icons; the five category post pages still used the old shared rich form. Rewrote them with the mock's exact per-category layouts.
+- NEW components/forms/MockPostForm.tsx: shared card shell (white header: close X, per-type icon + title, Drafts link; labeled fields with per-type focus ring; white footer with full width colored publish button) + five field sets straight from the mock:
+  gig: Gig Title ("I will..."), Category + Delivery Time selects side by side, bold Price (naira), dashed Gig Cover Image upload ("Upload cover (16:9 ratio)"), violet "Publish Gig".
+  service: Service Title, Fixed/Per Hour segmented pricing control, Rate, Location + "Can be done remotely" checkbox, blue "Publish Service".
+  task: "What needs to be done?", orange Urgent Deadline box (Clock icon, Within 2 Hours / Today select), Budget, Pickup Location, orange "Post Task Now".
+  job: Job Role, Job Type + Salary Period selects, Salary Budget, Requirements textarea, green "Post Job Listing".
+  digital: Product Title, Price, dashed Upload Product File ("Upload ZIP, PDF, or Audio (Max 50MB)"), dashed Cover Image, pink "Publish Product".
+- Data mapping: addListing still gets full Listing shape; mock omits some fields, so description is auto-composed from entered fields (no dashes), category defaults per type for non-gig forms, task deadline maps to today, job type goes to tags, salary period drives priceType (Per Hour > hourly). Phone-verification gate kept. Covers optional with category default image fallback; digital file required.
+- FEATURE PRESERVATION: the old form's paid boost section is not in the mock, so boosting moved to My Listings: new Zap button per listing opens a Featured (N2,000) / Urgent (N1,000) dialog paying from the wallet (E2E verified: toast + deduction). Save draft / Preview buttons dropped from post pages per mock; drafts remain viewable via the header Drafts link; the old ListingForm stays in use for dashboard EDIT flow.
+- E2E: all five forms submitted locally (React controlled inputs needed the native value-setter trick; digital file upload via DataTransfer) and landed in My Listings; gig form screenshot at 390px matches mock frame 2. PROD index-C6kEbHJz.js: gig + digital forms verified live (guests correctly redirect to login via protect()).
