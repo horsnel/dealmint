@@ -304,7 +304,7 @@ export function Navigation({ user }: NavigationProps) {
                 >
                   Log in
                 </Link>
-                <Link to="/register">
+                <Link to="/onboarding">
                   <Button className="bg-amber-500 hover:bg-amber-600 text-white rounded-full px-6">
                     Get Started
                   </Button>
@@ -459,7 +459,7 @@ export function Navigation({ user }: NavigationProps) {
                     Log in
                   </Link>
                   <Link
-                    to="/register"
+                    to="/onboarding"
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="block w-full text-center py-2 bg-amber-500 text-white rounded-lg"
                   >

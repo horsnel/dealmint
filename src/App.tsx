@@ -43,6 +43,7 @@ const CommunityPage = page(() => import('@/pages/InfoPages'), 'CommunityPage');
 
 const LoginPage = page(() => import('@/pages/auth/LoginPage'), 'LoginPage');
 const RegisterPage = page(() => import('@/pages/auth/RegisterPage'), 'RegisterPage');
+const OnboardingPage = page(() => import('@/pages/auth/OnboardingPage'), 'OnboardingPage');
 const RoleSelectionPage = page(() => import('@/pages/auth/RoleSelectionPage'), 'RoleSelectionPage');
 const ForgotPasswordPage = page(() => import('@/pages/auth/ForgotPasswordPage'), 'ForgotPasswordPage');
 const VerifyPhonePage = page(() => import('@/pages/auth/VerifyPhonePage'), 'VerifyPhonePage');
@@ -132,6 +133,7 @@ function AppContent() {
               <Route path="/community" element={<CommunityPage />} />
 
               {/* Auth Routes */}
+              <Route path="/onboarding" element={<OnboardingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/role-selection" element={<RoleSelectionPage />} />

@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import type { SafeSpot } from '@/types';
-import { NIGERIA_VIEW, cityCenter, directionsUrl, type LatLng } from '@/lib/safe-spots';
+import { NIGERIA_VIEW, cityCenter, directionsUrl, HEAT_COLORS, type HeatZone, type LatLng } from '@/lib/safe-spots';
 import { spotTypeMeta } from '@/pages/SafeSpotsPage.meta';
 
 interface SafeSpotsMapProps {
@@ -20,6 +20,8 @@ interface SafeSpotsMapProps {
   mode?: 'view' | 'picker';
   picked?: LatLng | null;
   onPick?: (p: LatLng) => void;
+  /** Activity heatmap zones (safe/moderate/busy) drawn as soft blurred circles */
+  heatmapZones?: HeatZone[];
 }
 
 const TILE_URL =
@@ -66,6 +68,7 @@ export function SafeSpotsMap({
   mode = 'view',
   picked,
   onPick,
+  heatmapZones,
 }: SafeSpotsMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -75,6 +78,7 @@ export function SafeSpotsMap({
   const userMarkerRef = useRef<L.Marker | null>(null);
   const userCircleRef = useRef<L.Circle | null>(null);
   const pickMarkerRef = useRef<L.Marker | null>(null);
+  const heatLayerRef = useRef<L.LayerGroup | null>(null);
   const pickCbRef = useRef(onPick);
   pickCbRef.current = onPick;
 
@@ -90,6 +94,13 @@ export function SafeSpotsMap({
       attributionControl: true,
     });
     mapRef.current = map;
+    // Low pane for the activity heatmap so real pins and popups sit above it.
+    map.createPane('ssHeat');
+    const heatPane = map.getPane('ssHeat');
+    if (heatPane) {
+      heatPane.style.zIndex = '390';
+      heatPane.classList.add('ss-heat-pane');
+    }
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
     // Spots live in a cluster group so country-wide zooms collapse the pins
@@ -115,6 +126,7 @@ export function SafeSpotsMap({
       userMarkerRef.current = null;
       userCircleRef.current = null;
       pickMarkerRef.current = null;
+      heatLayerRef.current = null;
     };
   }, []);
 
@@ -241,6 +253,36 @@ export function SafeSpotsMap({
     }).addTo(map);
     map.flyTo(ll, Math.max(map.getZoom(), 14), { duration: 0.9 });
   }, [userPos, mode]);
+
+  // Activity heatmap: soft blurred circles (mock style) derived from real
+  // spot clusters + live listing volume. Redrawn only when the zone set changes.
+  const zoneSignature = useMemo(
+    () => (heatmapZones ?? []).map((z) => `${z.lat.toFixed(3)}:${z.lng.toFixed(3)}:${z.radiusKm}:${z.level}`).join('|'),
+    [heatmapZones]
+  );
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || mode !== 'view') return;
+    heatLayerRef.current?.remove();
+    heatLayerRef.current = null;
+    const zones = heatmapZones ?? [];
+    if (zones.length === 0) return;
+    const group = L.layerGroup();
+    zones.forEach((z) => {
+      L.circle([z.lat, z.lng], {
+        radius: z.radiusKm * 1000,
+        stroke: false,
+        fillColor: HEAT_COLORS[z.level].fill,
+        fillOpacity: 0.55,
+        interactive: false,
+        pane: 'ssHeat',
+      }).addTo(group);
+    });
+    group.addTo(map);
+    heatLayerRef.current = group;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zoneSignature, mode]);
 
   // Picker mode: tap to drop the pin.
   useEffect(() => {

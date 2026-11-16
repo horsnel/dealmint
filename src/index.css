@@ -225,6 +225,11 @@
   filter: invert(1) hue-rotate(190deg) brightness(0.92) contrast(0.92) saturate(0.75);
 }
 
+/* Activity heatmap pane — blurred circles read as soft zones like the mock */
+.ss-heat-pane {
+  filter: blur(26px);
+}
+
 /* Brand pins */
 .ss-marker-wrap {
   background: transparent;
@@ -395,4 +400,13 @@
 /* Rounded corners clip everything inside the map frame */
 .ss-map-frame .leaflet-container {
   border-radius: 1rem;
+}
+
+/* Thin areas that scroll horizontally without a visible scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

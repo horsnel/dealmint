@@ -48,3 +48,32 @@ export function formatDistance(km: number): string {
 export function directionsUrl(point: LatLng): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${point.lat},${point.lng}`;
 }
+
+// ---------- Activity heatmap ----------
+// Zones are derived from real platform activity (approved safe spots grouped
+// on a ~2 km grid, blended with live listing volume in the same city). Levels
+// follow the mock legend: green = calm & community-vetted, amber = moderate,
+// red = very high activity.
+
+export type HeatLevel = 'safe' | 'moderate' | 'busy';
+
+export interface HeatZone {
+  lat: number;
+  lng: number;
+  /** Zone radius in kilometres */
+  radiusKm: number;
+  level: HeatLevel;
+}
+
+export const HEAT_COLORS: Record<HeatLevel, { fill: string; label: string }> = {
+  safe: { fill: '#22c55e', label: 'Safe / High Jobs' },
+  moderate: { fill: '#F59E0B', label: 'Moderate' },
+  busy: { fill: '#ef4444', label: 'High Activity' },
+};
+
+// Level + radius from a cluster's spot count and the city's live listings.
+export function zoneForCluster(spots: number, listings: number): { level: HeatLevel; radiusKm: number } {
+  const score = spots * 3 + Math.min(listings, 10);
+  const level: HeatLevel = score >= 18 ? 'busy' : score >= 9 ? 'moderate' : 'safe';
+  return { level, radiusKm: Math.max(3, Math.min(8, 2 + spots)) };
+}
