@@ -11,6 +11,7 @@ import {
   Search,
   ShieldCheck,
   SlidersHorizontal,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,6 +56,9 @@ export function SafeSpotsPage() {
   const [city, setCity] = useState<string>('all');
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
+  // Map content popup: hidden by default; opens on a location search or the
+  // Suggest a Spot flow, closed via its X button.
+  const [popupOpen, setPopupOpen] = useState(false);
   const [name, setName] = useState('');
   const [type, setType] = useState<SafeSpotType | ''>('');
   const [address, setAddress] = useState('');
@@ -91,7 +95,10 @@ export function SafeSpotsPage() {
     () =>
       q
         ? approved.filter(
-            (s) => s.name.toLowerCase().includes(q) || s.address.toLowerCase().includes(q)
+            (s) =>
+              s.name.toLowerCase().includes(q) ||
+              s.address.toLowerCase().includes(q) ||
+              s.city.toLowerCase().includes(q)
           )
         : approved,
     [approved, q]
@@ -241,6 +248,7 @@ export function SafeSpotsPage() {
 
   const openDialog = () => {
     setPicked(null);
+    setPopupOpen(true); // the suggest flow surfaces the map content popup
     setOpen(true);
   };
 
@@ -271,11 +279,31 @@ export function SafeSpotsPage() {
     }
   };
 
+  // Searching a location is one of the two triggers for the map content popup
+  // (the other is Suggest a Spot via openDialog). Clearing the search hides it.
+  useEffect(() => {
+    setPopupOpen(query.trim().length > 0);
+  }, [query]);
+
   return (
-    <div className="relative h-[calc(100dvh-4rem)] overflow-hidden bg-lavender dark:bg-violet-950">
-      {/* The map fills the screen (z-0); the floating header/search and the
-          bottom sheet stack above it. */}
-      <div ref={mapSectionRef} className="absolute inset-0 z-0">
+    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-6 lg:pt-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Intro */}
+        <div className="mb-6">
+          <p className="text-gray-600 dark:text-gray-300 max-w-2xl">
+            Community-vetted places to meet buyers and sellers: busy, public and well-lit. Meet
+            somewhere safe and swap with confidence.
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+            {cityCounts.total} approved spots across {cityCounts.cities} cities
+          </p>
+        </div>
+
+        {/* Hero map with floating header + search (mock layout) */}
+        <div
+          ref={mapSectionRef}
+          className="relative z-0 ss-map-frame h-[520px] sm:h-[560px] rounded-3xl overflow-hidden border border-gray-200 dark:border-violet-700 shadow-card scroll-mt-20"
+        >
           <SafeSpotsMap
             spots={searchApproved}
             city={city}
@@ -332,16 +360,87 @@ export function SafeSpotsPage() {
               <SlidersHorizontal className="w-4 h-4" />
             </button>
           </div>
+
+          {/* Map content popup — hidden on page load. Opens when the user
+              searches for a location or starts the Suggest a Spot flow; the X
+              closes it. Sits inside the map card (z-30, below the floating
+              header/search at z-[1000]) so it never overlays the whole page. */}
+          {popupOpen && (
+            <div className="absolute bottom-4 inset-x-4 z-30 bg-white dark:bg-violet-900 rounded-2xl shadow-xl border border-gray-100 dark:border-violet-700 p-4 max-h-[46%] overflow-y-auto">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                  Activity in {cityLabel}
+                  <span className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> Live
+                  </span>
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setPopupOpen(false)}
+                  aria-label="Close results popup"
+                  className="p-1.5 rounded-full bg-gray-100 dark:bg-violet-800 text-gray-600 dark:text-amber-400 hover:bg-gray-200 dark:hover:bg-violet-700 transition shrink-0"
+                >
+                  <X className="w-4 h-4" strokeWidth={2.5} />
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                {searchApproved.length} of {cityCounts.total} approved spots
+                {query.trim() ? (
+                  <>
+                    {' '}match “{query.trim()}”
+                  </>
+                ) : null}
+              </p>
+              {searchApproved.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400 py-2">
+                  No spots match this search — try another area or city, or browse the community
+                  list below.
+                </p>
+              ) : (
+                <div className="space-y-1.5">
+                  {searchApproved.slice(0, 4).map((spot) => {
+                    const meta = spotTypeMeta.find((t) => t.value === spot.type);
+                    const Icon = meta?.icon ?? MapPin;
+                    return (
+                      <div
+                        key={spot.id}
+                        className="flex items-center justify-between gap-3 bg-gray-50 dark:bg-violet-800/60 rounded-xl px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white truncate flex items-center gap-1.5">
+                            <Icon className="w-3.5 h-3.5 shrink-0 text-violet-600 dark:text-amber-400" />
+                            {spot.name}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            {spot.address} · {spot.city}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => focusSpot(spot.id)}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-violet-600 dark:text-amber-400 hover:underline underline-offset-2 shrink-0"
+                        >
+                          <MapPinned className="w-3.5 h-3.5 shrink-0" /> View on map
+                        </button>
+                      </div>
+                    );
+                  })}
+                  {searchApproved.length > 4 && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 pt-1">
+                      +{searchApproved.length - 4} more in the community list below
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Bottom sheet — fixed above the mobile nav area, solid white so the
-            Leaflet tiles never bleed through. Activity, filters, legend and
-            live listings live strictly inside it. */}
-        <div className="absolute bottom-16 md:bottom-0 left-0 right-0 w-full bg-white dark:bg-violet-900 rounded-t-[2rem] z-20 p-6 pb-8 max-h-[68dvh] flex flex-col border-t border-gray-100 dark:border-violet-700 shadow-[0_-10px_40px_rgba(0,0,0,0.15)]">
-          <div className="w-12 h-1.5 bg-gray-200 dark:bg-violet-700 rounded-full mx-auto mb-4 shrink-0" />
-          <div className="overflow-y-auto no-scrollbar min-h-0 flex-1">
+        {/* Bottom sheet: activity, filters, legend, live listings (mock layout) */}
+        <div className="relative z-10 -mt-8 bg-white dark:bg-violet-900 rounded-t-[2rem] p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.15)] pb-8">
+          <div className="w-12 h-1.5 bg-gray-200 dark:bg-violet-700 rounded-full mx-auto mb-5" />
 
-          <div className="flex justify-between items-center mb-2 gap-3">
+          <div className="flex justify-between items-center mb-4 gap-3">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white">
               Activity in {cityLabel}
             </h2>
@@ -349,9 +448,6 @@ export function SafeSpotsPage() {
               <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> Live
             </span>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-            {cityCounts.total} approved spots across {cityCounts.cities} cities
-          </p>
 
           {/* City filter */}
           <div ref={filtersRef} className="flex flex-wrap gap-2 mb-4" role="group" aria-label="Filter by city">
@@ -447,9 +543,10 @@ export function SafeSpotsPage() {
               ))}
             </div>
           )}
+        </div>
 
-        {/* Community-vetted spots — scrollable inside the sheet */}
-        <div className="pt-8 mt-6 border-t border-gray-100 dark:border-violet-700">
+        {/* Spots grid */}
+        <div className="pt-10">
           {searchApproved.length === 0 && pending.length === 0 ? (
             <EmptyState
               icon={MapPinned}
@@ -581,9 +678,8 @@ export function SafeSpotsPage() {
               Suggest a spot
             </Button>
           </div>
-          </div>
-          </div>
         </div>
+      </div>
 
       {/* Suggest dialog */}
       <Dialog open={open} onOpenChange={(v) => (v ? openDialog() : setOpen(false))}>

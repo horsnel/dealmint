@@ -13,17 +13,21 @@ import {
   LogOut,
   Bell,
   X,
+  ChevronRight,
 } from 'lucide-react';
 import { Logo } from '@/components/common/Logo';
 import { NotificationDrawer } from '@/components/notifications/NotificationDrawer';
 import { useApp } from '@/context/AppContext';
 import { toast } from 'sonner';
 
-// The single app shell for every route (except chrome-free auth pages and the
-// immersive inbox). Desktop (md+): Sidebar Version 2 — a permanent fixed left
-// column (w-64, white, violet active states) with the content sitting beside
-// it at ml-64. Mobile: a sticky tinted header; the hamburger opens the same
-// sidebar links as a slide-in drawer over a dimmed backdrop.
+// The app shell carries BOTH historical sidebar designs, switched app-wide by
+// the Settings toggle (navSide) instead of by page:
+//   'left'  — the dashboard design: fixed left w-64 white sidebar with violet
+//             active states (Sidebar Version 2).
+//   'right' — the marketplace design: the old Navigation menu (profile card,
+//             gray links, notifications inline, amber accents, pinned logout)
+//             anchored as a fixed right w-64 sidebar; its drawer slides in
+//             from the right on mobile.
 const SITE_LINKS = [
   { label: 'Marketplace', href: '/marketplace', icon: Store },
   { label: 'Browse', href: '/browse', icon: Compass },
@@ -37,13 +41,6 @@ const ACCOUNT_LINKS = [
   { label: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
   { label: 'Favourites', href: '/dashboard/favourites', icon: Heart },
 ];
-
-const linkClass = (active: boolean) =>
-  `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
-    active
-      ? 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-amber-400'
-      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-violet-800'
-  }`;
 
 // Routes that render chrome-free (no shell): the immersive inbox keeps its own
 // conversation sidebar; the auth/onboarding flows are focused, full-screen.
@@ -62,11 +59,12 @@ const CHROME_FREE_PATHS = [
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { user, unreadMessages, unreadNotifications, logout } = useApp();
+  const { user, unreadMessages, unreadNotifications, logout, navSide } = useApp();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [notifOpen, setNotifOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const isRight = navSide === 'right';
 
   useEffect(() => {
     setDrawerOpen(false);
@@ -86,12 +84,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     };
   }, [drawerOpen]);
 
-  // Chrome-free routes render their children untouched. (Kept after the hooks
-  // above so the hook order never differs between renders.)
-  if (CHROME_FREE_PATHS.some((p) => pathname.startsWith(p))) {
-    return <>{children}</>;
-  }
-
   const messagesBadge = unreadMessages > 0;
 
   const handleLogout = () => {
@@ -101,18 +93,21 @@ export function AppShell({ children }: { children: ReactNode }) {
     toast.success('You have been logged out');
   };
 
-  const navItems = (onNavigate?: () => void) => (
+  // ---- Left design nav (dashboard): violet active pill ----
+  const leftLink = (active: boolean) =>
+    `flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
+      active
+        ? 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-amber-400'
+        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-violet-800'
+    }`;
+
+  const leftNav = (
     <nav className="space-y-1">
       <p className="px-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-violet-700">
         Menu
       </p>
       {SITE_LINKS.map(({ label, href, icon: Icon }) => (
-        <Link
-          key={href}
-          to={href}
-          onClick={onNavigate}
-          className={linkClass(pathname === href)}
-        >
+        <Link key={href} to={href} onClick={() => setDrawerOpen(false)} className={leftLink(pathname === href)}>
           <Icon className="w-5 h-5 shrink-0" />
           {label}
         </Link>
@@ -123,12 +118,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             My account
           </p>
           {ACCOUNT_LINKS.map(({ label, href, icon: Icon }) => (
-            <Link
-              key={href}
-              to={href}
-              onClick={onNavigate}
-              className={linkClass(pathname === href)}
-            >
+            <Link key={href} to={href} onClick={() => setDrawerOpen(false)} className={leftLink(pathname === href)}>
               <Icon className="w-5 h-5 shrink-0" />
               {label}
             </Link>
@@ -138,53 +128,168 @@ export function AppShell({ children }: { children: ReactNode }) {
     </nav>
   );
 
+  // ---- Right design nav (marketplace): gray links, amber active pill ----
+  const rightLink = (active: boolean) =>
+    `flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
+      active
+        ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
+        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-violet-800'
+    }`;
+
+  const rightNav = (
+    <nav className="space-y-1">
+      {SITE_LINKS.map(({ label, href, icon: Icon }) => (
+        <Link key={href} to={href} onClick={() => setDrawerOpen(false)} className={rightLink(pathname === href)}>
+          <Icon className="w-5 h-5 shrink-0" />
+          {label}
+        </Link>
+      ))}
+      {user && (
+        <>
+          <p className="px-4 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-violet-700">
+            My account
+          </p>
+          {ACCOUNT_LINKS.map(({ label, href, icon: Icon }) => (
+            <Link key={href} to={href} onClick={() => setDrawerOpen(false)} className={rightLink(pathname === href)}>
+              <Icon className="w-5 h-5 shrink-0" />
+              {label}
+            </Link>
+          ))}
+        </>
+      )}
+    </nav>
+  );
+
+  // Chrome-free routes render their children untouched. (Kept after the hooks
+  // above so the hook order never differs between renders.)
+  if (CHROME_FREE_PATHS.some((p) => pathname.startsWith(p))) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="min-h-screen bg-[#F5F3FF] dark:bg-violet-950">
-      {/* Desktop sidebar — a permanent fixed column from md: up, never an
-          overlay. z-50 keeps it above Leaflet map panes. */}
-      <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 z-50 flex-col bg-white dark:bg-violet-900 border-r border-gray-200 dark:border-violet-800">
-        <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-violet-800 shrink-0">
-          <Logo href="/" tone="auto" />
-        </div>
-        <div className="flex-1 overflow-y-auto px-3 py-4">
-          {navItems()}
-        </div>
-        <div className="px-3 py-3 border-t border-gray-200 dark:border-violet-800 space-y-1 shrink-0">
-          {user ? (
-            <>
-              <Link to="/dashboard/settings" className={linkClass(pathname === '/dashboard/settings')}>
-                <Settings className="w-5 h-5 shrink-0" />
-                Settings
+      {/* ---------- Desktop sidebar (design depends on navSide) ---------- */}
+      {isRight ? (
+        /* Marketplace design — fixed RIGHT column, restored from the old
+           Navigation menu: profile card, gray links with amber active state,
+           notifications inline, pinned logout. */
+        <aside className="hidden md:flex fixed inset-y-0 right-0 w-64 z-50 flex-col bg-white dark:bg-violet-900 border-l border-gray-200 dark:border-violet-800">
+          <div className="h-16 flex items-center px-6 border-b border-gray-100 dark:border-violet-800 shrink-0">
+            <Logo href="/" tone="auto" />
+          </div>
+          <div className="flex-1 overflow-y-auto px-3 py-4">
+            {user && (
+              <Link
+                to="/dashboard"
+                className="flex items-center gap-3 rounded-2xl border border-violet-100 dark:border-violet-700 bg-violet-50/60 dark:bg-violet-800/60 p-3 mb-4 transition-colors hover:bg-violet-100 dark:hover:bg-violet-800/80"
+              >
+                <img
+                  src={user.avatar || '/images/avatar_default.jpg'}
+                  alt={user.name}
+                  className="w-11 h-11 rounded-full object-cover border-2 border-amber-500 shrink-0"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-display font-semibold text-gray-900 dark:text-white truncate">
+                    {user.name}
+                  </span>
+                  <span className="block text-sm text-gray-500 dark:text-gray-400 truncate">
+                    {user.email}
+                  </span>
+                </span>
+                <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
               </Link>
+            )}
+            {rightNav}
+            {user && (
+              <div className="border-t border-gray-100 dark:border-violet-800 mt-3 pt-3 space-y-1">
+                <button
+                  type="button"
+                  onClick={() => setNotifOpen(true)}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-violet-800 font-medium transition-colors"
+                >
+                  <Bell className="w-5 h-5 shrink-0" />
+                  <span>Notifications{unreadNotifications > 0 ? ` (${unreadNotifications})` : ''}</span>
+                </button>
+                <Link to="/dashboard/settings" className={rightLink(pathname === '/dashboard/settings')}>
+                  <Settings className="w-5 h-5 shrink-0" />
+                  Settings
+                </Link>
+              </div>
+            )}
+          </div>
+          <div className="px-3 py-3 border-t border-gray-100 dark:border-violet-800 shrink-0">
+            {user ? (
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex items-center gap-3 w-full rounded-xl px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 font-medium transition-colors"
               >
                 <LogOut className="w-5 h-5 shrink-0" />
                 Log out
               </button>
-            </>
-          ) : (
-            <>
-              <Link
-                to="/login"
-                className="flex items-center justify-center w-full rounded-xl px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-violet-600 hover:bg-gray-50 dark:hover:bg-violet-800 transition-colors"
-              >
-                Log in
-              </Link>
-              <Link
-                to="/onboarding"
-                className="flex items-center justify-center w-full rounded-xl px-4 py-2.5 text-sm font-medium bg-amber-500 hover:bg-amber-600 text-white transition-colors"
-              >
-                Get Started
-              </Link>
-            </>
-          )}
-        </div>
-      </aside>
+            ) : (
+              <div className="space-y-2">
+                <Link
+                  to="/login"
+                  className="block w-full text-center py-2 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-violet-600 rounded-lg hover:bg-gray-50 dark:hover:bg-violet-800 transition-colors"
+                >
+                  Log in
+                </Link>
+                <Link
+                  to="/onboarding"
+                  className="block w-full text-center py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+                >
+                  Get Started
+                </Link>
+              </div>
+            )}
+          </div>
+        </aside>
+      ) : (
+        /* Dashboard design — permanent fixed left column, never an overlay.
+            z-50 keeps it above Leaflet map panes. */
+        <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 z-50 flex-col bg-white dark:bg-violet-900 border-r border-gray-200 dark:border-violet-800">
+          <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-violet-800 shrink-0">
+            <Logo href="/" tone="auto" />
+          </div>
+          <div className="flex-1 overflow-y-auto px-3 py-4">{leftNav}</div>
+          <div className="px-3 py-3 border-t border-gray-200 dark:border-violet-800 space-y-1 shrink-0">
+            {user ? (
+              <>
+                <Link to="/dashboard/settings" className={leftLink(pathname === '/dashboard/settings')}>
+                  <Settings className="w-5 h-5 shrink-0" />
+                  Settings
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 w-full rounded-xl px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                >
+                  <LogOut className="w-5 h-5 shrink-0" />
+                  Log out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="flex items-center justify-center w-full rounded-xl px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-violet-600 hover:bg-gray-50 dark:hover:bg-violet-800 transition-colors"
+                >
+                  Log in
+                </Link>
+                <Link
+                  to="/onboarding"
+                  className="flex items-center justify-center w-full rounded-xl px-4 py-2.5 text-sm font-medium bg-amber-500 hover:bg-amber-600 text-white transition-colors"
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
+          </div>
+        </aside>
+      )}
 
-      {/* Mobile header — sticky, tinted, minimal (logo + messages + menu) */}
+      {/* ---------- Mobile header ---------- */}
       <header className="sticky top-0 z-50 bg-[#F5F3FF]/90 dark:bg-violet-950/90 backdrop-blur-md md:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-16">
@@ -221,8 +326,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      {/* Mobile drawer — the same sidebar links, hidden by default, sliding in
-          from the left over a dimmed backdrop. */}
+      {/* ---------- Mobile drawer: the active sidebar's design, sliding in
+          from the matching side ---------- */}
       {drawerOpen && (
         <div className="md:hidden">
           <button
@@ -235,9 +340,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             role="dialog"
             aria-modal="true"
             aria-label="Menu"
-            className="fixed inset-y-0 left-0 w-72 max-w-[85vw] z-[56] flex flex-col bg-white dark:bg-violet-900 shadow-xl animate-in slide-in-from-left duration-200"
+            className={`fixed inset-y-0 w-72 max-w-[85vw] z-[56] flex flex-col bg-white dark:bg-violet-900 shadow-xl animate-in duration-200 ${
+              isRight
+                ? 'right-0 slide-in-from-right border-l border-gray-100 dark:border-violet-800'
+                : 'left-0 slide-in-from-left border-r border-gray-100 dark:border-violet-800'
+            }`}
           >
-            <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 dark:border-violet-800 shrink-0">
+            <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100 dark:border-violet-800 shrink-0">
               <Logo href="/" tone="auto" />
               <button
                 onClick={() => setDrawerOpen(false)}
@@ -247,8 +356,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <X className="w-5 h-5" strokeWidth={2.5} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto px-3 py-4">
-              {user && (
+            <div className="flex-1 overflow-y-auto px-3 py-4 flex flex-col">
+              {isRight && user && (
                 <Link
                   to="/dashboard"
                   onClick={() => setDrawerOpen(false)}
@@ -257,7 +366,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <img
                     src={user.avatar || '/images/avatar_default.jpg'}
                     alt={user.name}
-                    className="w-11 h-11 rounded-full object-cover border-2 border-amber-500 shrink-0"
+                    className="w-12 h-12 rounded-full object-cover border-2 border-amber-500 shrink-0"
                   />
                   <span className="min-w-0 flex-1">
                     <span className="block font-display font-semibold text-gray-900 dark:text-white truncate">
@@ -267,68 +376,78 @@ export function AppShell({ children }: { children: ReactNode }) {
                       {user.email}
                     </span>
                   </span>
+                  <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
                 </Link>
               )}
-              {navItems(() => setDrawerOpen(false))}
-              {user && (
-                <div className="border-t border-gray-100 dark:border-violet-800 mt-3 pt-3 space-y-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDrawerOpen(false);
-                      setNotifOpen(true);
-                    }}
-                    className="flex items-center gap-3 w-full rounded-xl px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-violet-800 transition-colors"
-                  >
-                    <Bell className="w-5 h-5 shrink-0" />
-                    <span>Notifications{unreadNotifications > 0 ? ` (${unreadNotifications})` : ''}</span>
-                  </button>
-                  <Link
-                    to="/dashboard/settings"
-                    onClick={() => setDrawerOpen(false)}
-                    className={linkClass(pathname === '/dashboard/settings')}
-                  >
-                    <Settings className="w-5 h-5 shrink-0" />
-                    Settings
-                  </Link>
-                </div>
-              )}
-            </div>
-            <div className="px-3 py-3 border-t border-gray-200 dark:border-violet-800 shrink-0">
-              {user ? (
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="flex items-center gap-3 w-full rounded-xl px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
-                >
-                  <LogOut className="w-5 h-5 shrink-0" />
-                  Log out
-                </button>
-              ) : (
-                <div className="space-y-2">
-                  <Link
-                    to="/login"
-                    onClick={() => setDrawerOpen(false)}
-                    className="flex items-center justify-center w-full rounded-xl px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-violet-600 hover:bg-gray-50 dark:hover:bg-violet-800 transition-colors"
-                  >
-                    Log in
-                  </Link>
-                  <Link
-                    to="/onboarding"
-                    onClick={() => setDrawerOpen(false)}
-                    className="flex items-center justify-center w-full rounded-xl px-4 py-2.5 text-sm font-medium bg-amber-500 hover:bg-amber-600 text-white transition-colors"
-                  >
-                    Get Started
-                  </Link>
-                </div>
-              )}
+              <div className="flex-1">
+                {isRight ? rightNav : leftNav}
+                {user && (
+                  <div className="border-t border-gray-100 dark:border-violet-800 mt-3 pt-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDrawerOpen(false);
+                        setNotifOpen(true);
+                      }}
+                      className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-violet-800 font-medium transition-colors"
+                    >
+                      <Bell className="w-5 h-5 shrink-0" />
+                      <span>Notifications{unreadNotifications > 0 ? ` (${unreadNotifications})` : ''}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+              {/* Pinned bottom actions */}
+              <div className="pt-3 border-t border-gray-100 dark:border-violet-800 space-y-1">
+                {user ? (
+                  <>
+                    <Link
+                      to="/dashboard/settings"
+                      onClick={() => setDrawerOpen(false)}
+                      className={isRight ? rightLink(pathname === '/dashboard/settings') : leftLink(pathname === '/dashboard/settings')}
+                    >
+                      <Settings className="w-5 h-5 shrink-0" />
+                      Settings
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="flex items-center gap-3 w-full rounded-xl px-4 py-3 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 font-medium transition-colors"
+                    >
+                      <LogOut className="w-5 h-5 shrink-0" />
+                      Log out
+                    </button>
+                  </>
+                ) : (
+                  <div className="space-y-2 pt-1">
+                    <Link
+                      to="/login"
+                      onClick={() => setDrawerOpen(false)}
+                      className={`flex items-center justify-center w-full py-2 rounded-lg border ${
+                        isRight
+                          ? 'text-gray-700 dark:text-gray-200 border-gray-200 dark:border-violet-600'
+                          : 'rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 border-gray-200 dark:border-violet-600'
+                      }`}
+                    >
+                      Log in
+                    </Link>
+                    <Link
+                      to="/onboarding"
+                      onClick={() => setDrawerOpen(false)}
+                      className="flex items-center justify-center w-full py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors"
+                    >
+                      Get Started
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
           </aside>
         </div>
       )}
 
-      {/* Desktop top bar — sits next to the sidebar, not sticky */}
-      <div className="hidden md:block md:pl-64">
+      {/* ---------- Desktop top bar (opposite the sidebar) ---------- */}
+      <div className={`hidden md:block ${isRight ? 'md:pr-64' : 'md:pl-64'}`}>
         <div className="h-16 flex items-center justify-end gap-1 px-4 sm:px-6 lg:px-8">
           {user ? (
             <>
@@ -370,9 +489,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-      {/* Main content — right of the sidebar on desktop, below the header on
-          mobile. Pages provide their own max-width containers. */}
-      <div className="md:ml-64">
+      {/* Main content — beside the sidebar on the active side, below the
+          header on mobile. Pages provide their own max-width containers. */}
+      <div className={isRight ? 'md:mr-64' : 'md:ml-64'}>
         <main>{children}</main>
       </div>
 

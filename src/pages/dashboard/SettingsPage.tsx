@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Lock, Shield, Trash2, LogOut, Moon, Sparkles } from 'lucide-react';
+import { Bell, Lock, Shield, Trash2, LogOut, Moon, Sparkles, PanelLeft, PanelRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -52,7 +52,7 @@ const privacyRows: { key: ToggleKey; label: string; description: string }[] = [
 export function SettingsPage() {
   usePageTitle('Settings');
   const navigate = useNavigate();
-  const { user, updateSettings, updateProfile, changePassword, deleteAccount, logout, isDarkMode, toggleDarkMode } = useApp();
+  const { user, updateSettings, updateProfile, changePassword, deleteAccount, logout, isDarkMode, toggleDarkMode, navSide, setNavSide } = useApp();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -159,6 +159,69 @@ export function SettingsPage() {
                 </div>
               );
             })}
+          </CardContent>
+        </Card>
+
+        <Card className="dark:bg-violet-800 dark:border-violet-700">
+          <CardHeader>
+            <CardTitle className="text-gray-900 dark:text-white flex items-center gap-2">
+              <PanelLeft className="w-5 h-5" />
+              Navigation
+            </CardTitle>
+            <CardDescription className="dark:text-gray-300">
+              Pick which sidebar design the app uses — the dashboard sidebar on the left or the
+              marketplace sidebar on the right. Applies everywhere, on this device.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {([
+                {
+                  side: 'left' as const,
+                  icon: PanelLeft,
+                  title: 'Left sidebar',
+                  desc: 'Dashboard design: white sidebar with violet active states, pinned to the left.',
+                },
+                {
+                  side: 'right' as const,
+                  icon: PanelRight,
+                  title: 'Right sidebar',
+                  desc: 'Marketplace design: profile card and amber accents, anchored to the right.',
+                },
+              ]).map(({ side, icon: Icon, title, desc }) => {
+                const on = navSide === side;
+                return (
+                  <button
+                    key={side}
+                    type="button"
+                    onClick={() => {
+                      setNavSide(side);
+                      toast.success(`Sidebar switched to the ${side} side`);
+                    }}
+                    aria-pressed={on}
+                    className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition-colors ${
+                      on
+                        ? 'border-violet-500 bg-violet-50 dark:bg-violet-700/40 dark:border-amber-400'
+                        : 'border-gray-200 hover:border-violet-300 dark:border-violet-600 dark:hover:border-amber-400'
+                    }`}
+                  >
+                    <span
+                      className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+                        on ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-600 dark:bg-violet-700 dark:text-gray-200'
+                      }`}
+                    >
+                      <Icon className="w-[18px] h-[18px]" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className={`block font-medium ${on ? 'text-violet-700 dark:text-amber-400' : 'text-gray-900 dark:text-white'}`}>
+                        {title}
+                      </span>
+                      <span className="block text-sm text-gray-500 dark:text-gray-400 mt-0.5">{desc}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </CardContent>
         </Card>
 

@@ -122,6 +122,10 @@ interface AppContextValue {
   isDarkMode: boolean;
   toggleDarkMode: () => void;
 
+  // sidebar side (per device): 'left' = dashboard sidebar design, 'right' = marketplace design
+  navSide: 'left' | 'right';
+  setNavSide: (side: 'left' | 'right') => void;
+
   // auth (async in cloud mode; resolves instantly in local mode)
   login: (email: string, password: string, remember: boolean) => Promise<Result>;
   register: (input: RegisterInput) => Promise<Result<User>>;
@@ -415,6 +419,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     () => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false
   );
   const [guestDark, setGuestDark] = useState<boolean | null>(null);
+
+  // Sidebar side preference (per device): which of the two shell designs is
+  // active app-wide — 'left' (dashboard sidebar) or 'right' (marketplace).
+  const [navSide, setNavSideState] = useState<'left' | 'right'>(() =>
+    localStorage.getItem('dealmint_navside') === 'right' ? 'right' : 'left'
+  );
+  const setNavSide = useCallback((side: 'left' | 'right') => {
+    setNavSideState(side);
+    localStorage.setItem('dealmint_navside', side);
+  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
@@ -1905,6 +1919,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     authMode,
     isDarkMode,
     toggleDarkMode,
+    navSide,
+    setNavSide,
     user,
     login,
     register,
