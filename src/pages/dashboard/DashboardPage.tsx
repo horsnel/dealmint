@@ -20,7 +20,6 @@ import { useApp } from '@/context/AppContext';
 import { MODES, modesOf } from '@/lib/modes';
 import { timeAgo } from '@/lib/format';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { PostNewSheet } from '@/components/dashboard/PostNewSheet';
 
 const activityIcons = {
@@ -127,7 +126,7 @@ export function DashboardPage() {
   ];
 
   return (
-    <DashboardShell>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
       <div className="space-y-6">
         {/* Welcome */}
         <section>
@@ -380,6 +379,6 @@ export function DashboardPage() {
       </div>
 
       <PostNewSheet open={postOpen} onOpenChange={setPostOpen} user={user} />
-    </DashboardShell>
+    </div>
   );
 }

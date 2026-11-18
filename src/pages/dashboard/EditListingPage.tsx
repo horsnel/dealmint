@@ -1,5 +1,4 @@
 import { useParams, Link } from 'react-router-dom';
-import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -13,7 +12,7 @@ export function EditListingPage() {
 
   if (!listing || listing.seller.id !== user?.id) {
     return (
-      <DashboardShell>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         <div>
           <EmptyState
             icon={Search}
@@ -26,13 +25,13 @@ export function EditListingPage() {
             }
           />
         </div>
-      </DashboardShell>
+      </div>
     );
   }
 
   return (
-    <DashboardShell>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
       <ListingForm key={listing.id} type={listing.type} listing={listing} inDashboard />
-    </DashboardShell>
+    </div>
   );
 }

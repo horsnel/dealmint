@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { Link } from 'react-router-dom';
 import { Package, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -105,7 +104,7 @@ export function OrdersPage() {
   };
 
   return (
-    <DashboardShell>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
@@ -142,6 +141,6 @@ export function OrdersPage() {
           <TabsContent value="selling">{renderList(selling, 'seller')}</TabsContent>
         </Tabs>
       </div>
-    </DashboardShell>
+    </div>
   );
 }

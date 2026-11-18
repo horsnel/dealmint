@@ -98,7 +98,7 @@ export function RegisterPage() {
   const iconClass = 'absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400';
 
   return (
-    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
+    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-6 lg:pt-8">
       <div className="max-w-md mx-auto px-4 sm:px-6 py-8 lg:py-16">
         <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-8">
           {/* Header */}

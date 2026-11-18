@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react';
-import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { Link } from 'react-router-dom';
 import {
   ArrowDownLeft,
@@ -280,7 +279,7 @@ export function WalletPage() {
         ))}
       </div>
     ) : (
-      <p className="text-center text-gray-500 dark:text-gray-400 py-8">Nothing here yet</p>
+      <EmptyState icon={History} title="No transactions yet" description="Your earnings, deposits and withdrawals will appear here." />
     );
 
   const earnings = transactions.filter((t) => ['earning', 'bonus', 'refund', 'referral_bonus'].includes(t.type));
@@ -301,7 +300,7 @@ export function WalletPage() {
   const tabClass = 'dark:data-[state=active]:bg-violet-600';
 
   return (
-    <DashboardShell>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
       <div>
         <h1 className="font-display font-bold text-2xl lg:text-3xl text-gray-900 dark:text-white mb-6">
           Wallet
@@ -424,7 +423,7 @@ export function WalletPage() {
                       return (
                         <div
                           key={a.id}
-                          className="flex items-center gap-4 p-4 rounded-lg border border-gray-200 dark:border-violet-700"
+                          className="flex items-center gap-4 p-4 rounded-2xl border border-gray-100 shadow-sm dark:border-violet-700"
                         >
                           <div className="w-10 h-10 rounded-full bg-violet-100 dark:bg-violet-700 flex items-center justify-center shrink-0">
                             <Icon className="w-5 h-5 text-violet-600 dark:text-violet-300" />
@@ -514,7 +513,7 @@ export function WalletPage() {
                 ) : (
                   <div className="space-y-3">
                     {escrowLedger.slice(0, 5).map((e) => (
-                      <div key={e.id} className="p-3 rounded-lg border border-gray-200 dark:border-violet-700 min-w-0">
+                      <div key={e.id} className="p-3 rounded-2xl border border-gray-100 shadow-sm dark:border-violet-700 min-w-0">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{e.listingTitle}</p>
                           <span className={`shrink-0 text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${escrowStatusChip(e.status)}`}>
@@ -803,6 +802,6 @@ export function WalletPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardShell>
+    </div>
   );
 }

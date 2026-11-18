@@ -63,7 +63,7 @@ export function VerifyPhonePage() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
+    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-6 lg:pt-8">
       <div className="max-w-md mx-auto px-4 sm:px-6 py-8 lg:py-16">
         <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-8 text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-violet-100 dark:bg-violet-700 flex items-center justify-center">

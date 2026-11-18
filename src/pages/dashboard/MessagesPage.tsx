@@ -332,7 +332,7 @@ export function MessagesPage() {
                 </p>
               </>
             ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400">No conversations match your search</p>
+              <EmptyState icon={Inbox} title="No conversations match your search" description="Try a different name or keyword." />
             )}
           </div>
         )}

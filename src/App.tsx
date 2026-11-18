@@ -1,7 +1,7 @@
 import { Suspense, lazy, type ComponentType, type ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
-import { Navigation } from '@/components/layout/Navigation';
+import { AppShell } from '@/components/layout/AppShell';
 import { Footer } from '@/components/layout/Footer';
 import { PostFab } from '@/components/layout/PostFab';
 import { ScrollToTop } from '@/components/common/ScrollToTop';
@@ -93,14 +93,13 @@ function AppContent() {
   return (
     <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
       <ScrollToTop />
-      {/* The inbox renders chrome-free — its own conversation sidebar with
-          page-size title and avatar — chat-app style */}
-      {location.pathname !== '/dashboard/messages' && <Navigation user={user} />}
-      {/* Nudge signed-in cloud users to verify their email (skipped on the immersive inbox too) */}
+      {/* Chrome-free pages (immersive inbox, auth flows) skip the shell inside
+          AppShell; the email-verify nudge is skipped there too */}
       {location.pathname !== '/dashboard/messages' && <EmailVerifyBanner />}
       {/* Hard gate: cloud accounts with an unverified email are blocked from
           ordering — this modal explains and offers a resend (invisible when closed) */}
       <VerifyGateModal />
+      <AppShell>
       <main>
         <ErrorBoundary>
           {/* Keyed by pathname so every page mounts with a soft rise-and-fade;
@@ -177,8 +176,9 @@ function AppContent() {
           </Suspense>
         </ErrorBoundary>
       </main>
-      {/* Footer is only part of the landing page */}
-      {location.pathname === '/' && <Footer />}
+        {/* Footer is only part of the landing page */}
+        {location.pathname === '/' && <Footer />}
+      </AppShell>
       {/* Mobile-only: floating "Post" button + bottom sheet (replaces the mobile menu Post links) */}
       <PostFab user={user} />
       <Toaster position="top-right" />

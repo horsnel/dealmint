@@ -41,7 +41,7 @@ export function RoleSelectionPage() {
   };
 
   return (
-    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
+    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-6 lg:pt-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 lg:py-16">
         {/* Header */}
         <div className="text-center mb-10">

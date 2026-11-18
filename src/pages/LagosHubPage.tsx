@@ -59,7 +59,7 @@ export function LagosHubPage() {
   const remoteCount = useMemo(() => active.filter((l) => l.isRemote).length, [active]);
 
   return (
-    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
+    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-6 lg:pt-8">
       {/* ---------- Hero ---------- */}
       <section className="bg-gradient-to-b from-violet-700 to-violet-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">

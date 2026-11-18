@@ -130,7 +130,7 @@ export function ListingDetailPage() {
 
   if (!listing) {
     return (
-      <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
+      <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-6 lg:pt-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <EmptyState
             icon={Search}
@@ -364,7 +364,7 @@ export function ListingDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
+    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-6 lg:pt-8">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-8 pb-32">
         {/* Sticky glass header (mock a57a53 / 8bb219): back, share, save */}
         <div className="sticky top-20 z-30 -mx-4 mb-6 flex items-center justify-between border-b border-gray-200/50 bg-lavender/90 px-4 py-2.5 backdrop-blur-md sm:-mx-6 sm:px-6 lg:top-24 dark:border-violet-800/60 dark:bg-violet-950/90">

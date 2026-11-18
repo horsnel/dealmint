@@ -272,24 +272,10 @@ export function SafeSpotsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Intro */}
-        <div className="mb-6">
-          <p className="text-gray-600 dark:text-gray-300 max-w-2xl">
-            Community-vetted places to meet buyers and sellers: busy, public and well-lit. Meet
-            somewhere safe and swap with confidence.
-          </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-            {cityCounts.total} approved spots across {cityCounts.cities} cities
-          </p>
-        </div>
-
-        {/* Hero map with floating header + search (mock layout) */}
-        <div
-          ref={mapSectionRef}
-          className="relative z-0 ss-map-frame h-[520px] sm:h-[560px] rounded-3xl overflow-hidden border border-gray-200 dark:border-violet-700 shadow-card scroll-mt-24"
-        >
+    <div className="relative h-[calc(100dvh-4rem)] overflow-hidden bg-lavender dark:bg-violet-950">
+      {/* The map fills the screen (z-0); the floating header/search and the
+          bottom sheet stack above it. */}
+      <div ref={mapSectionRef} className="absolute inset-0 z-0">
           <SafeSpotsMap
             spots={searchApproved}
             city={city}
@@ -348,11 +334,14 @@ export function SafeSpotsPage() {
           </div>
         </div>
 
-        {/* Bottom sheet: activity, filters, legend, live listings (mock layout) */}
-        <div className="relative z-10 -mt-8 bg-white dark:bg-violet-900 rounded-t-[2rem] p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.15)] pb-8">
-          <div className="w-12 h-1.5 bg-gray-200 dark:bg-violet-700 rounded-full mx-auto mb-5" />
+        {/* Bottom sheet — fixed above the mobile nav area, solid white so the
+            Leaflet tiles never bleed through. Activity, filters, legend and
+            live listings live strictly inside it. */}
+        <div className="absolute bottom-16 md:bottom-0 left-0 right-0 w-full bg-white dark:bg-violet-900 rounded-t-[2rem] z-20 p-6 pb-8 max-h-[68dvh] flex flex-col border-t border-gray-100 dark:border-violet-700 shadow-[0_-10px_40px_rgba(0,0,0,0.15)]">
+          <div className="w-12 h-1.5 bg-gray-200 dark:bg-violet-700 rounded-full mx-auto mb-4 shrink-0" />
+          <div className="overflow-y-auto no-scrollbar min-h-0 flex-1">
 
-          <div className="flex justify-between items-center mb-4 gap-3">
+          <div className="flex justify-between items-center mb-2 gap-3">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white">
               Activity in {cityLabel}
             </h2>
@@ -360,6 +349,9 @@ export function SafeSpotsPage() {
               <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> Live
             </span>
           </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+            {cityCounts.total} approved spots across {cityCounts.cities} cities
+          </p>
 
           {/* City filter */}
           <div ref={filtersRef} className="flex flex-wrap gap-2 mb-4" role="group" aria-label="Filter by city">
@@ -455,10 +447,9 @@ export function SafeSpotsPage() {
               ))}
             </div>
           )}
-        </div>
 
-        {/* Spots grid */}
-        <div className="pt-10">
+        {/* Community-vetted spots — scrollable inside the sheet */}
+        <div className="pt-8 mt-6 border-t border-gray-100 dark:border-violet-700">
           {searchApproved.length === 0 && pending.length === 0 ? (
             <EmptyState
               icon={MapPinned}
@@ -590,8 +581,9 @@ export function SafeSpotsPage() {
               Suggest a spot
             </Button>
           </div>
+          </div>
+          </div>
         </div>
-      </div>
 
       {/* Suggest dialog */}
       <Dialog open={open} onOpenChange={(v) => (v ? openDialog() : setOpen(false))}>

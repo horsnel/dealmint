@@ -1,5 +1,4 @@
 import { useState, useRef } from 'react';
-import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Check,
@@ -115,7 +114,7 @@ export function OrderDetailPage() {
 
   if (!order || !user) {
     return (
-      <DashboardShell>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         <div>
           <EmptyState
             icon={Search}
@@ -128,7 +127,7 @@ export function OrderDetailPage() {
             }
           />
         </div>
-      </DashboardShell>
+      </div>
     );
   }
 
@@ -350,7 +349,7 @@ export function OrderDetailPage() {
   const feeRate = order.price > 0 ? Math.round((order.fee / order.price) * 100) : 0;
 
   return (
-    <DashboardShell>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
       <div>
         <PageClose fallback="/dashboard/orders" />
         <div className="flex flex-wrap items-center gap-3 mb-6">
@@ -1121,6 +1120,6 @@ export function OrderDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </DashboardShell>
+    </div>
   );
 }

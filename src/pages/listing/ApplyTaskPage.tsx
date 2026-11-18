@@ -41,7 +41,7 @@ export function ApplyTaskPage() {
 
   if (!listing || !user) {
     return (
-      <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
+      <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-6 lg:pt-8">
         <div className="mx-auto max-w-md px-4 py-8">
           <EmptyState
             icon={Search}
@@ -114,7 +114,7 @@ export function ApplyTaskPage() {
     ) : null;
 
   return (
-    <div className="min-h-screen bg-lavender pt-20 lg:pt-24 dark:bg-violet-950">
+    <div className="min-h-screen bg-lavender pt-6 lg:pt-8 dark:bg-violet-950">
       <div className="mx-auto max-w-md px-4 pb-16 sm:px-6">
         <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-xl shadow-violet-900/5 dark:border-violet-700 dark:bg-violet-900">
           {/* Header (mock: X + page title) */}

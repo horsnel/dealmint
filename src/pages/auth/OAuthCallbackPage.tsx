@@ -32,7 +32,7 @@ export function OAuthCallbackPage() {
   }, [completeOAuthSignIn, navigate]);
 
   return (
-    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-20 lg:pt-24">
+    <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-6 lg:pt-8">
       <div className="max-w-md mx-auto px-4 sm:px-6 py-8 lg:py-16">
         <div className="card-white dark:bg-violet-800 dark:border-violet-700 p-8 text-center">
           {error ? (

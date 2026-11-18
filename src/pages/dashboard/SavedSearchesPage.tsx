@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -54,7 +53,7 @@ export function SavedSearchesPage() {
   };
 
   return (
-    <DashboardShell>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
       <div>
         <h1 className="font-display font-bold text-2xl lg:text-3xl text-gray-900 dark:text-white mb-2">
           Saved Searches &amp; Alerts
@@ -225,6 +224,6 @@ export function SavedSearchesPage() {
           )}
         </section>
       </div>
-    </DashboardShell>
+    </div>
   );
 }

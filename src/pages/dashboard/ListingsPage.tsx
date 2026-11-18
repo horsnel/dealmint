@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Edit, Eye, Pause, Play, Trash2, Search, Briefcase, ChevronDown, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -197,7 +196,7 @@ export function ListingsPage() {
     );
 
   return (
-    <DashboardShell>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
       <div>
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
           <div>
@@ -280,7 +279,7 @@ export function ListingsPage() {
                     toast.info(res.error);
                   }
                 }}
-                className="rounded-xl border border-gray-200 dark:border-violet-600 p-3 text-left transition hover:border-violet-400 dark:hover:border-amber-400"
+                className="rounded-2xl border border-gray-100 shadow-sm dark:border-violet-600 p-3 text-left transition hover:border-violet-400 dark:hover:border-amber-400"
               >
                 <p className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white">
                   {kind === 'featured' ? (
@@ -315,6 +314,6 @@ export function ListingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </DashboardShell>
+    </div>
   );
 }

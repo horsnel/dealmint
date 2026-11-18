@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react';
-import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { BadgeCheck, FileUp, ShieldCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -62,7 +61,7 @@ export function VerifyIdPage() {
   };
 
   return (
-    <DashboardShell>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
       <div>
         <h1 className="font-display font-bold text-2xl lg:text-3xl text-gray-900 dark:text-white mb-2 flex items-center gap-3">
           <BadgeCheck className="w-7 h-7 text-violet-600 dark:text-amber-400" />
@@ -197,6 +196,6 @@ export function VerifyIdPage() {
           </>
         )}
       </div>
-    </DashboardShell>
+    </div>
   );
 }

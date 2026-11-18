@@ -310,7 +310,7 @@ export function OnboardingPage() {
 
             <div className="flex-grow overflow-y-auto no-scrollbar space-y-3 pb-4">
               {SAFETY_RULES.map((rule, i) => (
-                <div key={rule.title} className="bg-white border border-gray-200 rounded-2xl overflow-hidden transition-all">
+                <div key={rule.title} className="bg-white border border-gray-100 shadow-sm rounded-2xl overflow-hidden transition-all">
                   <button
                     type="button"
                     onClick={() => setOpenRule(openRule === i ? null : i)}

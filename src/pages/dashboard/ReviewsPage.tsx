@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { Link } from 'react-router-dom';
 import { Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,7 +23,7 @@ export function ReviewsPage() {
   const toReview = orders.filter((o) => o.buyerId === user.id && o.status === 'completed' && !o.reviewed);
 
   return (
-    <DashboardShell>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
       <div>
         <div className="mb-8">
           <h1 className="font-display font-bold text-2xl lg:text-3xl text-gray-900 dark:text-white">Reviews</h1>
@@ -140,6 +139,6 @@ export function ReviewsPage() {
           </TabsContent>
         </Tabs>
       </div>
-    </DashboardShell>
+    </div>
   );
 }
