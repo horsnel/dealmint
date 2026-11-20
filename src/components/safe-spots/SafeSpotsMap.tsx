@@ -22,12 +22,105 @@ interface SafeSpotsMapProps {
   onPick?: (p: LatLng) => void;
   /** Activity heatmap zones (safe/moderate/busy) drawn as soft blurred circles */
   heatmapZones?: HeatZone[];
+  /** Basemap style selected in the Layers sheet */
+  mapType?: MapType;
+  /** Map detail overlays (Public transport / Cycling) toggled in the Layers sheet */
+  overlays?: { transit?: boolean; cycling?: boolean };
+  /** Task-density heat blobs (one per live listing, weighted) */
+  densityPoints?: DensityPoint[];
+  /** Task-density heatmap toggle; toggling off fades the layer out */
+  densityOn?: boolean;
+  /** Temporary community safety reports (auto-expire after 2h) */
+  reportPins?: ReportPin[];
+  /** Full-screen map mode: re-measure the tiles when the container resizes */
+  fullscreen?: boolean;
 }
 
-const TILE_URL =
-  'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-const TILE_ATTR =
-  '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors';
+export type MapType = 'default' | 'satellite' | 'terrain';
+
+export interface DensityPoint {
+  lat: number;
+  lng: number;
+  /** 0..1 — drives blob size and colour */
+  weight: number;
+}
+
+export interface ReportPin {
+  id: string;
+  lat: number;
+  lng: number;
+  label: string;
+  /** Epoch ms when the report was filed; the page prunes after 2h */
+  ts: number;
+}
+
+// Basemaps for the Layers sheet (URLs per the Google-Maps-style spec).
+const BASE_LAYERS: Record<MapType, { url: string; attr: string; maxZoom: number; subdomains?: string }> = {
+  default: {
+    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    attr: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>',
+    maxZoom: 19,
+    subdomains: 'abcd',
+  },
+  satellite: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attr: 'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics',
+    maxZoom: 19,
+  },
+  terrain: {
+    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    attr: 'Map data: &copy; OpenStreetMap contributors, SRTM | Style: &copy; OpenTopoMap (<a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noreferrer">CC-BY-SA</a>)',
+    maxZoom: 17,
+    subdomains: 'abc',
+  },
+};
+
+// Keyless community overlay tiles for the "Map details" toggles.
+const OVERLAY_LAYERS = {
+  transit: {
+    url: 'https://{s}.tiles.openrailwaymap.org/2/{z}/{x}/{y}.png',
+    attr: '&copy; <a href="https://www.openrailwaymap.org/" target="_blank" rel="noreferrer">OpenRailwayMap</a> (CC-BY-SA)',
+    maxZoom: 18,
+  },
+  cycling: {
+    url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+    attr: '&copy; <a href="https://www.cyclosm.org/" target="_blank" rel="noreferrer">CyclOSM</a> | &copy; OpenStreetMap contributors',
+    maxZoom: 19,
+  },
+} as const;
+
+// Graceful degradation: Carto (and OSM on some networks) answer throttled
+// IPs with a tiny placeholder tile instead of real imagery — still HTTP 200,
+// so tileerror never fires. We probe the primary with a known land tile and
+// walk a fallback chain (each step probed by response size) until a provider
+// actually serves a map.
+const FALLBACK_CHAINS: Record<MapType, { url: string; attr: string; maxZoom: number; minBytes?: number }[]> = {
+  default: [
+    {
+      url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      attr: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+      // OSM's block page is a ~7KB image; real z10 land tiles are much larger
+      minBytes: 10000,
+    },
+    {
+      // Terminal, CDN-backed light basemap that works everywhere
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+      attr: 'Tiles &copy; Esri — Source: Esri',
+      maxZoom: 19,
+      minBytes: 3500,
+    },
+  ],
+  terrain: [
+    {
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+      attr: 'Tiles &copy; Esri — Source: Esri, USGS, NOAA',
+      maxZoom: 19,
+      minBytes: 3500,
+    },
+  ],
+  satellite: [],
+};
 
 const esc = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
@@ -58,6 +151,16 @@ const clusterIcon = (cluster: L.MarkerCluster) =>
     iconSize: L.point(40, 40),
   });
 
+// Waze-style temporary warning pin: orange circle, white ring, bouncing.
+const reportPinIcon = () =>
+  L.divIcon({
+    className: 'ss-report-pin-wrap',
+    html: `<div class="ss-report-pin animate-bounce"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16],
+  });
+
 export function SafeSpotsMap({
   spots,
   city,
@@ -69,16 +172,28 @@ export function SafeSpotsMap({
   picked,
   onPick,
   heatmapZones,
+  mapType = 'default',
+  overlays,
+  densityPoints,
+  densityOn = false,
+  reportPins,
+  fullscreen = false,
 }: SafeSpotsMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const tilesRef = useRef<L.TileLayer | null>(null);
+  const transitRef = useRef<L.TileLayer | null>(null);
+  const cyclingRef = useRef<L.TileLayer | null>(null);
   const clusterRef = useRef<L.MarkerClusterGroup | null>(null);
   const markersRef = useRef<Record<string, L.Marker>>({});
   const userMarkerRef = useRef<L.Marker | null>(null);
   const userCircleRef = useRef<L.Circle | null>(null);
   const pickMarkerRef = useRef<L.Marker | null>(null);
   const heatLayerRef = useRef<L.LayerGroup | null>(null);
+  const densityLayerRef = useRef<L.LayerGroup | null>(null);
+  const densityFadeRef = useRef<number | null>(null);
+  const reportsRef = useRef<L.LayerGroup | null>(null);
+  const probeTokenRef = useRef(0);
   const pickCbRef = useRef(onPick);
   pickCbRef.current = onPick;
 
@@ -94,12 +209,19 @@ export function SafeSpotsMap({
       attributionControl: true,
     });
     mapRef.current = map;
-    // Low pane for the activity heatmap so real pins and popups sit above it.
+    // Low panes for the activity heatmap and the task-density heat so real
+    // pins and popups sit above them.
     map.createPane('ssHeat');
     const heatPane = map.getPane('ssHeat');
     if (heatPane) {
       heatPane.style.zIndex = '390';
       heatPane.classList.add('ss-heat-pane');
+    }
+    map.createPane('ssDensity');
+    const densityPane = map.getPane('ssDensity');
+    if (densityPane) {
+      densityPane.style.zIndex = '385';
+      densityPane.classList.add('ss-density-pane');
     }
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
@@ -127,19 +249,90 @@ export function SafeSpotsMap({
       userCircleRef.current = null;
       pickMarkerRef.current = null;
       heatLayerRef.current = null;
+      densityLayerRef.current = null;
+      reportsRef.current = null;
+      if (densityFadeRef.current) window.clearTimeout(densityFadeRef.current);
     };
   }, []);
 
-  // Swap basemap tiles when the theme changes (same tiles — dark mode is a CSS filter).
+  // Basemap: swap tiles when the theme or the Layers-sheet map type changes.
+  // A size probe on a known land tile detects placeholder responses and walks
+  // the fallback chain; real networks keep the primary source untouched.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     if (tilesRef.current) map.removeLayer(tilesRef.current);
-    tilesRef.current = L.tileLayer(TILE_URL, {
-      attribution: TILE_ATTR,
-      maxZoom: 19,
-    }).addTo(map);
-  }, [dark]);
+    const base = BASE_LAYERS[mapType];
+    const attach = (cfg: { url: string; attr: string; maxZoom: number; subdomains?: string }) =>
+      L.tileLayer(cfg.url, {
+        attribution: cfg.attr,
+        maxZoom: cfg.maxZoom,
+        ...(cfg.subdomains ? { subdomains: cfg.subdomains } : {}),
+      }).addTo(map);
+    const layer = attach(base);
+    tilesRef.current = layer;
+    // Real imagery (satellite/terrain) must not get the dark invert filter.
+    map.getContainer().classList.toggle('ss-map-nofilter', mapType !== 'default');
+
+    const probeToken = ++probeTokenRef.current;
+    const probeTile = (cfg: { url: string; subdomains?: string }, minBytes: number) => {
+      const url = cfg.url
+        .replace('{s}', (cfg.subdomains ?? 'abc')[0])
+        .replace('{z}', '10')
+        .replace('{x}', '521')
+        .replace('{y}', '493')
+        .replace('{r}', '');
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), 7000);
+      return fetch(url, { mode: 'cors', signal: controller.signal })
+        .then((r) => r.blob())
+        .then((blob) => blob.size >= minBytes)
+        .catch(() => false)
+        .finally(() => window.clearTimeout(timer));
+    };
+
+    (async () => {
+      if (await probeTile(base, 3500)) return; // primary serves real tiles
+      for (const cand of FALLBACK_CHAINS[mapType]) {
+        if (await probeTile(cand, cand.minBytes ?? 3500)) {
+          if (probeToken !== probeTokenRef.current || mapRef.current !== map || tilesRef.current !== layer) return;
+          map.removeLayer(layer);
+          tilesRef.current = attach(cand);
+          return;
+        }
+      }
+    })();
+  }, [dark, mapType]);
+
+  // Map detail overlays (Public transport / Cycling) from the Layers sheet.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const wantTransit = !!overlays?.transit;
+    const wantCycling = !!overlays?.cycling;
+    if (!wantTransit && transitRef.current) {
+      map.removeLayer(transitRef.current);
+      transitRef.current = null;
+    }
+    if (!wantCycling && cyclingRef.current) {
+      map.removeLayer(cyclingRef.current);
+      cyclingRef.current = null;
+    }
+    if (wantTransit && !transitRef.current) {
+      transitRef.current = L.tileLayer(OVERLAY_LAYERS.transit.url, {
+        attribution: OVERLAY_LAYERS.transit.attr,
+        maxZoom: OVERLAY_LAYERS.transit.maxZoom,
+        opacity: 0.85,
+      }).addTo(map);
+    }
+    if (wantCycling && !cyclingRef.current) {
+      cyclingRef.current = L.tileLayer(OVERLAY_LAYERS.cycling.url, {
+        attribution: OVERLAY_LAYERS.cycling.attr,
+        maxZoom: OVERLAY_LAYERS.cycling.maxZoom,
+        opacity: 0.85,
+      }).addTo(map);
+    }
+  }, [overlays?.transit, overlays?.cycling]);
 
   // Spot markers (view mode). Keyed by a stable signature so changing the
   // city filter never rebuilds the cluster mid-animation — it only reframes.
@@ -283,6 +476,98 @@ export function SafeSpotsMap({
     heatLayerRef.current = group;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zoneSignature, mode]);
+
+  // Task-density heatmap (Mapbox-style blobs from live listing volume).
+  // Toggling on fades the blobs in; toggling off (or auto-hide from the
+  // My Location / Layers buttons) fades them out before teardown.
+  const densitySignature = useMemo(
+    () => (densityPoints ?? []).map((p) => `${p.lat.toFixed(3)}:${p.lng.toFixed(3)}:${p.weight.toFixed(2)}`).join('|'),
+    [densityPoints]
+  );
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || mode !== 'view') return;
+    const pane = map.getPane('ssDensity');
+
+    const show = () => {
+      if (densityFadeRef.current) {
+        window.clearTimeout(densityFadeRef.current);
+        densityFadeRef.current = null;
+      }
+      if (!densityLayerRef.current) {
+        const group = L.layerGroup();
+        (densityPoints ?? []).forEach((p) => {
+          const colour = p.weight >= 0.7 ? '#ef4444' : p.weight >= 0.4 ? '#f97316' : '#f59e0b';
+          L.circle([p.lat, p.lng], {
+            radius: 450 + p.weight * 1400,
+            stroke: false,
+            fillColor: colour,
+            fillOpacity: 0.5,
+            interactive: false,
+            pane: 'ssDensity',
+          }).addTo(group);
+        });
+        group.addTo(map);
+        densityLayerRef.current = group;
+      }
+      if (pane) pane.style.opacity = '1';
+    };
+
+    const hide = () => {
+      if (pane) pane.style.opacity = '0';
+      if (densityFadeRef.current) window.clearTimeout(densityFadeRef.current);
+      densityFadeRef.current = window.setTimeout(() => {
+        densityLayerRef.current?.remove();
+        densityLayerRef.current = null;
+        densityFadeRef.current = null;
+      }, 550);
+    };
+
+    if (densityOn && (densityPoints ?? []).length > 0) show();
+    else hide();
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [densitySignature, densityOn, mode]);
+
+  // Community safety reports: temporary orange warning pins that live for 2h.
+  const reportsSignature = useMemo(
+    () => (reportPins ?? []).map((r) => `${r.id}:${r.lat.toFixed(4)}:${r.lng.toFixed(4)}:${r.label}`).join('|'),
+    [reportPins]
+  );
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || mode !== 'view') return;
+    reportsRef.current?.remove();
+    reportsRef.current = null;
+    const pins = reportPins ?? [];
+    if (pins.length === 0) return;
+    const group = L.layerGroup();
+    pins.forEach((r) => {
+      const when = new Date(r.ts).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' });
+      L.marker([r.lat, r.lng], { icon: reportPinIcon(), title: r.label, alt: r.label, zIndexOffset: 600 })
+        .bindPopup(
+          `<div class="ss-popup"><p class="ss-popup__name">${esc(r.label)}</p><p class="ss-popup__meta">Community alert &middot; ${when}</p><p class="ss-popup__addr">Temporary warning — auto-clears within 2 hours.</p></div>`,
+          { closeButton: true, maxWidth: 220, minWidth: 180, autoPanPadding: L.point(44, 52) }
+        )
+        .addTo(group);
+    });
+    group.addTo(map);
+    reportsRef.current = group;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportsSignature, mode]);
+
+  // Full-screen mode: the container resizes mid-transition; re-measure after
+  // the settle so the tiles fill the viewport edge to edge.
+  useEffect(() => {
+    if (!fullscreen) return;
+    const map = mapRef.current;
+    if (!map) return;
+    map.invalidateSize();
+    const t = window.setTimeout(() => map.invalidateSize(), 550);
+    return () => window.clearTimeout(t);
+  }, [fullscreen]);
 
   // Picker mode: tap to drop the pin.
   useEffect(() => {

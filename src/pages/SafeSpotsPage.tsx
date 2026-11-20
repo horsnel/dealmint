@@ -1,16 +1,36 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
+  AlertTriangle,
+  Bike,
+  BookOpen,
+  Box,
   Building2,
   Check,
+  Compass,
+  Construction,
   Crosshair,
+  Eye,
+  Flame,
+  Landmark,
+  LayoutGrid,
+  Layers,
   MapPin,
   MapPinned,
+  Maximize,
+  Mic,
+  Minimize,
+  Moon,
   Navigation,
   Plus,
-  Search,
   ShieldCheck,
-  SlidersHorizontal,
+  ShoppingBag,
+  Train,
+  TrafficCone,
+  User,
+  Users,
+  UtensilsCrossed,
+  Wind,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -36,8 +56,10 @@ import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
 import { EmptyState } from '@/components/common/EmptyState';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { SafeSpotsMap } from '@/components/safe-spots/SafeSpotsMap';
+import { SafeSpotsMap, type DensityPoint, type MapType, type ReportPin } from '@/components/safe-spots/SafeSpotsMap';
 import {
+  CITY_CENTERS,
+  cityCenter,
   directionsUrl,
   formatDistance,
   haversineKm,
@@ -48,6 +70,61 @@ import {
 } from '@/lib/safe-spots';
 import { spotCities, spotTypeMeta } from '@/pages/SafeSpotsPage.meta';
 import type { SafeSpotType } from '@/types';
+
+// Google-Maps-style category pills — mapped to the real spot types so every
+// pill actually filters the map pins (Coffee/Bars have no spot data yet).
+const TYPE_FILTERS: { id: 'all' | SafeSpotType; label: string; icon: typeof MapPin }[] = [
+  { id: 'all', label: 'All', icon: LayoutGrid },
+  { id: 'police_station', label: 'Police stations', icon: ShieldCheck },
+  { id: 'mall', label: 'Shopping', icon: ShoppingBag },
+  { id: 'bank', label: 'Banks', icon: Landmark },
+  { id: 'restaurant', label: 'Restaurants', icon: UtensilsCrossed },
+  { id: 'library', label: 'Libraries', icon: BookOpen },
+];
+
+// Waze-style report categories (verbatim per the request).
+const REPORT_OPTIONS: { id: string; label: string; icon: typeof MapPin }[] = [
+  { id: 'crowded', label: 'Spot is crowded / too busy', icon: Users },
+  { id: 'lighting', label: 'Poor lighting / feels unsafe', icon: Moon },
+  { id: 'road', label: "Road blocked / can't access location", icon: Construction },
+  { id: 'suspicious', label: 'Suspicious activity', icon: Eye },
+];
+
+// Thumbnail snapshots (real tiles of Lagos at z10) for the Layers sheet, with
+// reliable fallbacks if a provider throttles the visitor's network.
+const MAP_TYPES: { id: MapType; label: string; thumb: string; fallbackThumb: string }[] = [
+  {
+    id: 'default',
+    label: 'Default',
+    // Esri's light canvas always renders (Carto throttles some networks), and
+    // it reads like the light_all style it stands in for
+    thumb: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/10/493/521',
+    fallbackThumb: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/10/493/521',
+  },
+  {
+    id: 'satellite',
+    label: 'Satellite',
+    thumb: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/10/493/521',
+    fallbackThumb: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/10/493/521',
+  },
+  {
+    id: 'terrain',
+    label: 'Terrain',
+    thumb: 'https://a.tile.opentopomap.org/10/521/493.png',
+    fallbackThumb: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/10/493/521',
+  },
+];
+
+// Task-density hubs — Lagos gigs cluster hard around Lekki and Ikeja.
+const DENSITY_HUBS: Record<string, { lat: number; lng: number }[]> = {
+  Lagos: [
+    { lat: 6.4455, lng: 3.543 }, // Lekki
+    { lat: 6.6018, lng: 3.3515 }, // Ikeja
+    { lat: 6.5244, lng: 3.3792 }, // Lagos Island
+  ],
+};
+
+const REPORT_TTL_MS = 2 * 60 * 60 * 1000;
 
 export function SafeSpotsPage() {
   usePageTitle('Safe Spots');
@@ -71,6 +148,62 @@ export function SafeSpotsPage() {
   const mapSectionRef = useRef<HTMLDivElement | null>(null);
   const filtersRef = useRef<HTMLDivElement | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // --- Google-Maps-style overlay state ---
+  // Basemap style picked in the Layers sheet, persisted per device.
+  const [mapType, setMapTypeState] = useState<MapType>(() => {
+    const stored = localStorage.getItem('dealmint_maptype');
+    return stored === 'satellite' || stored === 'terrain' ? stored : 'default';
+  });
+  const setMapType = (t: MapType) => {
+    setMapTypeState(t);
+    localStorage.setItem('dealmint_maptype', t);
+  };
+  const [transitOn, setTransitOn] = useState(false);
+  const [cyclingOn, setCyclingOn] = useState(false);
+  const [densityOn, setDensityOn] = useState(false);
+  const [layersOpen, setLayersOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [dirOpen, setDirOpen] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<'all' | SafeSpotType>('all');
+  const [reportChoice, setReportChoice] = useState('');
+  // Community safety reports: device-local, each pin lives for 2 hours.
+  const [reports, setReports] = useState<ReportPin[]>(() => {
+    try {
+      const raw = localStorage.getItem('dealmint_safety_reports');
+      const list: ReportPin[] = raw ? JSON.parse(raw) : [];
+      return list.filter((r) => Date.now() - r.ts < REPORT_TTL_MS);
+    } catch {
+      return [];
+    }
+  });
+
+  // Prune expired report pins while the page is open.
+  useEffect(() => {
+    const iv = window.setInterval(() => {
+      setReports((prev) => {
+        const next = prev.filter((r) => Date.now() - r.ts < REPORT_TTL_MS);
+        if (next.length !== prev.length) localStorage.setItem('dealmint_safety_reports', JSON.stringify(next));
+        return next.length === prev.length ? prev : next;
+      });
+    }, 60000);
+    return () => window.clearInterval(iv);
+  }, []);
+
+  // Full-screen map: lock the page and let Escape exit.
+  useEffect(() => {
+    if (!fullscreen) return;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFullscreen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [fullscreen]);
 
   const cityCounts = useMemo(() => {
     const approved = safeSpots.filter((s) => s.isApproved);
@@ -102,6 +235,13 @@ export function SafeSpotsPage() {
           )
         : approved,
     [approved, q]
+  );
+
+  // Category pills narrow the map pins (and the popup results) only — the
+  // community list below keeps showing everything for context.
+  const mapSpots = useMemo(
+    () => (typeFilter === 'all' ? searchApproved : searchApproved.filter((s) => s.type === typeFilter)),
+    [searchApproved, typeFilter]
   );
 
   // Live listings for the bottom sheet — real, active posts only, newest first.
@@ -152,6 +292,38 @@ export function SafeSpotsPage() {
     });
   }, [searchApproved, liveCountByCity, city]);
 
+  // Task-density heat: one weighted blob per live gig/task. Listings have no
+  // coordinates, so each post lands near its city's hub — Lagos posts cluster
+  // hard around Lekki and Ikeja — with jitter derived from the listing id so
+  // the pattern is dense but perfectly stable between renders.
+  const densityPoints = useMemo<DensityPoint[]>(() => {
+    const active = listings.filter((l) => l.isActive && !l.isDraft && (l.type === 'task' || l.type === 'gig'));
+    const hash = (s: string) => {
+      let h = 0;
+      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+      return h;
+    };
+    const pts: DensityPoint[] = [];
+    active.slice(0, 60).forEach((l) => {
+      const h = hash(l.id);
+      const loc = (l.location ?? '').toLowerCase();
+      const cityMatch = spotCities.find((c) => loc.includes(c.toLowerCase()));
+      const isHot = cityMatch === 'Lagos';
+      const hubs = isHot ? DENSITY_HUBS.Lagos : cityMatch ? [CITY_CENTERS[cityMatch]] : DENSITY_HUBS.Lagos;
+      const hub = hubs[h % hubs.length];
+      const angle = ((h >> 8) % 628) / 100;
+      const distKm = 1 + ((h >> 4) % (isHot ? 9 : 6));
+      const latJ = (Math.cos(angle) * distKm) / 111;
+      const lngJ = (Math.sin(angle) * distKm) / (111 * Math.cos((hub.lat * Math.PI) / 180));
+      pts.push({
+        lat: hub.lat + latJ,
+        lng: hub.lng + lngJ,
+        weight: (isHot ? 0.45 : 0.25) + ((h >> 12) % 100) / 200,
+      });
+    });
+    return pts;
+  }, [listings]);
+
   // Distance from the visitor to every spot, once location is shared.
   const distances = useMemo(() => {
     const map = new Map<string, number>();
@@ -164,6 +336,17 @@ export function SafeSpotsPage() {
     }
     return map;
   }, [searchApproved, userPos]);
+
+  // Nearest vetted spots for the Directions sheet — measured from the
+  // visitor's position, or the active city's centre as a fallback.
+  const nearestSpots = useMemo(() => {
+    const ref = userPos ?? cityCenter(city === 'all' ? 'Lagos' : city);
+    return searchApproved
+      .filter((s) => s.lat != null && s.lng != null)
+      .map((s) => ({ spot: s, km: haversineKm(ref, { lat: s.lat!, lng: s.lng! }) }))
+      .sort((a, b) => a.km - b.km)
+      .slice(0, 5);
+  }, [searchApproved, userPos, city]);
 
   const focusSpot = (id: string) => {
     setFocusSpotId(id);
@@ -252,6 +435,64 @@ export function SafeSpotsPage() {
     setOpen(true);
   };
 
+  // Google-style voice search: dictation fills the search bar when the
+  // browser supports it; graceful message where it does not.
+  const voiceSearch = () => {
+    const w = window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown };
+    const SR = (w.SpeechRecognition ?? w.webkitSpeechRecognition) as
+      | (new () => {
+          lang: string;
+          interimResults: boolean;
+          start: () => void;
+          onresult: ((e: { results: { 0: { 0: { transcript: string } } } }) => void) | null;
+          onerror: (() => void) | null;
+        })
+      | undefined;
+    if (!SR) return void toast.info('Voice search is not supported in this browser.');
+    const rec = new SR();
+    rec.lang = 'en-NG';
+    rec.interimResults = false;
+    rec.onresult = (e) => onSearchChange(e.results[0][0].transcript);
+    rec.onerror = () => toast.error("Couldn't hear that — try typing the area instead.");
+    rec.start();
+    toast.info('Listening… say an area or city name.');
+  };
+
+  // Layers opens the Map type sheet; the density heat fades out to keep the
+  // basemap clean while a style/overlay choice is being made.
+  const openLayers = () => {
+    setDensityOn(false);
+    setLayersOpen(true);
+  };
+
+  const handleMyLocation = () => {
+    setDensityOn(false); // heat fades when the user zeroes in on their position
+    handleLocate();
+  };
+
+  const comingSoon = () => toast.info('This layer is coming soon to Dealmint.');
+
+  // Waze-style report: pin a temporary warning at the visitor's position (or
+  // the active city centre when location is unavailable) for 2 hours.
+  const submitReport = () => {
+    const option = REPORT_OPTIONS.find((o) => o.id === reportChoice);
+    if (!option) return;
+    const ref = userPos ?? cityCenter(city === 'all' ? 'Lagos' : city);
+    const pin: ReportPin = {
+      id: `rep-${Date.now()}`,
+      lat: ref.lat,
+      lng: ref.lng,
+      label: option.label,
+      ts: Date.now(),
+    };
+    const next = [...reports, pin];
+    setReports(next);
+    localStorage.setItem('dealmint_safety_reports', JSON.stringify(next));
+    setReportOpen(false);
+    setReportChoice('');
+    toast.success("Alert sent. You've helped keep the community safe.");
+  };
+
   const handleSubmit = () => {
     if (!user) {
       toast.info('Log in to suggest a safe spot', {
@@ -290,6 +531,7 @@ export function SafeSpotsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Intro */}
         <div className="mb-6">
+          <h1 className="sr-only">Safe Spots</h1>
           <p className="text-gray-600 dark:text-gray-300 max-w-2xl">
             Community-vetted places to meet buyers and sellers: busy, public and well-lit. Meet
             somewhere safe and swap with confidence.
@@ -299,71 +541,173 @@ export function SafeSpotsPage() {
           </p>
         </div>
 
-        {/* Hero map with floating header + search (mock layout) */}
+        {/* Hero map with Google-Maps-style overlays (mock layout). The card
+            lifts above the in-flow sheet while any card overlay is open so
+            the sheets are never clipped by the sheet's rounded top. */}
         <div
           ref={mapSectionRef}
-          className="relative z-0 ss-map-frame h-[520px] sm:h-[560px] rounded-3xl overflow-hidden border border-gray-200 dark:border-violet-700 shadow-card scroll-mt-20"
+          className={
+            fullscreen
+              ? 'ss-map-frame fixed inset-0 z-[70] rounded-none overflow-hidden bg-gray-200 dark:bg-violet-950'
+              : `ss-map-frame relative ${
+                  layersOpen || reportOpen || dirOpen || popupOpen ? 'z-30' : 'z-0'
+                } h-[520px] sm:h-[560px] rounded-3xl overflow-hidden border border-gray-200 dark:border-violet-700 shadow-card scroll-mt-20`
+          }
         >
           <SafeSpotsMap
-            spots={searchApproved}
+            spots={mapSpots}
             city={city}
             dark={isDarkMode}
             userPos={userPos}
             focusSpotId={focusSpotId}
             focusNonce={focusNonce}
             heatmapZones={heatZones}
+            mapType={mapType}
+            overlays={{ transit: transitOn, cycling: cyclingOn }}
+            densityPoints={densityPoints}
+            densityOn={densityOn}
+            reportPins={reports}
+            fullscreen={fullscreen}
           />
 
-          {/* Floating header row */}
-          <div className="absolute top-4 inset-x-4 z-[1000] flex items-center justify-between pointer-events-none">
+          {/* Google-style top overlay: search row + category pills */}
+          <div className="absolute top-0 inset-x-0 z-[1000] pt-4 px-4 pb-10 bg-gradient-to-b from-gray-100/95 dark:from-violet-950/95 to-transparent pointer-events-none">
+            <div className="flex items-center gap-2 pointer-events-auto mb-3">
+              <button
+                type="button"
+                onClick={() => {
+                  // Recenter the map on the active city's spots instead of
+                  // navigating away — the control should feel like part of the
+                  // map, not an exit.
+                  setFocusSpotId(null);
+                  setFocusNonce((n) => n + 1);
+                }}
+                aria-label="Reset map view"
+                className="w-11 h-11 shrink-0 bg-white dark:bg-violet-800 rounded-full shadow-md flex items-center justify-center text-gray-700 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-violet-700 transition"
+              >
+                <Compass className="w-5 h-5" />
+              </button>
+              <div className="flex-grow bg-white dark:bg-violet-900 rounded-full shadow-md border border-gray-100 dark:border-violet-700 flex items-center px-4 py-3">
+                <MapPin className="w-5 h-5 text-violet-600 dark:text-amber-400 mr-3 shrink-0" aria-hidden="true" />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  placeholder="Search here"
+                  aria-label="Search safe spots by area or city"
+                  className="bg-transparent border-none outline-none w-full text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 font-medium"
+                />
+                <button
+                  type="button"
+                  onClick={voiceSearch}
+                  aria-label="Search by voice"
+                  className="ml-2 p-1.5 rounded-full text-gray-400 hover:text-violet-600 dark:hover:text-amber-400 hover:bg-gray-100 dark:hover:bg-violet-800 transition shrink-0"
+                >
+                  <Mic className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div
+              className="flex gap-2 overflow-x-auto hide-scrollbar pointer-events-auto pb-1"
+              role="group"
+              aria-label="Filter map pins by category"
+            >
+              {TYPE_FILTERS.map((f) => {
+                const on = typeFilter === f.id;
+                const Icon = f.icon;
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => {
+                      setTypeFilter(f.id);
+                      setFocusSpotId(null);
+                      setFocusNonce((n) => n + 1);
+                    }}
+                    aria-pressed={on}
+                    className={`whitespace-nowrap flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-full shadow-md border transition-colors ${
+                      on
+                        ? 'bg-violet-600 border-violet-600 text-white'
+                        : 'bg-white dark:bg-violet-900 border-gray-100 dark:border-violet-700 text-gray-800 dark:text-gray-100 hover:border-violet-300'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 ${on ? '' : 'text-violet-600 dark:text-amber-400'}`} aria-hidden="true" />
+                    {f.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Floating map controls (right stack, Google Maps style) */}
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 z-[1000] flex flex-col gap-3">
             <button
               type="button"
-              onClick={() => {
-                // Recenter the map on the active city's spots instead of
-                // navigating away — the control should feel like part of the
-                // map, not an exit.
-                setFocusSpotId(null);
-                setFocusNonce((n) => n + 1);
-              }}
-              aria-label="Reset map view"
-              className="pointer-events-auto w-10 h-10 bg-white dark:bg-violet-800 rounded-full shadow-md flex items-center justify-center text-gray-700 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-violet-700 transition"
+              onClick={() => setFullscreen((v) => !v)}
+              aria-label={fullscreen ? 'Exit full screen map' : 'Enter full screen map'}
+              className="w-11 h-11 bg-white dark:bg-violet-800 rounded-full shadow-lg flex items-center justify-center text-gray-700 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-violet-700 transition"
             >
-              <Crosshair className="w-5 h-5" />
+              {fullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
             </button>
-            <h1 className="pointer-events-auto bg-white/90 dark:bg-violet-900/90 backdrop-blur px-4 py-2 rounded-full shadow-md font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
-              <MapPinned className="w-4 h-4 text-violet-600 dark:text-amber-400" /> Safe Spots
-            </h1>
             <button
               type="button"
-              onClick={handleLocate}
-              disabled={locating}
-              aria-label="Show safe spots near me"
-              className="pointer-events-auto w-10 h-10 bg-white dark:bg-violet-800 rounded-full shadow-md flex items-center justify-center text-gray-700 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-violet-700 transition disabled:opacity-60"
+              onClick={() => setDensityOn((v) => !v)}
+              aria-pressed={densityOn}
+              aria-label="Toggle task density heatmap"
+              className={`w-11 h-11 rounded-full shadow-lg flex items-center justify-center transition ${
+                densityOn
+                  ? 'bg-white text-orange-500 border-2 border-orange-500'
+                  : 'bg-white dark:bg-violet-800 border-2 border-transparent text-gray-700 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-violet-700'
+              }`}
             >
-              <Navigation className={`w-5 h-5 ${locating ? 'animate-pulse' : ''}`} />
+              <Flame className="w-5 h-5" />
+            </button>
+            <button
+              type="button"
+              onClick={openLayers}
+              aria-label="Map layers"
+              className="w-11 h-11 bg-white dark:bg-violet-800 rounded-full shadow-lg flex items-center justify-center text-gray-700 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-violet-700 transition"
+            >
+              <Layers className="w-5 h-5" />
+            </button>
+            <button
+              type="button"
+              onClick={handleMyLocation}
+              disabled={locating}
+              aria-label="My location"
+              className="w-11 h-11 bg-white dark:bg-violet-800 rounded-full shadow-lg flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-gray-50 dark:hover:bg-violet-700 transition disabled:opacity-60"
+            >
+              <Crosshair className={`w-5 h-5 ${locating ? 'animate-pulse' : ''}`} />
             </button>
           </div>
 
-          {/* Search bar */}
-          <div className="absolute top-[4.25rem] inset-x-4 z-[1000] bg-white dark:bg-violet-900 rounded-2xl shadow-lg border border-gray-100 dark:border-violet-700 flex items-center px-4 py-3">
-            <Search className="w-5 h-5 text-gray-400 mr-3 shrink-0" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Search area or city..."
-              aria-label="Search safe spots by area or city"
-              className="bg-transparent border-none outline-none w-full text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 font-medium"
-            />
+          {/* Directions (blue square) + Report (orange) above the bottom sheet */}
+          <div
+            className={`absolute right-4 z-[1000] transition-all duration-300 ${
+              fullscreen ? 'bottom-6' : 'bottom-16'
+            } ${popupOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          >
             <button
               type="button"
-              onClick={() =>
-                filtersRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-              }
-              aria-label="Filter by city"
-              className="bg-gray-100 dark:bg-violet-800 p-1.5 rounded-lg text-gray-600 dark:text-amber-400 hover:bg-gray-200 dark:hover:bg-violet-700 transition shrink-0"
+              onClick={() => setDirOpen(true)}
+              aria-label="Directions"
+              className="w-14 h-14 bg-blue-600 hover:bg-blue-700 rounded-2xl shadow-xl flex items-center justify-center text-white transition"
             >
-              <SlidersHorizontal className="w-4 h-4" />
+              <Navigation className="w-6 h-6 fill-white" />
+            </button>
+          </div>
+          <div
+            className={`absolute left-4 z-[1000] transition-all duration-300 ${
+              fullscreen ? 'bottom-6' : 'bottom-16'
+            } ${popupOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          >
+            <button
+              type="button"
+              onClick={() => setReportOpen(true)}
+              aria-label="Report a safety issue"
+              className="w-12 h-12 bg-orange-500 hover:bg-orange-600 rounded-full shadow-xl flex items-center justify-center text-white transition"
+            >
+              <AlertTriangle className="w-6 h-6" />
             </button>
           </div>
 
@@ -440,6 +784,270 @@ export function SafeSpotsPage() {
               )}
             </div>
           )}
+
+          {/* Layers sheet — Map type thumbnails + map details grid */}
+          {layersOpen && (
+            <div className="absolute inset-0 z-[1100] flex flex-col justify-end">
+              <button
+                type="button"
+                aria-label="Close map type sheet"
+                onClick={() => setLayersOpen(false)}
+                className="absolute inset-0 bg-black/40 animate-in fade-in duration-200"
+              />
+              <div className="relative bg-white dark:bg-violet-900 w-full rounded-t-3xl p-5 pb-8 max-h-[85%] overflow-y-auto animate-in slide-in-from-bottom duration-300">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Map type</h2>
+                  <button
+                    type="button"
+                    onClick={() => setLayersOpen(false)}
+                    aria-label="Close map type sheet"
+                    className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-violet-800 transition"
+                  >
+                    <X className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+                  </button>
+                </div>
+
+                <div className="flex gap-4 mb-6">
+                  {MAP_TYPES.map((t) => {
+                    const on = mapType === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => {
+                          setMapType(t.id);
+                          setLayersOpen(false);
+                        }}
+                        className="flex flex-col items-center gap-2"
+                        aria-pressed={on}
+                      >
+                        <span
+                          className={`block w-20 h-20 rounded-xl overflow-hidden shadow-sm bg-gray-100 dark:bg-violet-800 ${
+                            on ? 'border-[3px] border-blue-500' : 'border border-gray-200 dark:border-violet-600'
+                          }`}
+                        >
+                          <img
+                            src={t.thumb}
+                            alt={`${t.label} map preview`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              // Provider throttled this network — swap once to
+                              // the reliable fallback tile for the preview.
+                              const img = e.currentTarget;
+                              if (img.dataset.fallbackUsed) return;
+                              img.dataset.fallbackUsed = '1';
+                              img.src = t.fallbackThumb;
+                            }}
+                          />
+                        </span>
+                        <span className={`text-xs font-medium ${on ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                          {t.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <hr className="border-gray-100 dark:border-violet-700 mb-5" />
+
+                <h3 className="text-base font-medium text-gray-800 dark:text-gray-100 mb-4">Map details</h3>
+                <div className="grid grid-cols-4 gap-3 mb-6">
+                  {([
+                    { id: 'transit', label: 'Public transport', icon: Train, tone: 'text-blue-500', active: transitOn, live: true },
+                    { id: 'traffic', label: 'Traffic', icon: TrafficCone, tone: 'text-orange-500', active: false, live: false },
+                    { id: 'cycling', label: 'Cycling', icon: Bike, tone: 'text-green-500', active: cyclingOn, live: true },
+                    { id: '3d', label: '3D', icon: Box, tone: 'text-gray-500 dark:text-gray-300', active: false, live: false },
+                  ] as const).map((d) => {
+                    const Icon = d.icon;
+                    return (
+                      <button
+                        key={d.id}
+                        type="button"
+                        aria-pressed={d.active}
+                        onClick={() => {
+                          if (d.id === 'transit') return setTransitOn((v) => !v);
+                          if (d.id === 'cycling') return setCyclingOn((v) => !v);
+                          comingSoon();
+                        }}
+                        className="flex flex-col items-center gap-2"
+                      >
+                        <span
+                          className={`w-14 h-14 rounded-xl flex items-center justify-center border ${
+                            d.active
+                              ? 'bg-blue-50 dark:bg-violet-700 border-blue-500'
+                              : 'bg-gray-50 dark:bg-violet-800 border-gray-100 dark:border-violet-700'
+                          }`}
+                        >
+                          <Icon className={`w-6 h-6 ${d.tone}`} aria-hidden="true" />
+                        </span>
+                        <span className="text-[10px] text-center text-gray-600 dark:text-gray-300">{d.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <h3 className="text-base font-medium text-gray-800 dark:text-gray-100 mb-4">More details</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  {([
+                    { label: 'Street View', icon: User, tone: 'text-yellow-500', badge: false },
+                    { label: 'Wildfires', icon: Flame, tone: 'text-red-500', badge: true },
+                    { label: 'Air quality', icon: Wind, tone: 'text-green-500', badge: true },
+                  ] as const).map((d) => {
+                    const Icon = d.icon;
+                    return (
+                      <button key={d.label} type="button" onClick={comingSoon} className="flex flex-col items-center gap-2">
+                        <span className="relative w-14 h-14 bg-gray-50 dark:bg-violet-800 rounded-xl flex items-center justify-center border border-gray-100 dark:border-violet-700">
+                          {d.badge && (
+                            <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">
+                              New
+                            </span>
+                          )}
+                          <Icon className={`w-6 h-6 ${d.tone}`} aria-hidden="true" />
+                        </span>
+                        <span className="text-[10px] text-center text-gray-600 dark:text-gray-300">{d.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Report sheet — Waze-style community safety alert */}
+          {reportOpen && (
+            <div className="absolute inset-0 z-[1100] flex flex-col justify-end">
+              <button
+                type="button"
+                aria-label="Close report sheet"
+                onClick={() => setReportOpen(false)}
+                className="absolute inset-0 bg-black/50 animate-in fade-in duration-200"
+              />
+              <div className="relative bg-white dark:bg-violet-900 w-full rounded-t-3xl p-6 pb-8 animate-in slide-in-from-bottom duration-300">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Report a Safety Issue</h2>
+                  <button
+                    type="button"
+                    onClick={() => setReportOpen(false)}
+                    aria-label="Close report sheet"
+                    className="p-2 rounded-full bg-gray-100 dark:bg-violet-800 hover:bg-gray-200 dark:hover:bg-violet-700 transition"
+                  >
+                    <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                  </button>
+                </div>
+                <div className="space-y-3 mb-6">
+                  {REPORT_OPTIONS.map((o) => {
+                    const Icon = o.icon;
+                    const on = reportChoice === o.id;
+                    return (
+                      <button
+                        key={o.id}
+                        type="button"
+                        onClick={() => setReportChoice(o.id)}
+                        aria-pressed={on}
+                        className={`w-full text-left p-4 rounded-xl border flex items-center gap-3 transition-colors ${
+                          on
+                            ? 'border-orange-500 bg-orange-50 dark:bg-orange-500/10'
+                            : 'border-gray-200 dark:border-violet-600 hover:border-orange-400'
+                        }`}
+                      >
+                        <Icon className={`w-5 h-5 shrink-0 ${on ? 'text-orange-500' : 'text-gray-500 dark:text-gray-300'}`} aria-hidden="true" />
+                        <span className="font-medium text-sm text-gray-900 dark:text-white">{o.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  onClick={submitReport}
+                  disabled={!reportChoice}
+                  className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold py-3.5 rounded-xl shadow-lg transition"
+                >
+                  Submit Alert
+                </button>
+                <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-3 text-center">
+                  Your alert pins a temporary warning on the map for 2 hours.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Directions sheet — nearest vetted spots with route links */}
+          {dirOpen && (
+            <div className="absolute inset-0 z-[1100] flex flex-col justify-end">
+              <button
+                type="button"
+                aria-label="Close directions sheet"
+                onClick={() => setDirOpen(false)}
+                className="absolute inset-0 bg-black/40 animate-in fade-in duration-200"
+              />
+              <div className="relative bg-white dark:bg-violet-900 w-full rounded-t-3xl p-6 pb-8 max-h-[70%] overflow-y-auto animate-in slide-in-from-bottom duration-300">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Directions</h2>
+                  <button
+                    type="button"
+                    onClick={() => setDirOpen(false)}
+                    aria-label="Close directions sheet"
+                    className="p-2 rounded-full bg-gray-100 dark:bg-violet-800 hover:bg-gray-200 dark:hover:bg-violet-700 transition"
+                  >
+                    <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                  {userPos
+                    ? 'Routes start from your current location.'
+                    : `Measured from the centre of ${city === 'all' ? 'Lagos' : city} — tap the crosshair to use your exact position.`}
+                </p>
+                {nearestSpots.length === 0 ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 py-2">
+                    No pinned safe spots yet — approve or suggest a spot first.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {nearestSpots.map(({ spot, km }) => {
+                      const meta = spotTypeMeta.find((t) => t.value === spot.type);
+                      const Icon = meta?.icon ?? MapPin;
+                      return (
+                        <div
+                          key={spot.id}
+                          className="flex items-center justify-between gap-3 bg-gray-50 dark:bg-violet-800/60 rounded-xl px-3 py-2.5"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate flex items-center gap-1.5">
+                              <Icon className="w-4 h-4 shrink-0 text-violet-600 dark:text-amber-400" />
+                              {spot.name}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                              {meta?.label} · {spot.city} · {formatDistance(km)}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <a
+                              href={directionsUrl({ lat: spot.lat!, lng: spot.lng! })}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline underline-offset-2"
+                            >
+                              <Navigation className="w-3.5 h-3.5" /> Directions
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                focusSpot(spot.id);
+                                setDirOpen(false);
+                              }}
+                              className="text-xs font-semibold text-violet-600 dark:text-amber-400 hover:underline underline-offset-2"
+                            >
+                              View on map
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Bottom sheet: activity, filters, legend, live listings (mock layout) */}
@@ -448,7 +1056,7 @@ export function SafeSpotsPage() {
 
           <div className="flex justify-between items-center mb-4 gap-3">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-              Activity in {cityLabel}
+              Latest in {cityLabel}
             </h2>
             <span className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-xs font-bold px-2.5 py-1 rounded-md flex items-center gap-1 shrink-0">
               <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> Live

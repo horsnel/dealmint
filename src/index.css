@@ -410,3 +410,47 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Satellite/terrain basemaps are real imagery — skip the dark invert filter */
+.dark .ss-map-nofilter .leaflet-tile-pane .leaflet-tile {
+  filter: none;
+}
+
+/* Task-density heat pane: blurred blobs, smooth fade via pane opacity */
+.ss-density-pane {
+  filter: blur(10px);
+  transition: opacity 500ms ease;
+}
+
+/* Waze-style temporary warning pin */
+.ss-report-pin-wrap {
+  background: transparent;
+  border: none;
+}
+
+.ss-report-pin {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background: #f97316;
+  border: 2px solid #ffffff;
+  box-shadow: 0 3px 10px rgb(154 52 18 / 0.45);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Horizontal scrollers that hide the scrollbar (filter pills, sheet cards) */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Keep the Leaflet zoom control clear of the floating Report button */
+.ss-map-frame .leaflet-bottom.leaflet-left {
+  margin-bottom: 7.25rem;
+}
