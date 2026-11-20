@@ -327,7 +327,7 @@ export function WalletPage() {
                   {hideBalance ? maskedBalance : formatPrice(balance)}
                 </h2>
                 {escrowHeld > 0 && (
-                  <div className="mt-3 inline-flex items-center gap-2 bg-white/10 rounded-lg px-3 py-2 max-w-full">
+                  <div className="mt-3 inline-flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2 max-w-full">
                     <ShieldCheck className="w-4 h-4 text-amber-300 shrink-0" />
                     <span className="text-sm text-violet-100 truncate">
                       <span className="font-semibold text-white">

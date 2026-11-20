@@ -453,7 +453,7 @@ export function SafeSpotsPage() {
     rec.lang = 'en-NG';
     rec.interimResults = false;
     rec.onresult = (e) => onSearchChange(e.results[0][0].transcript);
-    rec.onerror = () => toast.error("Couldn't hear that — try typing the area instead.");
+    rec.onerror = () => toast.error("Couldn't hear that. Try typing the area instead.");
     rec.start();
     toast.info('Listening… say an area or city name.');
   };
@@ -720,7 +720,7 @@ export function SafeSpotsPage() {
               <div className="flex items-center justify-between gap-3 mb-2">
                 <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
                   Activity in {cityLabel}
-                  <span className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0">
+                  <span className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
                     <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> Live
                   </span>
                 </h3>
@@ -743,7 +743,7 @@ export function SafeSpotsPage() {
               </p>
               {searchApproved.length === 0 ? (
                 <p className="text-sm text-gray-500 dark:text-gray-400 py-2">
-                  No spots match this search — try another area or city, or browse the community
+                  No spots match this search. Try another area or city, or browse the community
                   list below.
                 </p>
               ) : (
@@ -898,7 +898,7 @@ export function SafeSpotsPage() {
                       <button key={d.label} type="button" onClick={comingSoon} className="flex flex-col items-center gap-2">
                         <span className="relative w-14 h-14 bg-gray-50 dark:bg-violet-800 rounded-xl flex items-center justify-center border border-gray-100 dark:border-violet-700">
                           {d.badge && (
-                            <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">
+                            <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">
                               New
                             </span>
                           )}
@@ -995,11 +995,11 @@ export function SafeSpotsPage() {
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
                   {userPos
                     ? 'Routes start from your current location.'
-                    : `Measured from the centre of ${city === 'all' ? 'Lagos' : city} — tap the crosshair to use your exact position.`}
+                    : `Measured from the centre of ${city === 'all' ? 'Lagos' : city}. Tap the crosshair to use your exact position.`}
                 </p>
                 {nearestSpots.length === 0 ? (
                   <p className="text-sm text-gray-500 dark:text-gray-400 py-2">
-                    No pinned safe spots yet — approve or suggest a spot first.
+                    No pinned safe spots yet. Approve or suggest a spot first.
                   </p>
                 ) : (
                   <div className="space-y-2">
@@ -1058,7 +1058,7 @@ export function SafeSpotsPage() {
             <h2 className="text-lg font-bold text-gray-900 dark:text-white">
               Latest in {cityLabel}
             </h2>
-            <span className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-xs font-bold px-2.5 py-1 rounded-md flex items-center gap-1 shrink-0">
+            <span className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0">
               <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> Live
             </span>
           </div>
@@ -1072,7 +1072,7 @@ export function SafeSpotsPage() {
               className={`rounded-full px-3 py-1.5 text-xs font-medium border transition-colors ${
                 city === 'all'
                   ? 'border-violet-600 bg-violet-600 text-white'
-                  : 'border-gray-300 dark:border-violet-600 text-gray-600 dark:text-gray-200 hover:border-violet-400'
+                  : 'border-gray-200 dark:border-violet-600 text-gray-600 dark:text-gray-200 hover:border-violet-400'
               }`}
             >
               All cities
@@ -1086,7 +1086,7 @@ export function SafeSpotsPage() {
                 className={`rounded-full px-3 py-1.5 text-xs font-medium border transition-colors ${
                   city === c
                     ? 'border-violet-600 bg-violet-600 text-white'
-                    : 'border-gray-300 dark:border-violet-600 text-gray-600 dark:text-gray-200 hover:border-violet-400'
+                    : 'border-gray-200 dark:border-violet-600 text-gray-600 dark:text-gray-200 hover:border-violet-400'
                 }`}
               >
                 {c}
@@ -1116,7 +1116,7 @@ export function SafeSpotsPage() {
 
           {liveListings.length === 0 ? (
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              No active listings around {cityLabel} right now — check back soon.
+              No active listings around {cityLabel} right now. Check back soon.
             </p>
           ) : (
             <div className="flex gap-3 overflow-x-auto pb-4 snap-x">

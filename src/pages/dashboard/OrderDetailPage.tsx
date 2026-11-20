@@ -454,7 +454,7 @@ export function OrderDetailPage() {
               <img
                 src={order.listingImage || '/images/placeholder.jpg'}
                 alt=""
-                className="w-20 h-20 rounded-lg object-cover shrink-0"
+                className="w-20 h-20 rounded-xl object-cover shrink-0"
               />
               <div className="min-w-0">
                 <p className="text-xs text-gray-500 dark:text-gray-400">{typeLabel(order.listingType)} · Order #{order.id.slice(-6).toUpperCase()}</p>
@@ -558,7 +558,7 @@ export function OrderDetailPage() {
                 ))}
               </ol>
               {order.status === 'disputed' && (
-                <div className="mt-4 flex items-start gap-2 text-sm text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3">
+                <div className="mt-4 flex items-start gap-2 text-sm text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3">
                   <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0" />
                   Dispute under review. {formatPrice(order.price)} stays locked in escrow until this is resolved.
                 </div>
@@ -669,7 +669,7 @@ export function OrderDetailPage() {
                 >
                   {proof ? (
                     <>
-                      <img src={proof} alt="Proof preview" className="mb-2 h-24 rounded-lg object-cover" />
+                      <img src={proof} alt="Proof preview" className="mb-2 h-24 rounded-xl object-cover" />
                       <span className="flex items-center gap-1.5 text-sm font-semibold">
                         <CheckCircle2 className="h-4 w-4" /> Proof added. Tap to change
                       </span>
@@ -936,7 +936,7 @@ export function OrderDetailPage() {
                 </p>
               )}
               {escrowHeld && (
-                <div className="mt-4 flex items-start gap-2 text-sm text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
+                <div className="mt-4 flex items-start gap-2 text-sm text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 rounded-xl p-3">
                   <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0" />
                   Payment is held safely in escrow.
                 </div>

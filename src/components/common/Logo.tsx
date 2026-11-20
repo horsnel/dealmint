@@ -17,7 +17,7 @@ interface LogoProps {
  * centre dot, next to the Dealmint wordmark. A soft white glow keeps the
  * mark separable from dark or violet backgrounds (invisible on white).
  */
-export function Logo({ href = '/', size = 'md', tone = 'auto' }: LogoProps) {
+export function Logo({ href = '/marketplace', size = 'md', tone = 'auto' }: LogoProps) {
   const isLg = size === 'lg';
   const circle = isLg ? 26 : 20;
   const dot = isLg ? 12 : 9;

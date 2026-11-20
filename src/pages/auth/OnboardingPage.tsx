@@ -35,7 +35,7 @@ const SAFETY_RULES = [
     icon: MapPin,
     iconClass: 'text-amber-600',
     title: 'Meet in public',
-    body: 'For physical tasks, always meet during daylight hours in busy, public locations like a mall or café — pick one of our community Safe Spots.',
+    body: 'For physical tasks, always meet during daylight hours in busy, public locations like a mall or café. Pick one of our community Safe Spots.',
   },
   {
     icon: UserCheck,

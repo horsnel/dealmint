@@ -75,7 +75,7 @@ export function OrdersPage() {
             <img
               src={o.listingImage || '/images/placeholder.jpg'}
               alt=""
-              className="w-16 h-16 lg:w-20 lg:h-20 rounded-lg object-cover shrink-0"
+              className="w-16 h-16 lg:w-20 lg:h-20 rounded-xl object-cover shrink-0"
             />
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">

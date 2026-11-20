@@ -169,7 +169,7 @@ export function SettingsPage() {
               Navigation style
             </CardTitle>
             <CardDescription className="dark:text-gray-300">
-              Pick how you move around Dealmint — the dashboard sidebar on the left, the
+              Pick how you move around Dealmint. The dashboard sidebar on the left, the
               marketplace sidebar on the right, or a classic top navigation bar. Applies
               everywhere, on this device.
             </CardDescription>

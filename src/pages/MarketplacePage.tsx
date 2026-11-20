@@ -113,78 +113,67 @@ export function MarketplacePage() {
 
   return (
     <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-6 lg:pt-8">
-      {/* ---------- Hero: protected-by-default promise + dual entry ---------- */}
-      <section className="bg-gradient-to-b from-violet-700 to-violet-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 bg-white/10 rounded-full px-4 py-1.5 text-sm mb-5">
-              <ShieldCheck className="w-4 h-4 text-amber-300" />
-              Every order is protected. Money moves only when the work is done
+      {/* ---------- Practical entry: search + dual entry. The intro story
+          lives on the onboarding slides, so no hero copy repeats here. ---------- */}
+      <section className="bg-white dark:bg-violet-900/40 border-b border-gray-100 dark:border-violet-800">
+        <h1 className="sr-only">Marketplace</h1>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
+          {/* One search bar over everything. Button and bar are the same pill height */}
+          <form onSubmit={submitSearch} className="flex gap-2 max-w-xl">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="What do you need done? e.g. cleaner, logo, JAMB lessons"
+                aria-label="Search the marketplace"
+                className="w-full h-12 pl-11 pr-4 rounded-full bg-white dark:bg-violet-950 text-gray-900 dark:text-white placeholder:text-gray-400 text-sm border border-gray-100 dark:border-violet-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
             </div>
-            <h1 className="font-display font-bold text-3xl lg:text-5xl mb-4">
-              Nigeria's protected marketplace
-            </h1>
-            <p className="text-white/85 text-lg mb-8 max-w-2xl">
-              Hire help, find work and buy digital goods. Funds sit in escrow until you say the job is done. No stories, no wash.
-            </p>
+            <Button
+              type="submit"
+              className="bg-amber-500 hover:bg-amber-600 text-white rounded-full h-12 px-6 shadow-sm"
+            >
+              Search
+            </Button>
+          </form>
 
-            {/* One search bar over everything — button and bar are the same pill height */}
-            <form onSubmit={submitSearch} className="flex gap-2 mb-8 max-w-xl">
-              <div className="relative flex-1">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-                <input
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  placeholder="What do you need done? e.g. cleaner, logo, JAMB lessons"
-                  aria-label="Search the marketplace"
-                  className="w-full h-12 pl-11 pr-4 rounded-full bg-white text-gray-900 placeholder:text-gray-400 text-sm shadow-lg focus:outline-none focus:ring-2 focus:ring-amber-400"
-                />
+          {/* Dual entry. Tasks first */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mt-6">
+            <Link
+              to="/post/task"
+              className="group rounded-2xl bg-white dark:bg-violet-950 border border-gray-100 dark:border-violet-700 shadow-sm hover:shadow-md p-5 text-gray-900 dark:text-white transition-shadow"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <span className="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-800 flex items-center justify-center">
+                  <ClipboardList className="w-5 h-5 text-violet-600 dark:text-amber-400" />
+                </span>
+                <h3 className="font-display font-bold text-lg">I need something done</h3>
               </div>
-              <Button
-                type="submit"
-                className="bg-amber-500 hover:bg-amber-600 text-white rounded-full h-12 px-6 shadow-lg"
-              >
-                Search
-              </Button>
-            </form>
-
-            {/* Dual entry — tasks first */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
-              <Link
-                to="/post/task"
-                className="group rounded-2xl bg-white p-5 text-gray-900 shadow-lg hover:shadow-xl transition-shadow"
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
-                    <ClipboardList className="w-5 h-5 text-violet-600" />
-                  </span>
-                  <h3 className="font-display font-bold text-lg">I need something done</h3>
-                </div>
-                <p className="text-sm text-gray-600 mb-3">
-                  Post a task with your budget. Verified doers accept or send offers.
-                </p>
-                <span className="inline-flex items-center rounded-full bg-violet-600 text-white px-4 py-2 text-sm font-semibold group-hover:bg-violet-700 transition-colors">
-                  Post a task
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                Post a task with your budget. Verified doers accept or send offers.
+              </p>
+              <span className="inline-flex items-center rounded-full bg-violet-600 text-white px-4 py-2 text-sm font-semibold group-hover:bg-violet-700 transition-colors">
+                Post a task
+              </span>
+            </Link>
+            <Link
+              to="/post/gig"
+              className="group rounded-2xl bg-white dark:bg-violet-950 border border-gray-100 dark:border-violet-700 shadow-sm hover:shadow-md p-5 text-gray-900 dark:text-white transition-shadow"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <span className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-violet-800 flex items-center justify-center">
+                  <Briefcase className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                 </span>
-              </Link>
-              <Link
-                to="/post/gig"
-                className="group rounded-2xl border border-white/30 bg-white/10 backdrop-blur p-5 text-white hover:bg-white/15 transition-colors"
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="w-10 h-10 rounded-xl bg-amber-400/20 flex items-center justify-center">
-                    <Briefcase className="w-5 h-5 text-amber-300" />
-                  </span>
-                  <h3 className="font-display font-bold text-lg">I want to earn</h3>
-                </div>
-                <p className="text-sm text-white/80 mb-3">
-                  Sell your skills as gigs or services. Get paid to your wallet, guaranteed.
-                </p>
-                <span className="inline-flex items-center rounded-full bg-amber-500 text-white px-4 py-2 text-sm font-semibold group-hover:bg-amber-600 transition-colors">
-                  Post a gig
-                </span>
-              </Link>
-            </div>
+                <h3 className="font-display font-bold text-lg">I want to earn</h3>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                Sell your skills as gigs or services. Get paid to your wallet, guaranteed.
+              </p>
+              <span className="inline-flex items-center rounded-full bg-amber-500 text-white px-4 py-2 text-sm font-semibold group-hover:bg-amber-600 transition-colors">
+                Post a gig
+              </span>
+            </Link>
           </div>
         </div>
       </section>

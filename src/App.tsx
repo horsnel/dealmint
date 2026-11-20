@@ -11,10 +11,9 @@ import { RouteSkeleton } from '@/components/common/RouteSkeleton';
 import { AppProvider, useApp } from '@/context/AppContext';
 import { EmailVerifyBanner } from '@/components/auth/EmailVerifyBanner';
 import { VerifyGateModal } from '@/components/auth/VerifyGateModal';
-import { HomePage } from '@/pages/HomePage';
 import './App.css';
 
-// Load every page except the home page on demand to keep the first download small
+// Load every page on demand to keep the first download small
 function page<T extends Record<string, ComponentType>>(loader: () => Promise<T>, name: keyof T) {
   return lazy(() => loader().then((m) => ({ default: m[name] })));
 }
@@ -108,8 +107,9 @@ function AppContent() {
           <Suspense fallback={<RouteSkeleton path={location.pathname} />}>
             <div key={location.pathname} className="route-in">
               <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<HomePage />} />
+              {/* Public Routes — the landing page is retired; / and /marketplace
+                  both load the Marketplace directly */}
+              <Route path="/" element={<MarketplacePage />} />
               <Route path="/browse" element={<BrowsePage />} />
               <Route path="/marketplace" element={<MarketplacePage />} />
               <Route path="/marketplace/lagos" element={<LagosHubPage />} />
@@ -176,8 +176,8 @@ function AppContent() {
           </Suspense>
         </ErrorBoundary>
       </main>
-        {/* Footer is only part of the landing page */}
-        {location.pathname === '/' && <Footer />}
+        {/* Footer rides on the Marketplace front door (the landing page is retired) */}
+        {(location.pathname === '/' || location.pathname === '/marketplace') && <Footer />}
       </AppShell>
       {/* Mobile-only: floating "Post" button + bottom sheet (replaces the mobile menu Post links) */}
       <PostFab user={user} />

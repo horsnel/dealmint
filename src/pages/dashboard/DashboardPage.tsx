@@ -343,7 +343,7 @@ export function DashboardPage() {
           </div>
           <Link
             to="/dashboard/profile"
-            className="block w-full mt-5 rounded-lg bg-gray-100 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-200 dark:bg-violet-800 dark:text-gray-100 dark:hover:bg-violet-700 transition-colors"
+            className="block w-full mt-5 rounded-xl bg-gray-100 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-200 dark:bg-violet-800 dark:text-gray-100 dark:hover:bg-violet-700 transition-colors"
           >
             Edit Profile
           </Link>

@@ -64,7 +64,7 @@ const BASE_LAYERS: Record<MapType, { url: string; attr: string; maxZoom: number;
   },
   satellite: {
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attr: 'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics',
+    attr: 'Tiles &copy; Esri. Source: Esri, Maxar, Earthstar Geographics',
     maxZoom: 19,
   },
   terrain: {
@@ -106,7 +106,7 @@ const FALLBACK_CHAINS: Record<MapType, { url: string; attr: string; maxZoom: num
     {
       // Terminal, CDN-backed light basemap that works everywhere
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-      attr: 'Tiles &copy; Esri — Source: Esri',
+      attr: 'Tiles &copy; Esri. Source: Esri',
       maxZoom: 19,
       minBytes: 3500,
     },
@@ -114,7 +114,7 @@ const FALLBACK_CHAINS: Record<MapType, { url: string; attr: string; maxZoom: num
   terrain: [
     {
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
-      attr: 'Tiles &copy; Esri — Source: Esri, USGS, NOAA',
+      attr: 'Tiles &copy; Esri. Source: Esri, USGS, NOAA',
       maxZoom: 19,
       minBytes: 3500,
     },
@@ -548,7 +548,7 @@ export function SafeSpotsMap({
       const when = new Date(r.ts).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' });
       L.marker([r.lat, r.lng], { icon: reportPinIcon(), title: r.label, alt: r.label, zIndexOffset: 600 })
         .bindPopup(
-          `<div class="ss-popup"><p class="ss-popup__name">${esc(r.label)}</p><p class="ss-popup__meta">Community alert &middot; ${when}</p><p class="ss-popup__addr">Temporary warning — auto-clears within 2 hours.</p></div>`,
+          `<div class="ss-popup"><p class="ss-popup__name">${esc(r.label)}</p><p class="ss-popup__meta">Community alert &middot; ${when}</p><p class="ss-popup__addr">Temporary warning. Auto-clears within 2 hours.</p></div>`,
           { closeButton: true, maxWidth: 220, minWidth: 180, autoPanPadding: L.point(44, 52) }
         )
         .addTo(group);
