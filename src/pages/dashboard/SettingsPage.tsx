@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Lock, Shield, Trash2, LogOut, Moon, Sparkles, PanelLeft, PanelRight } from 'lucide-react';
+import { Bell, Lock, Shield, Trash2, LogOut, Moon, Sparkles, PanelLeft, PanelRight, PanelTop } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -52,7 +52,7 @@ const privacyRows: { key: ToggleKey; label: string; description: string }[] = [
 export function SettingsPage() {
   usePageTitle('Settings');
   const navigate = useNavigate();
-  const { user, updateSettings, updateProfile, changePassword, deleteAccount, logout, isDarkMode, toggleDarkMode, navSide, setNavSide } = useApp();
+  const { user, updateSettings, updateProfile, changePassword, deleteAccount, logout, isDarkMode, toggleDarkMode, navMode, setNavMode } = useApp();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -166,37 +166,44 @@ export function SettingsPage() {
           <CardHeader>
             <CardTitle className="text-gray-900 dark:text-white flex items-center gap-2">
               <PanelLeft className="w-5 h-5" />
-              Navigation
+              Navigation style
             </CardTitle>
             <CardDescription className="dark:text-gray-300">
-              Pick which sidebar design the app uses — the dashboard sidebar on the left or the
-              marketplace sidebar on the right. Applies everywhere, on this device.
+              Pick how you move around Dealmint — the dashboard sidebar on the left, the
+              marketplace sidebar on the right, or a classic top navigation bar. Applies
+              everywhere, on this device.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {([
                 {
-                  side: 'left' as const,
+                  mode: 'left' as const,
                   icon: PanelLeft,
                   title: 'Left sidebar',
                   desc: 'Dashboard design: white sidebar with violet active states, pinned to the left.',
                 },
                 {
-                  side: 'right' as const,
+                  mode: 'right' as const,
                   icon: PanelRight,
                   title: 'Right sidebar',
                   desc: 'Marketplace design: profile card and amber accents, anchored to the right.',
                 },
-              ]).map(({ side, icon: Icon, title, desc }) => {
-                const on = navSide === side;
+                {
+                  mode: 'top' as const,
+                  icon: PanelTop,
+                  title: 'Top bar',
+                  desc: 'Classic top navigation: logo, center links and account menu, full-width content.',
+                },
+              ]).map(({ mode, icon: Icon, title, desc }) => {
+                const on = navMode === mode;
                 return (
                   <button
-                    key={side}
+                    key={mode}
                     type="button"
                     onClick={() => {
-                      setNavSide(side);
-                      toast.success(`Sidebar switched to the ${side} side`);
+                      setNavMode(mode);
+                      toast.success(mode === 'top' ? 'Switched to the top navigation bar' : `Sidebar switched to the ${mode} side`);
                     }}
                     aria-pressed={on}
                     className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition-colors ${

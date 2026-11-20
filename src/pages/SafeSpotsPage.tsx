@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ArrowLeft,
   Building2,
   Check,
+  Crosshair,
   MapPin,
   MapPinned,
   Navigation,
@@ -318,11 +318,17 @@ export function SafeSpotsPage() {
           <div className="absolute top-4 inset-x-4 z-[1000] flex items-center justify-between pointer-events-none">
             <button
               type="button"
-              onClick={() => navigate(-1)}
-              aria-label="Go back"
+              onClick={() => {
+                // Recenter the map on the active city's spots instead of
+                // navigating away — the control should feel like part of the
+                // map, not an exit.
+                setFocusSpotId(null);
+                setFocusNonce((n) => n + 1);
+              }}
+              aria-label="Reset map view"
               className="pointer-events-auto w-10 h-10 bg-white dark:bg-violet-800 rounded-full shadow-md flex items-center justify-center text-gray-700 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-violet-700 transition"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <Crosshair className="w-5 h-5" />
             </button>
             <h1 className="pointer-events-auto bg-white/90 dark:bg-violet-900/90 backdrop-blur px-4 py-2 rounded-full shadow-md font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
               <MapPinned className="w-4 h-4 text-violet-600 dark:text-amber-400" /> Safe Spots
@@ -510,7 +516,7 @@ export function SafeSpotsPage() {
                 <Link
                   key={l.id}
                   to={`/listing/${l.id}`}
-                  className="min-w-[200px] max-w-[200px] bg-white dark:bg-violet-800 border border-gray-100 dark:border-violet-700 rounded-xl p-3 shadow-sm snap-start hover:border-violet-300 dark:hover:border-violet-500 transition-colors"
+                  className="min-w-[200px] max-w-[200px] bg-white dark:bg-violet-800 border border-gray-100 dark:border-violet-700 rounded-2xl p-3 shadow-sm snap-start hover:border-violet-300 dark:hover:border-violet-500 transition-colors"
                 >
                   <div className="flex items-center gap-2 mb-2">
                     {l.seller.avatar ? (

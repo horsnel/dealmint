@@ -9,8 +9,9 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
       className={cn(
         // card-tactile: the dashboard design language (purple-tinted lift +
         // physical press) applied app-wide; safe to also appear in className
-        // props that add it explicitly.
-        "card-tactile bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm",
+        // props that add it explicitly. Global card spec: soft rounded-2xl,
+        // white surface, hairline border, soft shadow, generous py-6 padding.
+        "card-tactile bg-white border-gray-100 text-card-foreground flex flex-col gap-6 rounded-2xl border py-6 shadow-sm",
         className
       )}
       {...props}

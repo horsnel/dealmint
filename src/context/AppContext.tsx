@@ -122,9 +122,10 @@ interface AppContextValue {
   isDarkMode: boolean;
   toggleDarkMode: () => void;
 
-  // sidebar side (per device): 'left' = dashboard sidebar design, 'right' = marketplace design
-  navSide: 'left' | 'right';
-  setNavSide: (side: 'left' | 'right') => void;
+  // navigation style (per device): 'left' = dashboard sidebar design,
+  // 'right' = marketplace design, 'top' = classic top navigation bar
+  navMode: 'left' | 'right' | 'top';
+  setNavMode: (mode: 'left' | 'right' | 'top') => void;
 
   // auth (async in cloud mode; resolves instantly in local mode)
   login: (email: string, password: string, remember: boolean) => Promise<Result>;
@@ -420,14 +421,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
   const [guestDark, setGuestDark] = useState<boolean | null>(null);
 
-  // Sidebar side preference (per device): which of the two shell designs is
-  // active app-wide — 'left' (dashboard sidebar) or 'right' (marketplace).
-  const [navSide, setNavSideState] = useState<'left' | 'right'>(() =>
-    localStorage.getItem('dealmint_navside') === 'right' ? 'right' : 'left'
-  );
-  const setNavSide = useCallback((side: 'left' | 'right') => {
-    setNavSideState(side);
-    localStorage.setItem('dealmint_navside', side);
+  // Navigation style preference (per device): which shell design is active
+  // app-wide — 'left' (dashboard sidebar), 'right' (marketplace sidebar) or
+  // 'top' (classic top navigation bar). Same storage key the two-sidebar
+  // toggle used, so existing device choices keep working.
+  const [navMode, setNavModeState] = useState<'left' | 'right' | 'top'>(() => {
+    const stored = localStorage.getItem('dealmint_navside');
+    return stored === 'right' || stored === 'top' ? stored : 'left';
+  });
+  const setNavMode = useCallback((mode: 'left' | 'right' | 'top') => {
+    setNavModeState(mode);
+    localStorage.setItem('dealmint_navside', mode);
   }, []);
 
   useEffect(() => {
@@ -1919,8 +1923,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     authMode,
     isDarkMode,
     toggleDarkMode,
-    navSide,
-    setNavSide,
+    navMode,
+    setNavMode,
     user,
     login,
     register,

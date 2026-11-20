@@ -244,7 +244,7 @@ export function WalletPage() {
         {list.map((tx) => (
           <div
             key={tx.id}
-            className="flex items-center justify-between p-4 rounded-lg bg-gray-50 dark:bg-violet-700/30"
+            className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-violet-700/30"
           >
             <div className="flex items-center gap-4 min-w-0">
               <div
@@ -590,7 +590,7 @@ export function WalletPage() {
                     type="button"
                     onClick={() => setDepositMethod(m.value)}
                     aria-pressed={depositMethod === m.value}
-                    className={`p-3 rounded-lg border text-sm flex flex-col items-center gap-1 transition-colors ${
+                    className={`p-3 rounded-xl border text-sm flex flex-col items-center gap-1 transition-colors ${
                       depositMethod === m.value
                         ? 'border-violet-600 bg-violet-50 dark:bg-violet-700 text-violet-700 dark:text-white'
                         : 'border-gray-200 dark:border-violet-600 text-gray-600 dark:text-gray-300'
@@ -773,7 +773,7 @@ export function WalletPage() {
               />
             </div>
             {acctName ? (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 text-sm">
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 text-sm">
                 <CheckCircle className="w-4 h-4 shrink-0" />
                 {acctName}
               </div>
