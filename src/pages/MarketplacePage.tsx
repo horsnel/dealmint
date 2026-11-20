@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -42,12 +42,24 @@ const groupIcon: Record<string, React.ElementType> = {
   Download,
 };
 
+// Short cycling search hints: each fits the pill on a 320px screen, so the
+// placeholder never gets cut off the way the long example sentence did.
+const SEARCH_HINTS = ['Search for a cleaner...', 'Search for a logo design...', 'Search for JAMB lessons...'];
+
 export function MarketplacePage() {
   usePageTitle('Marketplace');
   const navigate = useNavigate();
   const { listings, orders, safeSpots, user, savedSearches, matchesForSavedSearch, getSellerStats } = useApp();
   const [q, setQ] = useState('');
   const [previewHero, setPreviewHero] = useState(false);
+  const [hintIndex, setHintIndex] = useState(0);
+
+  // Swap the search hint every 3s. Skipped for users who prefer reduced motion.
+  useEffect(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const t = setInterval(() => setHintIndex((i) => (i + 1) % SEARCH_HINTS.length), 3000);
+    return () => clearInterval(t);
+  }, []);
 
   const active = useMemo(() => listings.filter((l) => l.isActive && !l.isDraft), [listings]);
 
@@ -113,44 +125,52 @@ export function MarketplacePage() {
 
   return (
     <div className="min-h-screen bg-lavender dark:bg-violet-950 pt-6 lg:pt-8">
-      {/* ---------- Practical entry: search + dual entry. The intro story
-          lives on the onboarding slides, so no hero copy repeats here. ---------- */}
-      <section className="bg-white dark:bg-violet-900/40 border-b border-gray-100 dark:border-violet-800">
-        <h1 className="sr-only">Marketplace</h1>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
-          {/* One search bar over everything. Button and bar are the same pill height */}
-          <form onSubmit={submitSearch} className="flex gap-2 max-w-xl">
-            <div className="relative flex-1">
+      {/* ---------- Deep purple hero: promise headline + practical entry.
+          No protected-badge pill here by design; the trust rail below carries
+          the assurance story. ---------- */}
+      <section className="bg-gradient-to-b from-[#4C1D95] to-violet-800 text-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+          <h1 className="font-display font-bold text-3xl lg:text-5xl mb-4">
+            Nigeria's protected marketplace
+          </h1>
+          <p className="text-white/85 text-lg mb-8 max-w-2xl">
+            Hire help, find work and buy digital goods. Funds sit in escrow until you say the job is done. No stories, no wash.
+          </p>
+
+          {/* One search bar over everything. Full hero width from md up; the
+              cycling hint keeps the pill readable on narrow phones */}
+          <form onSubmit={submitSearch} className="flex gap-2 mb-8">
+            <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="What do you need done? e.g. cleaner, logo, JAMB lessons"
+                placeholder={SEARCH_HINTS[hintIndex]}
                 aria-label="Search the marketplace"
-                className="w-full h-12 pl-11 pr-4 rounded-full bg-white dark:bg-violet-950 text-gray-900 dark:text-white placeholder:text-gray-400 text-sm border border-gray-100 dark:border-violet-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                className="w-full h-12 pl-11 pr-4 rounded-full bg-white text-gray-900 placeholder:text-gray-400 text-sm shadow-md focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
             </div>
             <Button
               type="submit"
-              className="bg-amber-500 hover:bg-amber-600 text-white rounded-full h-12 px-6 shadow-sm"
+              className="bg-amber-500 hover:bg-amber-600 text-white rounded-full h-12 px-6 shadow-md shrink-0"
             >
               Search
             </Button>
           </form>
 
-          {/* Dual entry. Tasks first */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mt-6">
+          {/* Dual entry. Tasks first. Side by side from md up, spanning the hero */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Link
               to="/post/task"
-              className="group rounded-2xl bg-white dark:bg-violet-950 border border-gray-100 dark:border-violet-700 shadow-sm hover:shadow-md p-5 text-gray-900 dark:text-white transition-shadow"
+              className="group rounded-2xl bg-white p-5 text-gray-900 shadow-lg hover:shadow-xl transition-shadow"
             >
               <div className="flex items-center gap-3 mb-2">
-                <span className="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-800 flex items-center justify-center">
-                  <ClipboardList className="w-5 h-5 text-violet-600 dark:text-amber-400" />
+                <span className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
+                  <ClipboardList className="w-5 h-5 text-violet-600" />
                 </span>
                 <h3 className="font-display font-bold text-lg">I need something done</h3>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+              <p className="text-sm text-gray-600 mb-3">
                 Post a task with your budget. Verified doers accept or send offers.
               </p>
               <span className="inline-flex items-center rounded-full bg-violet-600 text-white px-4 py-2 text-sm font-semibold group-hover:bg-violet-700 transition-colors">
@@ -159,15 +179,15 @@ export function MarketplacePage() {
             </Link>
             <Link
               to="/post/gig"
-              className="group rounded-2xl bg-white dark:bg-violet-950 border border-gray-100 dark:border-violet-700 shadow-sm hover:shadow-md p-5 text-gray-900 dark:text-white transition-shadow"
+              className="group rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 p-5 text-white hover:bg-white/15 transition-colors"
             >
               <div className="flex items-center gap-3 mb-2">
-                <span className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-violet-800 flex items-center justify-center">
-                  <Briefcase className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                <span className="w-10 h-10 rounded-xl bg-amber-400/20 flex items-center justify-center">
+                  <Briefcase className="w-5 h-5 text-amber-300" />
                 </span>
                 <h3 className="font-display font-bold text-lg">I want to earn</h3>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+              <p className="text-sm text-white/80 mb-3">
                 Sell your skills as gigs or services. Get paid to your wallet, guaranteed.
               </p>
               <span className="inline-flex items-center rounded-full bg-amber-500 text-white px-4 py-2 text-sm font-semibold group-hover:bg-amber-600 transition-colors">
